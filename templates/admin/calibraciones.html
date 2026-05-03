@@ -1,0 +1,61 @@
+{% extends "layout.html" %}
+{% block content %}
+<link rel="stylesheet" href="/static/css/calibraciones.css">
+<div class="calib-shell">
+  <div class="calib-head">
+    <div>
+      <div class="calib-kicker">ADMIN</div>
+      <h1>Calibraciones</h1>
+      <div class="calib-sub">Gestión visual de documentos, registros, impresión e histórico de calibración de tanques.</div>
+    </div>
+    <div class="calib-actions">
+      <a class="btn" href="/admin/menu">← Volver</a>
+      <a class="btn primary" href="javascript:void(0)">Nuevo registro</a>
+    </div>
+  </div>
+
+  <div class="calib-grid">
+    <div class="calib-stage card">
+      <div class="calib-stage-inner">
+        <img src="/static/img/tanque_calibraciones.png" class="calib-img" alt="Tanque"/>
+        <div class="calib-hotspots" aria-hidden="true">
+          <span class="spot s1"></span>
+          <span class="spot s2"></span>
+          <span class="spot s3"></span>
+          <span class="spot s4"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="calib-side">
+      <div class="calib-card card">
+        <div class="calib-card-title">Documentos</div>
+        <div class="help">Carga y consulta documentación de calibración (PDF/IMG).</div>
+        <div style="height:10px"></div>
+        <a class="btn primary" href="javascript:void(0)">Abrir</a>
+      </div>
+
+      <div class="calib-card card">
+        <div class="calib-card-title">Registros</div>
+        <div class="help">Tabla de aforos, litros, fechas y responsables.</div>
+        <div style="height:10px"></div>
+        <a class="btn primary" href="javascript:void(0)">Ver registros</a>
+      </div>
+
+      <div class="calib-card card">
+        <div class="calib-card-title">Impresión</div>
+        <div class="help">Genera un reporte listo para firma y archivo.</div>
+        <div style="height:10px"></div>
+        <a class="btn primary" href="javascript:void(0)">Imprimir</a>
+      </div>
+
+      <div class="calib-card card">
+        <div class="calib-card-title">Histórico</div>
+        <div class="help">Consulta versiones anteriores y cambios por periodo.</div>
+        <div style="height:10px"></div>
+        <a class="btn primary" href="javascript:void(0)">Ver histórico</a>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

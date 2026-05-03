@@ -1,0 +1,114 @@
+{% extends "layout.html" %}
+
+{% block head %}
+  {# cache-buster para evitar que el navegador se quede con JS/CSS viejo #}
+  <link rel="stylesheet" href="/static/css/calibraciones_docs.css?v=9">
+{% endblock %}
+
+{% block content %}
+<div class="cal-page">
+  <div class="cal-hero">
+    <div class="cal-hero-overlay"></div>
+    <div class="cal-hero-inner">
+      <div class="cal-hero-title">
+        <div class="crumb">Consulting <span>›</span> Calibraciones</div>
+        <h1>Calibraciones</h1>
+        <p>Gestión de documentos por estación. Dos módulos: <b>Tanques</b> y <b>Sonda / Temperatura</b>.</p>
+      </div>
+
+      <div class="cal-hero-actions">
+        <div class="station-picker">
+          <label>Estación</label>
+          <select id="calStation" class="select"></select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button id="tabTanks" class="tab active" type="button">Calibración de Tanques</button>
+    <button id="tabProbe" class="tab" type="button">Calibración Sonda / Temperatura</button>
+  </div>
+
+  <!-- TANQUES -->
+  <section id="panelTanks" class="panel">
+    <div class="tank-layout">
+      <div class="tank-visual">
+        <img class="tank-img" src="/static/img/tank_calibration.png" alt="Tanque" />
+        <div class="tank-hint">
+          <div class="hint-title">Acciones</div>
+          <div class="hint-row">🖨️ Imprimir: abre el PDF para imprimir.</div>
+          <div class="hint-row">⬆️ Subir: carga o reemplaza el PDF del tanque.</div>
+          <div class="hint-row">👁️ Ver: visualiza el PDF actual.</div>
+          <div class="hint-row">⬇️ Descargar: descarga el PDF actual.</div>
+        </div>
+      </div>
+
+      <div class="tank-docs">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>Documentos de Tanques</h2>
+              <div class="sub">Cada estación puede tener varios tanques, cada uno con su PDF.</div>
+            </div>
+            <button id="btnAddTank" class="btn primary" type="button">➕ Agregar tanque</button>
+          </div>
+
+          {# igual que sonda/temperatura: tarjetas en grid #}
+          <div id="tankList" class="grid-2">
+            <div class="muted">Selecciona una estación…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SONDA / TEMPERATURA -->
+  <section id="panelProbe" class="panel hidden">
+    <div class="probe-layout">
+      <div class="probe-visual">
+        <img class="probe-img" src="/static/img/probe_calibration.png" alt="Sonda / Temperatura" />
+        <div class="tank-hint">
+          <div class="hint-title">Acciones</div>
+          <div class="hint-row">🖨️ Imprimir: abre el PDF para imprimir.</div>
+          <div class="hint-row">⬆️ Subir: carga o reemplaza el PDF.</div>
+          <div class="hint-row">👁️ Ver: visualiza el PDF actual.</div>
+          <div class="hint-row">⬇️ Descargar: descarga el PDF actual.</div>
+        </div>
+      </div>
+
+      <div class="probe-docs">
+        <div class="card">
+          <div class="card-head">
+            <div>
+              <h2>Sonda / Temperatura</h2>
+              <div class="sub">Documentos por tanque (por ahora: solo administrador).</div>
+            </div>
+          </div>
+
+          <div class="grid-2" id="probeCards"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+{# Vista previa PDF (modal) #}
+<div id="pdfModal" class="pdf-modal hidden" aria-hidden="true">
+  <div class="pdf-modal-backdrop" data-act="close"></div>
+  <div class="pdf-modal-panel" role="dialog" aria-modal="true">
+    <div class="pdf-modal-head">
+      <div class="pdf-modal-title" id="pdfModalTitle">Vista previa</div>
+      <div class="pdf-modal-actions">
+        <button type="button" class="btn small" id="pdfModalPrint">🖨️ Imprimir</button>
+        <a class="btn small" id="pdfModalOpen" target="_blank" rel="noopener">↗ Abrir</a>
+        <button type="button" class="btn small" id="pdfModalClose">✕ Cerrar</button>
+      </div>
+    </div>
+    <iframe id="pdfModalFrame" class="pdf-modal-frame" title="Vista previa PDF"></iframe>
+  </div>
+</div>
+
+<script src="/static/js/calibraciones_docs.js?v=9"></script>
+{% endblock %}

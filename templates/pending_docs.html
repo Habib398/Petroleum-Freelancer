@@ -1,0 +1,91 @@
+{% extends "layout.html" %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/pending_docs.css"/>
+{% endblock %}
+{% block content %}
+<div class="page">
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+      <div>
+        <h1 style="margin:0 0 6px">{{ page_title }}</h1>
+        <div class="muted">{{ page_subtitle }}</div>
+      </div>
+      <div class="pill">Validación administrativa</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <section class="cardx">
+      <div style="display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0">Envíos</h3>
+          <div class="help">Aquí ves los documentos enviados para revisión. El administrador aprueba o rechaza; las estaciones revisan su estatus.</div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap">
+          <input id="q" class="input" placeholder="Buscar título o comentario" style="min-width:220px">
+          <select id="statusFilter" class="input">
+            <option value="">Todos los estatus</option>
+            <option value="pending">Pendientes</option>
+            <option value="approved">Aprobados</option>
+            <option value="rejected">Rechazados</option>
+          </select>
+          {% if is_admin %}
+          <select id="stationFilter" class="input">
+            <option value="">Todas las estaciones</option>
+            {% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}
+          </select>
+          {% elif stations|length > 1 %}
+          <select id="stationFilter" class="input">
+            <option value="">Mis estaciones</option>
+            {% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}
+          </select>
+          {% else %}
+          <input id="stationFilter" type="hidden" value="{{ default_station_id }}">
+          {% endif %}
+          <button id="btnRefresh" class="btnx alt" type="button">Actualizar</button>
+        </div>
+      </div>
+      <div id="msg" class="help" style="margin-top:10px"></div>
+      <div style="overflow:auto;margin-top:12px">
+        <table class="table">
+          <thead><tr><th>Título</th><th>Estación</th><th>Estatus</th><th>Archivo</th>{% if is_admin %}<th>Revisión</th>{% endif %}</tr></thead>
+          <tbody id="tbody"><tr><td colspan="{% if is_admin %}5{% else %}4{% endif %}" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="cardx">
+      <h3 style="margin-top:0">Subir documento faltante</h3>
+      <div class="help" style="margin-bottom:12px">Usa este flujo cuando falte un documento y quieras enviarlo a revisión. Si ya fue rechazado, vuelve a subirlo con el mismo título para reemplazar la versión actual.</div>
+      <form id="uploadForm">
+        <div class="field"><label>Título del documento</label><input name="title" required placeholder="Ej. Anexo 30, oficio, constancia, fotografía"></div>
+        <div class="field">
+          <label>Estación</label>
+          {% if is_admin %}
+          <select name="station_id" required><option value="">Selecciona una estación</option>{% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}</select>
+          {% elif stations|length > 1 %}
+          <select name="station_id" required><option value="">Selecciona una estación</option>{% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}</select>
+          {% else %}
+          <input type="hidden" name="station_id" value="{{ default_station_id }}">
+          <input value="{% if stations %}{{ stations[0].code }} • {{ stations[0].name }}{% else %}Sin estación{% endif %}" disabled>
+          {% endif %}
+        </div>
+        <div class="field"><label>Motivo / nota</label><textarea name="notes" rows="3" placeholder="Ej. Documento faltante solicitado por administración, reposición por rechazo, evidencia complementaria"></textarea></div>
+        <div class="field"><label>Archivo</label><input type="file" name="file" accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" required></div>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btnx" type="submit">Enviar a revisión</button>
+      </form>
+      <div class="note" style="margin-top:10px">Formatos permitidos: PDF, imágenes, Word y Excel. El admin decide si queda aprobado o rechazado.</div>
+      <div class="help" id="uploadMsg" style="margin-top:10px"></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.PendingDocsConfig = {
+    isAdmin: {{ is_admin|tojson }},
+    defaultStationId: {{ default_station_id|tojson }},
+    resetStationId: {{ (not is_admin and stations|length == 1)|tojson }}
+  };
+</script>
+<script src="/static/js/pending_docs.js" defer></script>
+{% endblock %}

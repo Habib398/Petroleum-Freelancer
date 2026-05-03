@@ -1,0 +1,16 @@
+AJUSTES REALIZADOS
+
+1) Cotización pública
+- El PDF ahora se genera con formato más corporativo y ordenado.
+- Incluye encabezado formal, folio visible, logos, datos del cliente, resumen ejecutivo y siguiente paso sugerido.
+- Si el detalle es largo, continúa automáticamente en páginas adicionales.
+- La vista previa del PDF ahora abre inline en el navegador.
+- También se agregó enlace separado para descargar el PDF.
+
+2) Estilo general del sistema
+- Se hizo una pasada global de orden visual para topbar, sidebar, cards, tablas, botones, inputs y formularios.
+- Se mejoró espaciado, jerarquía visual y sombras para una apariencia más profesional.
+- Se ajustaron también los módulos tipo hub para que se vean más uniformes.
+
+3) Limpieza
+- Se eliminó duplicado de PUBLIC_QUOTE_RECIPIENTS en archivos de entorno.

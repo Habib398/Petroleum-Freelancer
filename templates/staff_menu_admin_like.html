@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>{{ 'Centro Petroleum' if brand=='petroleum' else 'Centro Consulting' }} • Operación</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/theme-hme.css"/>
+  <style>
+    :root{--acc:{% if brand=='petroleum' %}#D6AF45{% else %}#22c55e{% endif %};--soft:{% if brand=='petroleum' %}rgba(214,175,69,.14){% else %}rgba(34,197,94,.10){% endif %};--line:{% if brand=='petroleum' %}rgba(214,175,69,.26){% else %}rgba(34,197,94,.20){% endif %};--surface:{% if brand=='petroleum' %}rgba(255,255,255,.06){% else %}rgba(255,255,255,.86){% endif %};--surface2:{% if brand=='petroleum' %}rgba(255,255,255,.04){% else %}rgba(255,255,255,.72){% endif %};--text:{% if brand=='petroleum' %}#F8FAFC{% else %}#0f172a{% endif %};--softtext:{% if brand=='petroleum' %}rgba(226,232,240,.74){% else %}#475569{% endif %};--border:{% if brand=='petroleum' %}rgba(255,255,255,.12){% else %}rgba(15,23,42,.10){% endif %};}
+    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--text);background:{% if brand=='petroleum' %}linear-gradient(180deg,#040914 0%,#07111f 55%,#050b14 100%){% else %}linear-gradient(180deg,#ffffff 0%,#f8fafc 55%,#ffffff 100%){% endif %};min-height:100vh} .topbar{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 18px;background:{% if brand=='petroleum' %}rgba(4,9,20,.62){% else %}rgba(255,255,255,.72){% endif %};backdrop-filter:blur(12px);border-bottom:1px solid var(--border)} .brand{display:flex;align-items:center;gap:12px}.logo{width:50px;height:50px;border-radius:16px;border:1px solid var(--border);background:var(--surface);display:grid;place-items:center}.logo img{width:78%;height:78%;object-fit:contain}.eyebrow{font-size:11px;font-weight:900;letter-spacing:.18em;color:var(--acc);text-transform:uppercase}.title{font-size:18px;font-weight:1000}.subtitle{font-size:12px;color:var(--softtext);font-weight:700}.pill,.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--surface);text-decoration:none;color:var(--text);font-weight:800}.wrap{max-width:1240px;margin:0 auto;padding:18px}.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.card{border-radius:28px;border:1px solid var(--border);background:var(--surface);padding:22px;box-shadow:0 18px 50px rgba(2,6,23,.12)} .kicker{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:12px;font-weight:900;color:{% if brand=='petroleum' %}#f5deb3{% else %}#166534{% endif %};text-transform:uppercase;letter-spacing:.14em}.hero h1{font-size:clamp(28px,4vw,46px);line-height:1.02;letter-spacing:-.04em;margin:14px 0 10px;max-width:12ch}.hero p{margin:0;color:var(--softtext);line-height:1.5;font-weight:650}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.stat{padding:16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2)} .stat .k{font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--softtext)} .stat .v{font-size:24px;font-weight:1000;margin-top:6px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}.tile{display:flex;flex-direction:column;gap:10px;border-radius:22px;border:1px solid var(--border);background:var(--surface);padding:18px;text-decoration:none;color:var(--text);min-height:170px;box-shadow:0 14px 36px rgba(2,6,23,.10)} .tile:hover{transform:translateY(-2px);border-color:var(--line)} .tag{display:inline-flex;width:max-content;padding:6px 10px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:{% if brand=='petroleum' %}#f5deb3{% else %}#166534{% endif %}} .tile h3{margin:0;font-size:18px;letter-spacing:-.02em}.tile p{margin:0;color:var(--softtext);line-height:1.4;font-size:13px}.footer{display:flex;justify-content:center;gap:12px;align-items:center;margin-top:18px;font-size:12px;font-weight:900;letter-spacing:.20em;color:var(--softtext);text-transform:uppercase}.footer span{width:54px;height:1px;background:var(--border)} @media (max-width:980px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}} @media (max-width:680px){.grid,.stats{grid-template-columns:1fr}.wrap{padding:14px}}
+  </style>
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo"><img src="{{ '/static/img/petroleum-logo.png' if brand=='petroleum' else '/static/img/logo.png' }}" alt="logo"></div>
+      <div>
+        <div class="eyebrow">{{ 'Petroleum' if brand=='petroleum' else 'Consulting' }} • {{ me.role|replace('_',' ')|title }}</div>
+        <div class="title">Centro operativo restringido</div>
+        <div class="subtitle">Mismo estilo del menú principal, con accesos limitados a tu rol.</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <div class="pill">{{ 'PETROLEUM' if brand=='petroleum' else 'CONSULTING' }}</div>
+      <a class="btn" href="/select-system">Cambiar sistema</a>
+      <a class="btn" href="/logout">Cerrar sesión</a>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="hero">
+      <article class="card">
+        <div class="kicker">Acceso operativo</div>
+        <h1>Consulta, seguimiento y edición limitada.</h1>
+        <p>Desde aquí entras a SASISOPA, SGM, documentos faltantes, carpeta compartida, organigrama y paneles operativos. El administrador mantiene el control completo y tu rol solo ve o edita lo permitido.</p>
+        <div class="actions">
+          <a class="btn" href="/mod/dashboard">Dashboard</a>
+          <a class="btn" href="/mod/notifications">Notificaciones</a>
+          <a class="btn" href="/mod/profile">Perfil / FIEL</a>
+        </div>
+      </article>
+      <aside class="stats">
+        <div class="stat"><div><div class="k">Rol activo</div><div class="v">{{ me.role|replace('_',' ')|title }}</div></div></div>
+        <div class="stat"><div><div class="k">Sistema</div><div class="v">{{ 'Petroleum' if brand=='petroleum' else 'Consulting' }}</div></div></div>
+        <div class="stat"><div><div class="k">Documental</div><div class="v">Parcial</div></div></div>
+        <div class="stat"><div><div class="k">Acceso</div><div class="v">Restringido</div></div></div>
+      </aside>
+    </section>
+    <section class="grid">
+      {% for c in cards %}
+      <a class="tile" href="{{ c.href }}">
+        <span class="tag">{{ c.tag }}</span>
+        <h3>{{ c.title }}</h3>
+        <p>{{ c.subtitle }}</p>
+      </a>
+      {% endfor %}
+    </section>
+    <div class="footer"><span></span>COG WORK LOG<span></span></div>
+  </main>
+</body>
+</html>

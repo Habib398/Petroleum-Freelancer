@@ -1,0 +1,36 @@
+{% extends "layout.html" %}
+{% block head %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" crossorigin=""/>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" crossorigin=""/>
+  <link rel="stylesheet" href="/static/css/mapa.css"/>
+{% endblock %}
+{% block content %}
+  <div class="pagehead">
+    <div>
+      <h1 class="h1">Mapa nacional de México</h1>
+      <div class="sub">Estaciones cargadas automáticamente (estados, calles y zoom).</div>
+    </div>
+  </div>
+<div class="card" style="margin:12px 0;">
+  <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
+    <label style="display:flex;gap:10px;align-items:center;">
+      <input type="checkbox" id="toggleFuel">
+      <span><b>Mostrar gasolineras de México (OSM)</b> <span class="help">Carga dinámica por zona visible (puede tardar unos segundos).</span></span>
+    </label>
+    <button class="btn" id="btnFuelRefresh" type="button" style="display:none;">Actualizar</button>
+    <label id="fuelBrandWrap" class="help" style="display:none; align-items:center; gap:8px;">
+      <span style="font-weight:800;">Marca:</span>
+      <select id="fuelBrand" class="select" style="min-width:180px;"></select>
+    </label>
+    <span class="help" id="fuelCount"></span>
+  </div>
+</div>
+  <div id="map"></div>
+{% endblock %}
+{% block scripts %}
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="/static/js/mapa.js"></script>
+{% endblock %}

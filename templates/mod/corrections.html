@@ -1,0 +1,17 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead"><div><h1 class="h1">Tareas / Correcciones</h1><div class="sub">Seguimiento de rechazos, observaciones y acciones correctivas.</div></div></div>
+<div class="grid cols-2" style="margin-top:14px;">
+  <div class="card"><div class="help">Nueva tarea</div><div style="display:grid;gap:10px;margin-top:10px;"><input id="title" class="input" placeholder="Título"><textarea id="description" class="input" style="min-height:110px;" placeholder="Detalle"></textarea><div class="grid cols-3"><input id="station_id" class="input" placeholder="ID estación"><input id="module" class="input" placeholder="Módulo"><select id="priority" class="input"><option>medium</option><option>low</option><option>high</option><option>urgent</option></select></div><button class="btn primary" id="btnCreate">Crear tarea</button><div id="msg" class="help"></div></div></div>
+  <div class="card"><div class="help">Filtro</div><select id="filter" class="input" style="margin-top:10px;"><option value="">Todas</option><option value="open">Abiertas</option><option value="in_progress">En progreso</option><option value="done">Terminadas</option><option value="cancelled">Canceladas</option></select><div class="help" style="margin-top:10px;">Las tareas rechazadas pueden crearse automáticamente desde revisiones.</div></div>
+</div>
+<div id="list" class="grid cols-2" style="margin-top:14px;"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function refresh(){const st=document.getElementById('filter').value||''; const r=await api('/api/corrections'+(st?('?status='+encodeURIComponent(st)):'')); const box=document.getElementById('list'); box.innerHTML=(r.items||[]).map(it=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><div class="help">${_esc(it.folio||'')}</div><h3 style="margin:4px 0 8px;">${_esc(it.title||'')}</h3><div class="help">${_esc(it.station_code||'Global')} · ${_esc(it.priority||'medium')} · ${_esc(it.status||'open')} · vence ${_esc(it.due_date||'-')}</div></div><div><button class="btn ghost" onclick="setTask(${it.id},'in_progress')">En curso</button> <button class="btn" onclick="setTask(${it.id},'done')">Completar</button></div></div><div style="margin-top:10px;white-space:pre-wrap;">${_esc(it.description||'')}</div></div>`).join('') || '<div class="card">Sin tareas.</div>'; }
+async function createTask(){await api('/api/corrections',{method:'POST',body:JSON.stringify({title:title.value,description:description.value,station_id:station_id.value,module:module.value,priority:priority.value})}); msg.textContent='Tarea creada.'; title.value=''; description.value=''; station_id.value=''; module.value=''; await refresh();}
+async function setTask(id,status){await api('/api/corrections/'+id,{method:'PATCH',body:JSON.stringify({status})}); await refresh();}
+document.getElementById('btnCreate').addEventListener('click',()=>createTask().catch(()=>msg.textContent='No se pudo crear.')); document.getElementById('filter').addEventListener('change',()=>refresh().catch(()=>{})); window.setTask=setTask; refresh();
+</script>
+{% endblock %}

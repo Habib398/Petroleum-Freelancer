@@ -1,0 +1,23 @@
+{% extends "layout.html" %}
+
+{% block content %}
+  <div class="pagehead">
+    <div>
+      <h1 class="h1">Notificaciones</h1>
+      <div class="sub">Avisos del sistema (entregas, correcciones, aprobaciones, alertas).</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button id="btnReadAll" class="btn">Marcar todo como leído</button>
+      <button id="btnReload" class="btn ghost">Actualizar</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:12px;">
+    <div id="notifList" class="list"></div>
+    <div id="notifEmpty" class="help" style="padding:12px;" hidden>Sin notificaciones por ahora 🎉</div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+  <script src="/static/js/notifications_page.js"></script>
+{% endblock %}

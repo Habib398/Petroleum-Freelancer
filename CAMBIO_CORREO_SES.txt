@@ -1,0 +1,24 @@
+CAMBIO REALIZADO: ENVIO PROFESIONAL DE CORREO
+
+Se integró AWS SES como opción preferida para cotizaciones y correo saliente.
+
+QUE CAMBIO
+- la cotización pública ya puede usar AWS SES
+- SMTP quedó solo como respaldo
+- el administrador puede elegir en Configuración: Automático / AWS SES / SMTP
+- se agregaron campos de región SES, remitente SES y configuration set
+- el formulario público sigue sin requerir login
+
+COMO ACTIVARLO EN AWS
+1) Verifica el remitente o dominio en Amazon SES
+2) En el servidor configura:
+   MAIL_PROVIDER=ses
+   SES_REGION=tu-region
+   SES_FROM_EMAIL=tu-correo-verificado
+   PUBLIC_QUOTE_RECIPIENTS=usiel54@hotmail.com,misaelsainz9@gmail.com
+3) Asigna permisos SES al rol IAM del servidor
+4) Reinicia la app
+
+SI QUIERES DEJARLO EN AUTOMATICO
+- usa MAIL_PROVIDER=auto
+- intentará SES primero y SMTP después

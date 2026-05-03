@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead"><div><h1 class="h1">Firma dibujada</h1><div class="sub">Firma interna con mouse o touch. Se guarda como evidencia visual y sello interno.</div></div></div>
+<div class="card" style="margin-top:14px;">
+  <div class="grid cols-3">
+    <input id="entity" class="input" placeholder="Entidad" value="general">
+    <input id="entity_id" class="input" placeholder="ID entidad" value="0">
+    <input id="action" class="input" placeholder="Acción" value="signed">
+  </div>
+  <canvas id="pad" style="margin-top:14px;width:100%;height:260px;border:1px dashed var(--hme-border);border-radius:16px;background:#fff;"></canvas>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px;"><button class="btn ghost" id="btnClear">Limpiar</button><button class="btn primary" id="btnSave">Guardar firma</button><span id="msg" class="help"></span></div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const canvas=document.getElementById('pad'); const ctx=canvas.getContext('2d'); let drawing=false; let hasStroke=false;
+function resize(){const r=canvas.getBoundingClientRect(); canvas.width=r.width*window.devicePixelRatio; canvas.height=260*window.devicePixelRatio; ctx.scale(window.devicePixelRatio,window.devicePixelRatio); ctx.lineWidth=2.4; ctx.lineCap='round'; ctx.strokeStyle='#111827'; ctx.fillStyle='#fff'; ctx.fillRect(0,0,r.width,260);} resize(); window.addEventListener('resize',()=>location.reload());
+function pt(e){const r=canvas.getBoundingClientRect(); const t=e.touches&&e.touches[0]?e.touches[0]:e; return {x:t.clientX-r.left,y:t.clientY-r.top};}
+function start(e){drawing=true; const p=pt(e); ctx.beginPath(); ctx.moveTo(p.x,p.y); e.preventDefault();}
+function move(e){if(!drawing) return; const p=pt(e); ctx.lineTo(p.x,p.y); ctx.stroke(); hasStroke=true; e.preventDefault();}
+function end(){drawing=false;}
+['mousedown','touchstart'].forEach(ev=>canvas.addEventListener(ev,start,{passive:false})); ['mousemove','touchmove'].forEach(ev=>canvas.addEventListener(ev,move,{passive:false})); ['mouseup','mouseleave','touchend'].forEach(ev=>canvas.addEventListener(ev,end,{passive:false}));
+btnClear.onclick=()=>{ctx.clearRect(0,0,canvas.width,canvas.height); resize(); hasStroke=false; msg.textContent='';};
+btnSave.onclick=async()=>{ if(!hasStroke){msg.textContent='Dibuja una firma primero.'; return;} const data=canvas.toDataURL('image/png'); const r=await api('/api/signatures/drawn',{method:'POST',body:JSON.stringify({entity:entity.value,entity_id:entity_id.value,action:action.value,image_data:data})}); msg.innerHTML='Firma guardada. <a href="'+r.url+'" target="_blank" rel="noopener">Ver imagen</a>'; };
+</script>
+{% endblock %}

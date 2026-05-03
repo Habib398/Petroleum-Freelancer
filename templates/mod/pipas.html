@@ -1,0 +1,79 @@
+{% extends "layout.html" %}
+{% block head %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Pipas</h1>
+    <div class="sub">Registro de pipas y litros recibidos con evidencias.</div>
+  </div>
+</div>
+<div class="card" data-export-bar style="margin-top:12px;" data-admin-auditor-only hidden>
+  <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;">
+    <div><b>Exportación</b> <span class="help">Descarga de datos para auditoría/analítica.</span></div>
+    <div style="display:flex;gap:10px;">
+      <a class="btn" href="/api/export/pipas.csv">CSV</a>
+      <a class="btn" href="/api/export/pipas.xlsx">Excel</a>
+    </div>
+  </div>
+</div>
+
+
+<div class="grid cols-2">
+  <div class="card">
+    <div style="font-weight:900;">Registrar pipa</div>
+    <div class="help">Campos clave + evidencias (ticket/factura/mediciones).</div>
+    <form id="pForm" style="display:grid;gap:10px;margin-top:10px;">
+      <div class="formrow" id="pStationRow" hidden>
+        <div style="grid-column:1 / -1;">
+          <div class="help">Estación</div>
+          <select id="pStation" name="station_id"></select>
+        </div>
+      </div>
+      <div class="formrow">
+        <div><div class="help">Placas</div><input class="input" name="plates"></div>
+        <div><div class="help">Operador</div><input class="input" name="operator_name"></div>
+      </div>
+      <div class="formrow">
+        <div><div class="help">Hora llegada</div><input class="input" name="arrival_time" placeholder="HH:MM"></div>
+        <div><div class="help">Hora salida</div><input class="input" name="departure_time" placeholder="HH:MM"></div>
+      </div>
+      <div class="formrow">
+        <div>
+          <div class="help">Combustible</div>
+          <select name="fuel_type">
+            <option value="magna">Magna</option>
+            <option value="premium">Premium</option>
+            <option value="diesel">Diésel</option>
+          </select>
+        </div>
+        <div><div class="help">Litros recibidos</div><input class="input" name="liters" type="number" step="0.01" required></div>
+      </div>
+      <div class="formrow">
+        <div><div class="help">Ticket (opcional)</div><input class="input" type="file" name="ticket"></div>
+        <div><div class="help">Factura (opcional)</div><input class="input" type="file" name="factura"></div>
+      </div>
+      <div class="formrow">
+        <div><div class="help">Medición antes (opcional)</div><input class="input" type="file" name="before"></div>
+        <div><div class="help">Medición después (opcional)</div><input class="input" type="file" name="after"></div>
+      </div>
+      <div><div class="help">Firma (nombre)</div><input class="input" name="signature_name"></div>
+      <div class="formactions"><button class="btn primary" type="submit">Guardar</button></div>
+      <div id="pErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;">Historial</div>
+    <div class="tablewrap" style="margin-top:10px;">
+      <table>
+        <thead><tr><th>Fecha</th><th>Estación</th><th>Combustible</th><th>Litros</th><th>Evidencias</th></tr></thead>
+        <tbody id="pTbody"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/pipas.js"></script>
+{% endblock %}

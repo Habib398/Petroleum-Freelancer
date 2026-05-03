@@ -1,0 +1,59 @@
+{% extends "layout.html" %}
+{% block head %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Alertas</h1>
+    <div class="sub">Alertas verdes, amarillas y rojas con seguimiento.</div>
+  </div>
+</div>
+<div class="card" data-export-bar style="margin-top:12px;" data-admin-auditor-only hidden>
+  <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;">
+    <div><b>Exportación</b> <span class="help">Descarga de datos para auditoría/analítica.</span></div>
+    <div style="display:flex;gap:10px;">
+      <a class="btn" href="/api/export/alerts.csv">CSV</a>
+      <a class="btn" href="/api/export/alerts.xlsx">Excel</a>
+    </div>
+  </div>
+</div>
+
+
+<div class="grid cols-2">
+  <div class="card">
+    <div style="font-weight:900;">Crear alerta</div>
+    <div style="display:grid;gap:10px;margin-top:10px;">
+      <div class="formrow" id="aStationRow" hidden>
+        <div style="grid-column:1 / -1;">
+          <div class="help">Estación</div>
+          <select id="aStation" style="width:100%;"></select>
+        </div>
+      </div>
+      <div class="formrow">
+        <div>
+          <div class="help">Severidad</div>
+          <select id="aSev">
+            <option value="green">Verde</option>
+            <option value="yellow">Amarilla</option>
+            <option value="red">Roja</option>
+          </select>
+        </div>
+        <div><div class="help">Título</div><input id="aTitle" class="input" placeholder="Ej. Falla en bomba"></div>
+      </div>
+      <div><div class="help">Descripción</div><textarea id="aDesc" class="input" rows="3"></textarea></div>
+      <div class="formactions"><button id="aSave" class="btn primary">Guardar</button></div>
+      <div id="aErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;">Alertas</div>
+    <div class="tablewrap" style="margin-top:10px;">
+      <table><thead><tr><th>Fecha</th><th>Estación</th><th>Severidad</th><th>Título</th><th>Status</th><th></th></tr></thead><tbody id="aT"></tbody></table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/alerts.js"></script>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block head %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Perfil / FIEL</h1>
+    <div class="sub">Gestión de datos fiscales y certificados.</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div style="font-weight:900;">Perfil fiscal de estación</div>
+    <div class="help">Permiso, razón social y FIEL (para descargas anuales).</div>
+    <form id="profileForm" style="display:grid;gap:10px;margin-top:10px;">
+      <div id="profileStationWrap" hidden><div class="help">Estación</div><select class="input" id="profileStation" name="station_id"></select></div>
+      <div><div class="help">Número de permiso</div><input class="input" name="permit_number"></div>
+      <div><div class="help">Razón social</div><input class="input" name="legal_name"></div>
+      <div class="formrow">
+        <div><div class="help">FIEL .cer</div><input class="input" type="file" name="fiel_cer"></div>
+        <div><div class="help">FIEL .key</div><input class="input" type="file" name="fiel_key"></div>
+      </div>
+      <div class="formactions"><button class="btn primary" type="submit">Guardar</button></div>
+      <div id="profErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+      <div id="profOk" class="help" style="color:var(--hme-success);font-weight:900;" hidden></div>
+    </form>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;">Estado</div>
+    <div id="profState" class="help" style="margin-top:10px;">Cargando…</div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/profile.js"></script>
+{% endblock %}

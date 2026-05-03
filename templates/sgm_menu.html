@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SGM • Menú</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/theme-hme.css"/>
+  <link rel="stylesheet" href="/static/css/modules.css"/>
+</head>
+<body class="module brand-{{ session.get('brand','consulting') }}">
+
+  <div class="hub-topbar">
+    <div class="hub-brand">
+      {% set _brand = session.get('brand','consulting') %}
+      {% if _brand == 'petroleum' %}
+        <img src="/static/img/petroleum-logo.png" alt="PETROLEUM"/>
+        <div>
+          <div class="kicker">Sistema de Gestión y Monitoreo</div>
+          <div class="title">SGM</div>
+        </div>
+      {% else %}
+        <img src="/static/img/logo.png" alt="CONSULTING"/>
+        <div>
+          <div class="kicker">Sistema de Gestión y Monitoreo</div>
+          <div class="title">SGM</div>
+        </div>
+      {% endif %}
+    </div>
+    <div class="hub-actions">
+      <a class="btn ghost" href="{{ back_url }}">← Regresar</a>
+      <a class="btn" href="/select-system">Cambiar empresa</a>
+      <a class="btn primary" href="/logout">Salir</a>
+    </div>
+  </div>
+
+  <div class="hub-shell">
+    <div class="hub-header">
+      <div>
+        <h1>SGM</h1>
+        <div class="sub">Accede rápido a manuales, evidencia y programas. Todo el contenido se mantiene separado por empresa.</div>
+      </div>
+      <div class="hub-meta">
+        <span class="badge">Admin</span>
+        <span class="badge">Soporte: documentos</span>
+      </div>
+    </div>
+
+    <div class="hub-grid">
+      <div class="hub-card">
+        <a href="/admin/sgm/manual">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19a2 2 0 0 0 2 2h14"/><path d="M6 17V5a2 2 0 0 1 2-2h12v18H8a2 2 0 0 1-2-2z"/><path d="M10 7h8"/><path d="M10 11h8"/></svg>
+          </div>
+          <div>
+            <h3>Manual</h3>
+            <p>Consulta guías, procedimientos y referencias internas del SGM.</p>
+            <div class="hub-meta">
+              <span class="badge">Lectura</span><span class="badge">PDF / links</span>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="hub-card">
+        <a href="/admin/sgm/evidencia">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+          </div>
+          <div>
+            <h3>Evidencias</h3>
+            <p>Sube y organiza evidencias por estación, fecha y tipo.</p>
+            <div class="hub-meta">
+              <span class="badge">Carga</span><span class="badge">Control documental</span>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="hub-card">
+        <a href="/admin/sgm/programa">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18"/><path d="M7 3v18"/><path d="M8 11h12"/><path d="M8 15h12"/><path d="M8 19h12"/></svg>
+          </div>
+          <div>
+            <h3>Programa</h3>
+            <p>Planeación, seguimiento y cumplimiento del programa SGM.</p>
+            <div class="hub-meta">
+              <span class="badge">Seguimiento</span><span class="badge">Reporte</span>
+            </div>
+          </div>
+        </a>
+      </div>
+
+      <div class="hub-card">
+        <a href="/admin/menu">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg>
+          </div>
+          <div>
+            <h3>Volver al panel</h3>
+            <p>Regresa al menú principal de administración.</p>
+            <div class="hub-meta">
+              <span class="badge">Admin</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

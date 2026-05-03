@@ -1,0 +1,38 @@
+{% extends 'layout.html' %}
+{% block content %}
+<section class="page-intro"><article class="info-card"><h3>Qué hace este tablero</h3><p>Es la vista global para admin. Aquí no capturas documentos: aquí supervisas todo lo que vence, falta o requiere renovación.</p><div class="step-grid"><div class="step"><b>1</b><span>Filtra por módulo, urgencia o estación.</span></div><div class="step"><b>2</b><span>Abre el registro correcto desde la tabla.</span></div><div class="step"><b>3</b><span>Usa renovar cuando ya tengas la nueva versión.</span></div></div></article><article class="info-card"><h3>Úsalo cuando</h3><div class="soft-list"><div class="soft-item">Necesites revisar todo de una sola vez.</div><div class="soft-item">Busques vencidos o próximos a vencer.</div><div class="soft-item">Quieras supervisar varias estaciones.</div></div></article></section>
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Control maestro documental · admin</h1>
+    <div class="sub">Base de datos central de vencimientos, renovaciones y archivos por estación o cliente.</div>
+  </div>
+  <div class="formactions">
+    <a class="btn ghost" href="/mod/document-renewals-calendar">Calendario</a>
+    <a class="btn ghost" href="/api/document-deadlines/export.csv">Exportar CSV</a>
+  </div>
+</div>
+<section class="card">
+  <div class="filters-grid" style="display:grid;grid-template-columns:2fr repeat(4,minmax(0,1fr));gap:10px;align-items:end;">
+    <div><label>Búsqueda</label><input id="q" class="input" placeholder="Documento, folio, estación, notas"></div>
+    <div><label>Estación</label><select id="station" class="input"></select></div>
+    <div><label>Módulo</label><select id="module" class="input"><option value="">Todos</option><option value="normativas">Normativa</option><option value="expediente_normativas">Documento normativo</option></select></div>
+    <div><label>Urgencia</label><select id="urgency" class="input"><option value="">Todas</option><option value="vencido">Vencido</option><option value="hoy">Vence hoy</option><option value="critico">0-7 días</option><option value="atencion">8-15 días</option><option value="proximo">16-30 días</option><option value="programado">Programado</option></select></div>
+    <div><label>Acción</label><button class="btn primary" id="reloadBtn">Actualizar</button></div>
+  </div>
+</section>
+<section class="grid cols-4" style="margin-top:14px;">
+  <div class="card"><div class="help">Total</div><div class="h1" id="kTotal">0</div></div>
+  <div class="card"><div class="help">Próximos</div><div class="h1" id="kSoon">0</div></div>
+  <div class="card"><div class="help">Críticos</div><div class="h1" id="kCrit">0</div></div>
+  <div class="card"><div class="help">Vencidos</div><div class="h1" id="kOver">0</div></div>
+</section>
+<section class="card" style="margin-top:14px;overflow:auto;">
+  <table class="table">
+    <thead><tr><th>Vence</th><th>Urgencia</th><th>Módulo</th><th>Estación / cliente</th><th>Documento</th><th>Folio</th><th>Estatus</th><th>Responsable</th><th>Archivo</th><th>Acción</th></tr></thead>
+    <tbody id="tbody"></tbody>
+  </table>
+</section>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/document_deadlines.js"></script>
+{% endblock %}

@@ -1,0 +1,75 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Auditoría</h1>
+    <div class="sub">Bitácora de acciones (por empresa). Exportable a CSV.</div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+    <input id="q" class="input" placeholder="Buscar (acción, módulo, IP, detalle)" style="min-width:280px;">
+    <input id="start" class="input" type="date">
+    <input id="end" class="input" type="date">
+    <button id="btn" class="btn">Buscar</button>
+    <a id="csv" class="btn ghost" href="#">Exportar CSV</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="tablewrap">
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th><th>Fecha</th><th>Acción</th><th>Módulo</th><th>Registro</th><th>Usuario</th><th>IP</th><th>Detalle</th>
+        </tr>
+      </thead>
+      <tbody id="tb"></tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(async ()=>{
+  const qs = (s)=>document.querySelector(s);
+  const tb = qs("#tb");
+  const btn = qs("#btn");
+  const q = qs("#q");
+  const start = qs("#start");
+  const end = qs("#end");
+  const csv = qs("#csv");
+
+  function buildParams(){
+    const p = new URLSearchParams();
+    if(q.value.trim()) p.set("q", q.value.trim());
+    if(start.value) p.set("start", start.value);
+    if(end.value) p.set("end", end.value);
+    p.set("limit","500");
+    return p;
+  }
+
+  async function load(){
+    const p = buildParams();
+    csv.href = "/api/audit/export.csv?" + p.toString();
+    const r = await fetch("/api/audit?" + p.toString(), {credentials:"include"});
+    const data = await r.json();
+    const rows = (data.rows||[]);
+    tb.innerHTML = rows.map(x=>`
+      <tr>
+        <td>${x.id}</td>
+        <td>${x.created_at||""}</td>
+        <td><b>${x.action||""}</b></td>
+        <td>${x.module||""}</td>
+        <td>${x.record_id||""}</td>
+        <td>${x.user_id||""}</td>
+        <td>${x.ip_address||""}</td>
+        <td style="max-width:420px;white-space:pre-wrap;">${(x.details||"").toString().slice(0,600)}</td>
+      </tr>
+    `).join("");
+  }
+
+  btn.addEventListener("click", load);
+  await load();
+})();
+</script>
+{% endblock %}

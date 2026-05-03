@@ -1,0 +1,91 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Control documental de Trámites</h1>
+    <div class="sub">Vista administrativa tipo base de datos / Excel para revisar por estación qué documentos existen, cuáles faltan y descargar los archivos.</div>
+  </div>
+  <div class="formactions">
+    <a class="btn ghost" href="/admin/tramites">Volver a Trámites</a>
+    <a class="btn ghost" href="/api/tramites/control-documental/export.csv">Exportar CSV</a>
+  </div>
+</div>
+
+<div class="grid cols-4">
+  <section class="card kpi"><div><div class="l">Estaciones</div><div id="kStations" class="v">0</div></div><span class="tag ok">Consulting</span></section>
+  <section class="card kpi"><div><div class="l">Documentos listados</div><div id="kDocs" class="v">0</div></div><span class="tag">Matriz</span></section>
+  <section class="card kpi"><div><div class="l">Con archivo</div><div id="kFiles" class="v">0</div></div><span class="tag ok">Descargables</span></section>
+  <section class="card kpi"><div><div class="l">Faltantes obligatorios</div><div id="kMissing" class="v">0</div></div><span class="tag bad">Seguimiento</span></section>
+</div>
+
+<section class="card" style="margin-top:14px;">
+  <div class="formrow">
+    <div><label>Buscar</label><input id="q" class="input" placeholder="Estación, documento, estatus o notas" oninput="refresh()"/></div>
+    <div><label>Estación</label><select id="fltStation" onchange="refresh()"></select></div>
+  </div>
+</section>
+
+<section class="card" style="margin-top:14px;">
+  <div class="pagehead" style="margin-bottom:12px;align-items:center;">
+    <div>
+      <div class="h1" style="font-size:18px;">Resumen por estación</div>
+      <div class="sub">Avance general del expediente y faltantes obligatorios por estación.</div>
+    </div>
+  </div>
+  <div id="stationCards" class="summary-grid"></div>
+</section>
+
+<section class="card" style="margin-top:14px;">
+  <div class="pagehead" style="margin-bottom:12px;align-items:center;">
+    <div>
+      <div class="h1" style="font-size:18px;">Tabla maestra documental</div>
+      <div class="sub">Aquí el administrador puede ver qué documento es, su estatus, si tiene archivo y descargarlo.</div>
+    </div>
+  </div>
+  <div class="tablewrap excel-wrap">
+    <table class="excel-table">
+      <thead>
+        <tr>
+          <th>Estación</th>
+          <th>Avance</th>
+          <th>Documento</th>
+          <th>Folio</th>
+          <th>Estatus</th>
+          <th>Emisión</th>
+          <th>Vigencia</th>
+          <th>Obligatorio</th>
+          <th>Versiones</th>
+          <th>Archivo</th>
+          <th>Notas</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block head %}
+<style>
+  .excel-wrap{overflow:auto}.excel-table{min-width:1500px}.excel-table td{padding:8px;vertical-align:top}
+  .summary-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+  .s-card{padding:14px;border-radius:18px;border:1px solid rgba(148,163,184,.18);background:rgba(255,255,255,.85)}
+  .s-card h3{margin:0 0 6px;font-size:16px}.s-card .meta{color:#64748b;font-size:13px}
+  .progress-line{height:10px;border-radius:999px;background:rgba(148,163,184,.16);overflow:hidden;margin-top:10px}.progress-line span{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a)}
+  .status-pill{display:inline-flex;padding:6px 10px;border-radius:999px;font-size:12px;font-weight:800}
+  .status-faltante{background:rgba(239,68,68,.12);color:#b91c1c}.status-vigente{background:rgba(22,163,74,.12);color:#166534}.status-proximo_a_vencer{background:rgba(245,158,11,.12);color:#b45309}.status-vencido{background:rgba(220,38,38,.12);color:#991b1b}.status-en_revision{background:rgba(59,130,246,.12);color:#1d4ed8}.status-no_aplica{background:rgba(107,114,128,.12);color:#374151}
+  @media (max-width: 980px){ .summary-grid{grid-template-columns:1fr 1fr} }
+  @media (max-width: 640px){ .summary-grid{grid-template-columns:1fr} }
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let META = {stations:[]};
+function stationOptions(selected=''){ return '<option value="">Todas las estaciones</option>' + (META.stations||[]).map(s=>`<option value="${s.id}" ${String(selected)==String(s.id)?'selected':''}>${_esc(s.code)} · ${_esc(s.name)}</option>`).join(''); }
+function stationCard(s){ return `<div class="s-card"><h3>${_esc(s.station_code)} · ${_esc(s.station_name)}</h3><div class="meta">Avance documental: <b>${_esc(s.completion_pct)}%</b> · Faltantes obligatorios: <b>${_esc(s.required_missing)}</b></div><div class="progress-line"><span style="width:${Number(s.completion_pct)||0}%"></span></div></div>`; }
+function rowTemplate(r){ const link = r.file_url ? `<a href="${_esc(r.file_url)}" target="_blank" rel="noopener">Ver / descargar</a>` : '<span class="help">Sin archivo</span>'; return `<tr><td><b>${_esc(r.station_code)}</b><div class="help">${_esc(r.station_name)}</div></td><td><b>${_esc(r.completion_pct)}%</b></td><td>${_esc(r.document_title||'')}</td><td>${_esc(r.folio||'')}</td><td><span class="status-pill status-${_esc(r.status||'faltante')}">${_esc(String(r.status||'').replaceAll('_',' '))}</span></td><td>${_esc(r.issue_date||'')}</td><td>${_esc(r.expiry_date||'')}</td><td>${r.is_required ? 'Sí' : 'No'}</td><td>${_esc(r.version_count||0)}</td><td>${link}</td><td>${_esc(r.notes||'')}</td></tr>`; }
+async function refresh(){ const qs = new URLSearchParams({q:q.value||'', station_id:fltStation.value||''}).toString(); const r = await api('/api/tramites/control-documental?'+qs); META.stations = r.stations || []; if(!fltStation.dataset.ready){ fltStation.innerHTML = stationOptions(''); fltStation.dataset.ready = '1'; } kStations.textContent = r.totals.stations || 0; kDocs.textContent = (r.rows||[]).length; kFiles.textContent = (r.rows||[]).filter(x=>x.file_url).length; kMissing.textContent = r.totals.required_missing || 0; stationCards.innerHTML = (r.station_cards||[]).map(stationCard).join('') || '<div class="help">Sin estaciones.</div>'; tbody.innerHTML = (r.rows||[]).map(rowTemplate).join('') || '<tr><td colspan="11" class="help">Sin resultados.</td></tr>'; }
+document.addEventListener('DOMContentLoaded', refresh);
+</script>
+{% endblock %}

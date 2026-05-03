@@ -1,0 +1,40 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: worklog_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: worklog
+      POSTGRES_USER: worklog
+      POSTGRES_PASSWORD: worklog_cambiar
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U worklog -d worklog"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - worklog_pgdata:/var/lib/postgresql/data
+
+  worklog:
+    build: .
+    container_name: worklog_app
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "5000:5000"
+    volumes:
+      - worklog_uploads:/app/uploads
+      - worklog_logs:/app/logs
+      - worklog_backups:/app/backups
+      - worklog_data:/app/data
+
+volumes:
+  worklog_uploads:
+  worklog_logs:
+  worklog_backups:
+  worklog_data:
+  worklog_pgdata:

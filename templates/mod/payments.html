@@ -1,0 +1,66 @@
+{% extends "layout.html" %}
+{% block head %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Mensualidad</h1>
+    <div class="sub">Envío de comprobante, revisión y entrega de factura.</div>
+  </div>
+</div>
+<div class="card" data-export-bar style="margin-top:12px;" data-admin-auditor-only hidden>
+  <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;">
+    <div><b>Exportación</b> <span class="help">Descarga de datos para auditoría/analítica.</span></div>
+    <div style="display:flex;gap:10px;">
+      <a class="btn" href="/api/export/payments.csv">CSV</a>
+      <a class="btn" href="/api/export/payments.xlsx">Excel</a>
+    </div>
+  </div>
+</div>
+
+
+<div class="grid cols-2">
+  <div class="card">
+    <div style="font-weight:900;">Enviar comprobante de pago</div>
+    <div class="help">Si la estación está en modo vista, aquí es donde puede reactivarse enviando su comprobante.</div>
+    <form id="payProof" style="display:grid;gap:10px;margin-top:10px;">
+      <div class="formrow">
+        <div><div class="help">Inicio periodo</div><input class="input" name="period_start" placeholder="2026-02-01"></div>
+        <div><div class="help">Fin periodo</div><input class="input" name="period_end" placeholder="2026-02-29"></div>
+      </div>
+      <div><div class="help">Comprobante (foto/PDF)</div><input class="input" type="file" name="proof" required></div>
+      <div class="formactions"><button class="btn primary" type="submit">Enviar</button></div>
+      <div id="payErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+    </form>
+
+    <div data-admin-only hidden style="margin-top:14px;">
+      <div style="font-weight:900;">Revisión (admin/contador)</div>
+      <div class="help">Valida y adjunta la factura generada externamente.</div>
+      <form id="payReview" style="display:grid;gap:10px;margin-top:10px;">
+        <div class="formrow">
+          <div><div class="help">ID pago</div><input class="input" name="payment_id" placeholder="Ej. 10" required></div>
+          <div>
+            <div class="help">Acción</div>
+            <select name="status">
+              <option value="validated">Validar</option>
+              <option value="rejected">Rechazar</option>
+            </select>
+          </div>
+        </div>
+        <div><div class="help">Factura (solo si validas)</div><input class="input" type="file" name="invoice"></div>
+        <div class="formactions"><button class="btn primary" type="submit">Aplicar</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;">Historial</div>
+    <div class="tablewrap" style="margin-top:10px;">
+      <table><thead><tr><th>ID</th><th>Fecha</th><th>Estación</th><th>Status</th><th>Comprobante</th><th>Factura</th></tr></thead><tbody id="payT"></tbody></table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/payments.js"></script>
+{% endblock %}

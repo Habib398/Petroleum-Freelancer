@@ -1,0 +1,210 @@
+
+/* Unified hub styles for SGM / SASISOPA and related pages */
+:root{
+  --hub-bg1: rgba(34,197,94,.12);
+  --hub-bg2: rgba(234,179,8,.10);
+  --hub-card: rgba(255,255,255,.86);
+  --hub-card2: rgba(255,255,255,.72);
+  --hub-stroke: rgba(15,23,42,.10);
+  --hub-shadow: 0 14px 30px rgba(2,6,23,.10);
+  --hub-shadow2: 0 10px 22px rgba(2,6,23,.07);
+}
+
+body.module{
+  margin:0;
+  min-height:100vh;
+  font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+  background:
+    radial-gradient(900px 520px at 15% 0%, var(--hub-bg1), transparent 55%),
+    radial-gradient(780px 520px at 90% 10%, var(--hub-bg2), transparent 60%),
+    linear-gradient(180deg,#ffffff 0%,#f8fafc 55%,#ffffff 100%);
+  color: var(--hme-text);
+}
+
+.hub-topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 18px;
+  position:sticky;top:0;z-index:20;
+  backdrop-filter: blur(10px);
+  background:rgba(255,255,255,.72);
+  border-bottom:1px solid rgba(15,23,42,.06);
+}
+.hub-brand{display:flex;gap:12px;align-items:center}
+.hub-brand img{width:42px;height:42px;border-radius:12px;box-shadow:0 8px 18px rgba(2,6,23,.10);background:#fff;object-fit:contain}
+.hub-brand .kicker{font-weight:900;font-size:12px;letter-spacing:.14em;color:rgba(31,41,55,.65)}
+.hub-brand .title{font-weight:1000;font-size:16px;letter-spacing:.02em}
+
+.hub-actions{display:flex;gap:10px;align-items:center}
+.hub-actions .chip{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 12px;border-radius:999px;
+  border:1px solid rgba(15,23,42,.10);
+  background:rgba(255,255,255,.85);
+  font-weight:900;
+}
+.hub-actions a{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 14px;border-radius:999px;
+  text-decoration:none;
+  border:1px solid rgba(15,23,42,.12);
+  background:rgba(255,255,255,.90);
+  color: var(--hme-text);
+  font-weight:900;
+}
+.hub-actions a.primary{
+  background: linear-gradient(180deg, var(--hme-green) 0%, var(--hme-green-dark) 100%);
+  color:#fff;border-color: transparent;
+  box-shadow: 0 14px 30px rgba(97,139,46,.25);
+}
+.hub-actions a:hover{transform: translateY(-1px)}
+.hub-actions a:active{transform: translateY(0px)}
+
+.hub-shell{max-width:1180px;margin:0 auto;padding:22px 18px 40px}
+.hub-header{
+  display:flex;align-items:flex-end;justify-content:space-between;gap:12px;
+  margin:8px 0 18px;
+}
+.hub-header h1{margin:0;font-size: clamp(28px, 3vw, 44px);letter-spacing:.01em}
+.hub-header .sub{color: var(--hme-text-soft);font-weight:700;max-width:64ch}
+
+.hub-grid{
+  display:grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 14px;
+}
+.hub-card{
+  grid-column: span 4;
+  position:relative;
+  border:1px solid var(--hub-stroke);
+  border-radius: 18px;
+  background: var(--hub-card);
+  box-shadow: var(--hub-shadow2);
+  overflow:hidden;
+}
+@media (max-width: 980px){ .hub-card{grid-column: span 6;} }
+@media (max-width: 640px){ .hub-card{grid-column: span 12;} }
+
+.hub-card a{
+  display:flex;gap:14px;align-items:flex-start;
+  padding:16px 16px 14px;
+  text-decoration:none;color:inherit;
+}
+.hub-card:hover{transform: translateY(-2px); box-shadow: var(--hub-shadow);}
+.hub-card:active{transform: translateY(0px);}
+.hub-ico{
+  width:46px;height:46px;border-radius:14px;
+  display:grid;place-items:center;
+  background: rgba(134,184,33,.12);
+  border:1px solid rgba(134,184,33,.25);
+  flex: 0 0 auto;
+}
+.brand-petroleum .hub-ico{
+  background: rgba(234,179,8,.14);
+  border-color: rgba(234,179,8,.24);
+}
+.hub-ico svg{width:24px;height:24px;stroke: currentColor;fill:none;stroke-width:2}
+.hub-card h3{margin:0;font-size:16px;font-weight:1000;letter-spacing:.01em}
+.hub-card p{margin:6px 0 0;color: var(--hme-text-soft);font-weight:650;line-height:1.35}
+.hub-meta{
+  display:flex;gap:8px;flex-wrap:wrap;margin-top:10px
+}
+.badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:6px 10px;border-radius:999px;
+  font-weight:900;font-size:12px;
+  border:1px solid rgba(15,23,42,.10);
+  background: rgba(255,255,255,.70);
+}
+
+.hub-split{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+@media (max-width: 980px){ .hub-split{grid-template-columns:1fr;} }
+
+.panel{
+  border:1px solid var(--hub-stroke);
+  background: rgba(255,255,255,.88);
+  border-radius: 18px;
+  box-shadow: var(--hub-shadow2);
+  overflow:hidden;
+}
+.panel .hd{
+  padding:14px 16px;
+  border-bottom:1px solid rgba(15,23,42,.06);
+  display:flex;align-items:center;justify-content:space-between;gap:12px;
+  background: rgba(255,255,255,.65);
+}
+.panel .hd h2{margin:0;font-size:13px;letter-spacing:.16em;font-weight:1000;color:rgba(31,41,55,.78)}
+.panel .bd{padding:16px}
+
+.toolbar{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;
+  margin: 14px 0 0;
+}
+.tool-left{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.tool-right{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.btn{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 12px;border-radius:999px;
+  border:1px solid rgba(15,23,42,.12);
+  background: rgba(255,255,255,.90);
+  text-decoration:none;color: var(--hme-text);
+  font-weight:900;
+}
+.btn.primary{
+  background: linear-gradient(180deg, var(--hme-green) 0%, var(--hme-green-dark) 100%);
+  color:#fff;border-color: transparent;
+  box-shadow: 0 14px 30px rgba(97,139,46,.22);
+}
+.brand-petroleum .btn.primary{
+  background: linear-gradient(180deg, #F4C84A 0%, #C59A1B 100%);
+  box-shadow: 0 14px 30px rgba(197,154,27,.22);
+}
+.btn.ghost{background: rgba(255,255,255,.65)}
+.btn:hover{transform: translateY(-1px)}
+.btn:active{transform: translateY(0px)}
+
+.empty{
+  padding: 22px;
+  border:1px dashed rgba(15,23,42,.18);
+  border-radius: 16px;
+  background: rgba(255,255,255,.55);
+}
+.empty .t{font-weight:1000}
+.empty .d{margin-top:6px;color: var(--hme-text-soft);font-weight:650}
+
+.table{
+  width:100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.table th,.table td{padding:10px 10px;border-bottom:1px solid rgba(15,23,42,.08);text-align:left}
+.table th{font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:rgba(31,41,55,.70)}
+
+/* Mobile: make tables scroll instead of breaking layout */
+@media (max-width: 740px){
+  .table{display:block;overflow-x:auto;white-space:nowrap;-webkit-overflow-scrolling:touch;}
+  .btn{padding:10px 12px;}
+}
+
+
+.pill{display:inline-block;padding:4px 10px;border-radius:999px;font-weight:800;font-size:12px;line-height:1;border:1px solid var(--hme-border);}
+.pill-consulting{background:rgba(24,160,112,.14);color:var(--hme-text);border-color:rgba(24,160,112,.35);}
+.pill-petroleum{background:rgba(200,162,74,.16);color:var(--hme-text);border-color:rgba(200,162,74,.38);}
+
+
+/* ===== Modules polish pass ===== */
+.hub-topbar{box-shadow:0 14px 28px rgba(15,23,42,.05)}
+.hub-header h1{letter-spacing:-.02em}
+.hub-header .sub{line-height:1.55}
+.hub-card,.panel{
+  backdrop-filter: blur(8px);
+  box-shadow:0 18px 34px rgba(15,23,42,.08);
+}
+.hub-card:hover,.panel:hover{box-shadow:0 24px 40px rgba(15,23,42,.11)}
+.hub-card h3{font-size:17px}
+.hub-card p{line-height:1.45}
+.hub-actions a,.btn{min-height:42px}
+.table th,.table td{line-height:1.45}

@@ -1,0 +1,60 @@
+{% extends "layout.html" %}
+{% block head %}
+<style>
+.cardx{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,.05)}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px;vertical-align:top}.field{display:grid;gap:6px}.field textarea,.field input{padding:10px 12px;border-radius:12px;border:1px solid #cbd5e1}.btnx{display:inline-flex;padding:8px 12px;border-radius:10px;background:#0f766e;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}.btnx.red{background:#991b1b}.btnx.alt{background:#0f172a}.muted{color:#64748b}.pill{display:inline-flex;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#ecfeff;color:#0f766e}
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+    <div>
+      <h1 style="margin:0 0 6px">Revisión admin</h1>
+      <div class="muted">Solo los administradores pueden abrir y descargar los PDFs generados por operadores.</div>
+    </div>
+    <div style="display:flex;gap:10px"><a class="btnx alt" href="/admin/sasisopa/docs">Dashboard</a><a class="btnx" href="/admin/sasisopa/docs/templates">Plantillas</a></div>
+  </div>
+</div>
+<div class="cardx" style="margin-top:16px">
+  <table class="table">
+    <thead><tr><th>Documento</th><th>Envío</th><th>PDF</th><th>Revisión</th><th>Desbloqueo</th></tr></thead>
+    <tbody>
+      {% for row in submissions %}
+      <tr>
+        <td>
+          <div style="font-weight:800">{{ row.requirement_title }}</div>
+          <div class="muted">{{ row.template_name }}{% if row.station_name %} • {{ row.station_name }}{% endif %}</div>
+          <div class="muted">Operador: {{ row.operator_name or ('ID ' ~ row.operator_id) }}</div>
+        </td>
+        <td>
+          <div>Intento {{ row.attempt_no }}</div>
+          <div class="muted">{{ row.submitted_at }}</div>
+          <div><span class="pill">{{ row.review_status }}</span></div>
+          {% if row.next_auto_reopen_at %}<div class="muted">Reintento auto: {{ row.next_auto_reopen_at[:10] }}</div>{% endif %}
+        </td>
+        <td><a href="/admin/sasisopa/docs/submissions/{{ row.id }}/download">Descargar PDF</a></td>
+        <td>
+          <form class="field" action="/admin/sasisopa/docs/submissions/{{ row.id }}/review" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <textarea name="comment" placeholder="Comentario de revisión"></textarea>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btnx" name="status" value="CORRECT" type="submit">Correcto</button>
+              <button class="btnx red" name="status" value="WRONG" type="submit">Incorrecto</button>
+            </div>
+          </form>
+        </td>
+        <td>
+          <form class="field" action="/admin/sasisopa/docs/requirements/{{ row.requirement_id }}/unlock" method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="operator_id" value="{{ row.operator_id }}">
+            <input name="reason" value="Desbloqueo por revisión / fecha vencida">
+            <button class="btnx alt" type="submit">Desbloquear</button>
+          </form>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="5" class="muted">Aún no hay envíos para revisar.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

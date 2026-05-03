@@ -1,0 +1,148 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Configuración</h1>
+    <div class="sub">Mantén el estilo original del sistema. Desde aquí ajustas logos, nombres globales, colores, orden, visibilidad y parámetros técnicos.</div>
+  </div>
+</div>
+<div class="grid cols-3" style="margin-top:14px;">
+  <div class="card"><div class="help">Empresa</div><select id="brandPick" class="input"><option value="consulting">Consulting</option><option value="petroleum">Petroleum</option></select></div>
+  <div class="card"><div class="help">Logo principal</div><input id="logoFile" type="file" accept="image/*"><button class="btn ghost" style="margin-top:10px;" id="btnLogo">Subir logo</button></div>
+  <div class="card"><div class="help">Scheduler real</div><div id="schedulerState" style="font-weight:900;margin-top:8px;">—</div><div class="help" style="margin-top:8px;">El scheduler de runtime ejecuta recordatorios sin depender solo de navegación.</div></div>
+</div>
+<div class="grid cols-2" style="margin-top:14px;">
+  <div class="card">
+    <div class="help">Normativas globales Petroleum</div>
+    <div class="help" style="margin-top:8px;">Aquí puedes cambiar nombre, etiqueta corta, color, orden y visibilidad. Lo que guardes aquí se refleja en portada, tarjetas de cumplimiento, control de vigencias, alertas y listados de Petroleum.</div>
+    <div class="grid cols-1" style="margin-top:12px;gap:12px;">
+      <div class="card" style="padding:14px;border:1px solid rgba(148,163,184,.18);">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+          <strong>Documento 1</strong>
+          <label class="help" style="display:flex;gap:8px;align-items:center;"><input id="norms_nom005_enabled" type="checkbox"> Visible en el sistema</label>
+        </div>
+        <div class="grid cols-2" style="margin-top:10px;gap:12px;">
+          <div><label class="help">Título</label><input id="norms_nom005_title" class="input" placeholder="Ej. NOM-005-ASEA-2027"></div>
+          <div><label class="help">Etiqueta corta</label><input id="norms_nom005_badge" class="input" placeholder="Ej. NOM"></div>
+          <div><label class="help">Ícono</label><input id="norms_nom005_icon" class="input" maxlength="8" placeholder="Ej. ⛽"></div>
+          <div><label class="help">Color</label><input id="norms_nom005_color" class="input" type="color" value="#22C55E"></div>
+          <div><label class="help">Orden</label><input id="norms_nom005_order" class="input" type="number" min="1" value="10"></div>
+          <div style="grid-column:1/-1;"><label class="help">Texto descriptivo</label><textarea id="norms_nom005_description" class="input" rows="2" placeholder="Describe en una línea el alcance del documento."></textarea></div>
+        </div>
+      </div>
+      <div class="card" style="padding:14px;border:1px solid rgba(148,163,184,.18);">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+          <strong>Documento 2</strong>
+          <label class="help" style="display:flex;gap:8px;align-items:center;"><input id="norms_nom016_enabled" type="checkbox"> Visible en el sistema</label>
+        </div>
+        <div class="grid cols-2" style="margin-top:10px;gap:12px;">
+          <div><label class="help">Título</label><input id="norms_nom016_title" class="input" placeholder="Ej. NOM-016-CRE-2027"></div>
+          <div><label class="help">Etiqueta corta</label><input id="norms_nom016_badge" class="input" placeholder="Ej. NOM"></div>
+          <div><label class="help">Ícono</label><input id="norms_nom016_icon" class="input" maxlength="8" placeholder="Ej. 🧪"></div>
+          <div><label class="help">Color</label><input id="norms_nom016_color" class="input" type="color" value="#EF4444"></div>
+          <div><label class="help">Orden</label><input id="norms_nom016_order" class="input" type="number" min="1" value="20"></div>
+          <div style="grid-column:1/-1;"><label class="help">Texto descriptivo</label><textarea id="norms_nom016_description" class="input" rows="2" placeholder="Describe en una línea el alcance del documento."></textarea></div>
+        </div>
+      </div>
+      <div class="card" style="padding:14px;border:1px solid rgba(148,163,184,.18);">
+        <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;">
+          <strong>Documento 3</strong>
+          <label class="help" style="display:flex;gap:8px;align-items:center;"><input id="norms_anexo3031_enabled" type="checkbox"> Visible en el sistema</label>
+        </div>
+        <div class="grid cols-2" style="margin-top:10px;gap:12px;">
+          <div><label class="help">Título</label><input id="norms_anexo3031_title" class="input" placeholder="Ej. Anexo 30-31 2027"></div>
+          <div><label class="help">Etiqueta corta</label><input id="norms_anexo3031_badge" class="input" placeholder="Ej. ANEXO"></div>
+          <div><label class="help">Ícono</label><input id="norms_anexo3031_icon" class="input" maxlength="8" placeholder="Ej. 📁"></div>
+          <div><label class="help">Color</label><input id="norms_anexo3031_color" class="input" type="color" value="#111827"></div>
+          <div><label class="help">Orden</label><input id="norms_anexo3031_order" class="input" type="number" min="1" value="30"></div>
+          <div style="grid-column:1/-1;"><label class="help">Texto descriptivo</label><textarea id="norms_anexo3031_description" class="input" rows="2" placeholder="Describe en una línea el alcance del documento."></textarea></div>
+        </div>
+      </div>
+      <div style="grid-column:1/-1;">
+        <div id="normPreview" class="help" style="margin-top:8px;font-weight:800;color:var(--hme-text,#0f172a);">Vista previa: —</div>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="help">Correo saliente</div>
+    <div class="help" style="margin-top:8px;">Recomendado: AWS SES con rol de IAM del servidor. SMTP queda disponible solo como respaldo o para pruebas locales.</div>
+    <div class="grid cols-2" style="margin-top:10px;">
+      <div><label class="help">Proveedor</label><select id="mail_provider" class="input"><option value="auto">Automático (SES y luego SMTP)</option><option value="ses">AWS SES</option><option value="smtp">SMTP</option></select></div>
+      <div><label class="help">Región SES</label><input id="ses_region" class="input" placeholder="Ej. us-east-1"></div>
+      <div><label class="help">Correo remitente SES</label><input id="ses_from" class="input" placeholder="Ej. cotizaciones@tudominio.com"></div>
+      <div><label class="help">Configuration Set SES</label><input id="ses_configuration_set" class="input" placeholder="Opcional"></div>
+      <div><label class="help">Host SMTP</label><input id="smtp_host" class="input"></div>
+      <div><label class="help">Puerto</label><input id="smtp_port" class="input"></div>
+      <div><label class="help">Usuario</label><input id="smtp_user" class="input"></div>
+      <div><label class="help">From</label><input id="smtp_from" class="input"></div>
+      <div class="cols-2" style="grid-column:1/-1;"><label class="help">Password</label><input id="smtp_pass" class="input" type="password"></div>
+      <div class="cols-2" style="grid-column:1/-1;"><label class="help">App URL</label><input id="app_url" class="input"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="help">Integraciones</div>
+    <div style="display:grid;gap:10px;margin-top:10px;">
+      <div><label class="help">Webhook WhatsApp</label><input id="whatsapp_webhook_url" class="input"></div>
+      <div class="help">Si llenas este webhook, las notificaciones también podrán enviarse hacia tu pasarela de WhatsApp.</div>
+      <div id="logoPreview" class="help">Sin logo personalizado.</div>
+    </div>
+  </div>
+</div>
+<div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+  <button class="btn primary" id="btnSave">Guardar configuración</button>
+  <button class="btn ghost" id="btnTestMail" type="button">Probar correo</button>
+  <span id="msg" class="help"></span>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const fields=['mail_provider','ses_region','ses_from','ses_configuration_set','smtp_host','smtp_port','smtp_user','smtp_pass','smtp_from','app_url','whatsapp_webhook_url','norms_nom005_title','norms_nom005_badge','norms_nom005_icon','norms_nom005_description','norms_nom005_color','norms_nom005_order','norms_nom005_enabled','norms_nom016_title','norms_nom016_badge','norms_nom016_icon','norms_nom016_description','norms_nom016_color','norms_nom016_order','norms_nom016_enabled','norms_anexo3031_title','norms_anexo3031_badge','norms_anexo3031_icon','norms_anexo3031_description','norms_anexo3031_color','norms_anexo3031_order','norms_anexo3031_enabled'];
+const checkboxFields=new Set(['norms_nom005_enabled','norms_nom016_enabled','norms_anexo3031_enabled']);
+let state={};
+function normRow(code, fallbackTitle, fallbackBadge, fallbackColor, fallbackOrder){
+  return {
+    code,
+    title:(document.getElementById(`norms_${code}_title`)?.value||fallbackTitle).trim(),
+    badge:(document.getElementById(`norms_${code}_badge`)?.value||fallbackBadge).trim(),
+    icon:(document.getElementById(`norms_${code}_icon`)?.value||'').trim(),
+    description:(document.getElementById(`norms_${code}_description`)?.value||'').trim(),
+    color:(document.getElementById(`norms_${code}_color`)?.value||fallbackColor).trim(),
+    order:Number(document.getElementById(`norms_${code}_order`)?.value||fallbackOrder),
+    enabled:!!document.getElementById(`norms_${code}_enabled`)?.checked
+  };
+}
+function renderNormPreview(){
+  const rows=[
+    normRow('nom005','NOM-005','NOM','#22C55E',10),
+    normRow('nom016','NOM-016','NOM','#EF4444',20),
+    normRow('anexo3031','Anexo 30-31','ANEXO','#111827',30)
+  ].sort((a,b)=>(a.order||0)-(b.order||0));
+  const visible=rows.filter(r=>r.enabled);
+  const box=document.getElementById('normPreview');
+  if(!box) return;
+  box.innerHTML = visible.length
+    ? 'Vista previa: ' + visible.map(r=>`<span style="display:inline-flex;align-items:flex-start;gap:8px;margin:0 14px 8px 0;"><span style="width:10px;height:10px;border-radius:999px;background:${r.color};display:inline-block;margin-top:7px;"></span><span><b>${r.icon||'•'} ${r.badge} · ${r.title}</b><br><span style="opacity:.82;">${r.description||'Sin texto descriptivo.'}</span></span></span>`).join('')
+    : 'Vista previa: no hay documentos visibles en este momento.';
+}
+function fill(brand){
+  const s=(state[brand]||{});
+  fields.forEach(k=>{
+    const el=document.getElementById(k);
+    if(!el) return;
+    if(checkboxFields.has(k)){
+      const raw=String(s[k] ?? '1').toLowerCase();
+      el.checked = raw !== '0' && raw !== 'false';
+    } else {
+      el.value=s[k]||'';
+    }
+  });
+  document.getElementById('logoPreview').innerHTML = s.logo_path ? 'Logo cargado: <a href="/uploads/'+s.logo_path+'" target="_blank" rel="noopener">ver</a>' : 'Sin logo personalizado.';
+  renderNormPreview();
+}
+async function load(){const r=await api('/api/admin/setup-wizard'); state=r.brands||{}; document.getElementById('schedulerState').textContent = r.runtime_scheduler_enabled ? 'Activo' : 'No activo'; fill(document.getElementById('brandPick').value);} 
+async function save(){const brand=document.getElementById('brandPick').value; const settings={}; fields.forEach(k=>{ const el=document.getElementById(k); if(!el) return; settings[k]=checkboxFields.has(k) ? (el.checked ? '1' : '0') : (el.value||''); }); await api('/api/admin/setup-wizard',{method:'POST',body:JSON.stringify({brand,settings})}); document.getElementById('msg').textContent='Configuración guardada.'; await load();}
+async function uploadLogo(){const brand=document.getElementById('brandPick').value; const f=document.getElementById('logoFile').files[0]; if(!f){document.getElementById('msg').textContent='Selecciona una imagen.'; return;} const fd=new FormData(); fd.append('brand',brand); fd.append('variant','logo_path'); fd.append('file',f); await api('/api/admin/branding/logo',{method:'POST',body:fd,headers:{}}); document.getElementById('msg').textContent='Logo actualizado.'; await load();}
+async function testMail(){const brand=document.getElementById('brandPick').value; document.getElementById('msg').textContent='Enviando prueba de correo...'; const res=await api('/api/admin/setup-wizard/test-mail',{method:'POST',body:JSON.stringify({brand})}); document.getElementById('msg').textContent = res?.ok ? `Correo de prueba enviado a: ${(res.recipients||[]).join(', ')}` : `${res?.message || 'No se pudo enviar la prueba de correo.'}${res?.detail ? ' [' + res.detail + ']' : ''}`;}
+document.getElementById('brandPick').addEventListener('change',e=>fill(e.target.value)); fields.forEach(k=>document.getElementById(k)?.addEventListener(checkboxFields.has(k)?'change':'input', renderNormPreview)); document.getElementById('btnSave').addEventListener('click',()=>save().catch(()=>document.getElementById('msg').textContent='No se pudo guardar.')); document.getElementById('btnLogo').addEventListener('click',()=>uploadLogo().catch(()=>document.getElementById('msg').textContent='No se pudo subir el logo.')); document.getElementById('btnTestMail')?.addEventListener('click',()=>testMail().catch(()=>document.getElementById('msg').textContent='No se pudo enviar la prueba de correo.')); load();
+</script>
+{% endblock %}

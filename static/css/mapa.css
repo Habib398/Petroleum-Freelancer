@@ -1,0 +1,5 @@
+/* mapa.css – Estilos específicos del módulo de mapa nacional */
+
+.select{padding:10px 12px;border-radius:12px;border:1px solid var(--hme-border);background:var(--hme-card);color:var(--hme-text);font-weight:800;}
+.select:focus{outline:none;box-shadow:0 0 0 4px rgba(99,102,241,.22);border-color:rgba(99,102,241,.55);}
+#map{height:calc(100vh - 64px - 44px); min-height:560px; border-radius:var(--radius); overflow:hidden; border:1px solid var(--hme-border); box-shadow:var(--shadow); background:white;}

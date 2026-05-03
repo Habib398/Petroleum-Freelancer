@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="csrf-token" content="{{ csrf_token }}"/>
+  <title>{% block title %}Unified System{% endblock %}</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="/static/css/theme-hme.css">
+  <link rel="stylesheet" href="/static/css/gateway.css">
+  <link rel="stylesheet" href="/static/css/chatbot.css">
+</head>
+<body class="public">
+  {% block body %}{% endblock %}
+
+  <!-- Chatbot (público) -->
+  <div id="chatbotPanel" class="chatbot-panel" role="dialog" aria-label="Asistente de información">
+    <div class="chatbot-header">
+      <div>
+        <div class="title">Asistente</div>
+        <div class="sub">Info de empresas y accesos</div>
+      </div>
+      <button id="chatbotClose" class="chatbot-close" type="button" aria-label="Cerrar">✕</button>
+    </div>
+    <div id="chatbotBody" class="chatbot-body"></div>
+    <div class="chatbot-footer">
+      <input id="chatbotInput" class="chatbot-input" type="text" placeholder="Escribe: Consulting, Petroleum, acceso..." autocomplete="off">
+      <button id="chatbotSend" class="chatbot-send" type="button">Enviar</button>
+    </div>
+  </div>
+
+  <button id="chatbotFab" class="chatbot-fab" type="button" aria-label="Abrir asistente" aria-expanded="false">
+    <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M20 12c0 4.418-3.582 8-8 8-1.06 0-2.07-.206-2.994-.58L4 20l.62-4.006A7.964 7.964 0 0 1 4 12c0-4.418 3.582-8 8-8s8 3.582 8 8Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+      <path d="M8 12h.01M12 12h.01M16 12h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </svg>
+  </button>
+  <script src="/static/js/chatbot.js"></script>
+
+</body>
+</html>

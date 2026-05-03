@@ -1,0 +1,57 @@
+{% extends "layout.html" %}
+{% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Analíticas</h1>
+    <div class="sub">Litros recibidos, estados de estaciones y alertas.</div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="grid cols-4">
+    <div>
+      <div class="help">Estación</div>
+      <select id="anStation" class="input"></select>
+    </div>
+    <div>
+      <div class="help">Desde</div>
+      <input id="anFrom" type="date" class="input"/>
+    </div>
+    <div>
+      <div class="help">Hasta</div>
+      <input id="anTo" type="date" class="input"/>
+    </div>
+    <div>
+      <div class="help">Agrupar</div>
+      <select id="anGroup" class="input">
+        <option value="day">Día</option>
+        <option value="month">Mes</option>
+      </select>
+    </div>
+  </div>
+  <div class="formactions" style="margin-top:12px;">
+    <button id="anRefresh" class="btn primary">Actualizar</button>
+    <a id="anExportCsv" class="btn" style="text-decoration:none;">Exportar CSV</a>
+    <a id="anExportXlsx" class="btn" style="text-decoration:none;">Exportar Excel</a>
+  </div>
+</div>
+
+<div class="grid cols-2" style="margin-top:14px;">
+  <div class="card">
+    <div style="font-weight:900;">Litros recibidos</div>
+    <div class="help">Por tipo de combustible.</div>
+    <canvas id="litersChart" style="width:100%;height:320px;"></canvas>
+  </div>
+  <div class="card">
+    <div style="font-weight:900;">Estado general</div>
+    <div class="help">Mensualidad y alertas.</div>
+    <canvas id="statusChart" style="width:100%;height:320px;"></canvas>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/analytics.js"></script>
+{% endblock %}

@@ -1,0 +1,12 @@
+Se ajustó el correo de cotización pública para que salga más profesional.
+
+Cambios aplicados:
+- Asunto con formato: "Nueva cotización recibida · FOLIO · SERVICIO"
+- Cuerpo HTML corporativo con bloques de información
+- Conserva versión de texto plano como respaldo
+- Mantiene el PDF adjunto en el correo interno
+- El flujo sigue enviando solo a los correos internos configurados
+
+Archivos modificados:
+- routes/pages.py
+- services/outbound.py

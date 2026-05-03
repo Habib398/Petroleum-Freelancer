@@ -1,0 +1,326 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>{{ 'Centro Petroleum' if brand=='petroleum' else 'Centro Consulting' }} • Admin</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/theme-hme.css"/>
+  <link rel="stylesheet" href="/static/css/admin_menu.css"/>
+  <style>
+    :root{
+      --menu-accent:{% if brand=='petroleum' %}#D6AF45{% else %}#22c55e{% endif %};
+      --menu-accent-soft:{% if brand=='petroleum' %}rgba(214,175,69,.14){% else %}rgba(34,197,94,.10){% endif %};
+      --menu-accent-line:{% if brand=='petroleum' %}rgba(214,175,69,.26){% else %}rgba(34,197,94,.20){% endif %};
+      --menu-surface:{% if brand=='petroleum' %}rgba(255,255,255,.06){% else %}rgba(255,255,255,.86){% endif %};
+      --menu-surface-2:{% if brand=='petroleum' %}rgba(255,255,255,.04){% else %}rgba(255,255,255,.74){% endif %};
+      --menu-text:{% if brand=='petroleum' %}#F8FAFC{% else %}#0f172a{% endif %};
+      --menu-soft:{% if brand=='petroleum' %}rgba(226,232,240,.74){% else %}#475569{% endif %};
+      --menu-border:{% if brand=='petroleum' %}rgba(255,255,255,.12){% else %}rgba(15,23,42,.10){% endif %};
+      --menu-shadow:{% if brand=='petroleum' %}0 28px 84px rgba(0,0,0,.42){% else %}0 22px 70px rgba(2,6,23,.12){% endif %};
+      --accent-text:{% if brand=='petroleum' %}#f5deb3{% else %}#166534{% endif %};
+      --body-bg:{% if brand=='petroleum' %}
+        radial-gradient(980px 560px at 12% 0%, rgba(214,175,69,.18), transparent 56%),
+        radial-gradient(860px 520px at 90% 10%, rgba(18,63,126,.30), transparent 58%),
+        linear-gradient(180deg,#040914 0%,#07111f 55%,#050b14 100%)
+      {% else %}
+        radial-gradient(920px 540px at 15% 0%, rgba(34,197,94,.14), transparent 55%),
+        radial-gradient(840px 520px at 90% 10%, rgba(234,179,8,.10), transparent 60%),
+        linear-gradient(180deg,#ffffff 0%,#f8fafc 55%,#ffffff 100%)
+      {% endif %};
+      --topbar-bg:{% if brand=='petroleum' %}rgba(4,9,20,.62){% else %}rgba(255,255,255,.72){% endif %};
+      --searchbar-bg:{% if brand=='petroleum' %}rgba(255,255,255,.08){% else %}rgba(255,255,255,.60){% endif %};
+      --searchbar-focus-bg:{% if brand=='petroleum' %}rgba(255,255,255,.12){% else %}rgba(255,255,255,.80){% endif %};
+      --search-icon-bg:url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="{% if brand=="petroleum" %}%23F8FAFC{% else %}%230f172a{% endif %}" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>') center/contain no-repeat;
+      --placeholder-color:{% if brand=='petroleum' %}rgba(248,250,252,.50){% else %}rgba(15,23,42,.40){% endif %};
+      --hero-bg:{% if brand=='petroleum' %}
+        linear-gradient(90deg, rgba(4,9,20,.90) 0%, rgba(4,9,20,.64) 52%, rgba(4,9,20,.86) 100%),
+        url('/static/img/petroleum-menu-concept.png') center/cover no-repeat
+      {% else %}
+        radial-gradient(800px 420px at 10% 0%, rgba(34,197,94,.18), transparent 56%),
+        radial-gradient(620px 360px at 90% 12%, rgba(234,179,8,.12), transparent 60%),
+        linear-gradient(135deg, rgba(255,255,255,.98), rgba(248,250,252,.92))
+      {% endif %};
+      --hero-opacity:{% if brand=='petroleum' %}.96{% else %}1{% endif %};
+      --stage-bg:{% if brand=='petroleum' %}
+        linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.01)),
+        radial-gradient(800px 420px at 50% 50%, rgba(214,175,69,.10), transparent 60%),
+        url('/static/img/petroleum-menu-concept.png') center/cover no-repeat
+      {% else %}
+        linear-gradient(180deg, rgba(255,255,255,.52), rgba(255,255,255,.08))
+      {% endif %};
+      --stage-opacity:{% if brand=='petroleum' %}.34{% else %}.88{% endif %};
+      --net-opacity:{% if brand=='petroleum' %}.92{% else %}.78{% endif %};
+      --hub-border-color:{% if brand=='petroleum' %}rgba(255,255,255,.16){% else %}rgba(15,23,42,.08){% endif %};
+      --hub-bg:{% if brand=='petroleum' %}
+        radial-gradient(circle at 50% 50%, rgba(6,17,33,.88), rgba(8,19,38,.70) 62%, rgba(6,12,24,.85)),
+        radial-gradient(circle at 60% 62%, rgba(214,175,69,.18), transparent 50%)
+      {% else %}
+        radial-gradient(circle at 35% 30%, rgba(255,255,255,.98), rgba(255,255,255,.78) 42%, rgba(2,6,23,.06) 78%),
+        radial-gradient(circle at 60% 66%, rgba(34,197,94,.18), transparent 52%)
+      {% endif %};
+      --hub-shadow:{% if brand=='petroleum' %}0 30px 96px rgba(0,0,0,.58){% else %}0 24px 80px rgba(2,6,23,.14){% endif %};
+      --hub-ring-col-1:{% if brand=='petroleum' %}rgba(214,175,69,.55){% else %}rgba(34,197,94,.50){% endif %};
+      --hub-ring-col-2:{% if brand=='petroleum' %}rgba(214,175,69,.35){% else %}rgba(34,197,94,.32){% endif %};
+      --hub-after-border:{% if brand=='petroleum' %}rgba(214,175,69,.22){% else %}rgba(34,197,94,.16){% endif %};
+      --hub-divider-color:{% if brand=='petroleum' %}rgba(214,175,69,.70){% else %}rgba(34,197,94,.60){% endif %};
+      --hub-breathe-shadow-0:{% if brand=='petroleum' %}0 30px 96px rgba(0,0,0,.58){% else %}0 24px 80px rgba(2,6,23,.14){% endif %};
+      --hub-breathe-shadow-50:{% if brand=='petroleum' %}0 42px 110px rgba(0,0,0,.70){% else %}0 36px 100px rgba(2,6,23,.24){% endif %};
+      --tile-hover-shadow:{% if brand=='petroleum' %}0 42px 110px rgba(0,0,0,.64){% else %}0 32px 88px rgba(2,6,23,.20){% endif %};
+      --strip-border:{% if brand=='petroleum' %}rgba(255,255,255,.08){% else %}rgba(15,23,42,.08){% endif %};
+    }
+  </style>
+
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge" aria-hidden="true">
+        <img src="{{ '/static/img/petroleum-logo.png' if brand=='petroleum' else '/static/img/logo.png' }}" alt="logo"/>
+      </div>
+      <div class="brand-copy">
+        <div class="eyebrow">{{ 'Petroleum' if brand=='petroleum' else 'Consulting' }} • Admin</div>
+        <div class="title">{{ 'Centro de control Petroleum' if brand=='petroleum' else 'Centro de módulos Consulting' }}</div>
+        <div class="subtitle">{{ 'Oil & Gas Inspection Unit · menú ejecutivo y operativo' if brand=='petroleum' else 'SGM, SASISOPA y control operativo administrativo' }}</div>
+      </div>
+    </div>
+
+    <div class="search-bar" id="searchBar" title="Buscar módulos, herramientas y documentos (Ctrl+K)">
+      <input type="text" class="search-input" id="searchInput" placeholder="Buscar módulos, herramientas..." autocomplete="off"/>
+    </div>
+
+    <div class="top-actions">
+      <div class="pill">{{ 'PETROLEUM' if brand=='petroleum' else 'CONSULTING' }}</div>
+      <div class="pill">UNIFIED SYSTEM</div>
+      <a class="icon-btn" href="/mod/notifications" title="Notificaciones">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+        <span id="notifDot" class="dot">0</span>
+      </a>
+      <a class="btn-link" href="/select-system">Cambiar sistema</a>
+      <a class="btn-link" href="/mod/dashboard">Dashboard</a>
+      <a class="btn-link" href="/logout">Cerrar sesión</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <article class="hero-card">
+        <div class="hero-body">
+          <div class="hero-kicker"><i></i>{{ 'Menú Petroleum' if brand=='petroleum' else 'Menú Consulting' }}</div>
+          <h1>{{ 'Inspección, cumplimiento y operación por estación.' if brand=='petroleum' else 'Supervisa módulos, revisión documental y operación.' }}</h1>
+          <p>
+            {% if brand=='petroleum' %}
+            Menú Petroleum simplificado: deja primero los módulos principales y mueve las herramientas secundarias a grupos más claros para que no se sienta saturado.
+            {% else %}
+            Centro Consulting simplificado: primero ves los módulos esenciales y abajo encuentras las herramientas secundarias agrupadas por función.
+            {% endif %}
+          </p>
+          <div class="hero-cta">
+            <a class="btn-link primary" href="{{ '/petroleum/normativas-control' if brand=='petroleum' else '/admin/sasisopa' }}">{{ 'Control de vigencias' if brand=='petroleum' else 'Abrir SASISOPA' }}</a>
+            <a class="btn-link" href="/admin/organigrama">Organigrama</a>
+            <a class="btn-link" href="{{ '/petroleum/normativas' if brand=='petroleum' else '/admin/inbox' }}">{{ 'Normativas por estación' if brand=='petroleum' else 'Inbox admin' }}</a>
+          </div>
+        </div>
+      </article>
+
+      <aside class="stats" aria-label="Resumen rápido">
+        <div class="stat">
+          <div>
+            <div class="k">Estaciones activas</div>
+            <div class="v" id="mStations">—</div>
+            <div class="hint">Inventario operativo disponible</div>
+          </div>
+          <div class="chip">Activas</div>
+        </div>
+        <div class="stat">
+          <div>
+            <div class="k">Alertas abiertas</div>
+            <div class="v" id="mAlerts">—</div>
+            <div class="hint">Incluye incidencias críticas</div>
+          </div>
+          <div class="chip">Riesgo</div>
+        </div>
+        <div class="stat">
+          <div>
+            <div class="k">Revisiones pendientes</div>
+            <div class="v" id="mReviews">—</div>
+            <div class="hint">Envíos pendientes por validar</div>
+          </div>
+          <div class="chip">Inbox</div>
+        </div>
+        <div class="stat">
+          <div>
+            <div class="k">Pendientes hoy</div>
+            <div class="v" id="mToday">—</div>
+            <div class="hint">Carga operativa del día</div>
+          </div>
+          <div class="chip">Hoy</div>
+        </div>
+      </aside>
+    </section>
+
+    <div class="quick-row">
+      {% if brand=='petroleum' %}
+      <a class="btn-link" href="/mod/activities">Agenda</a>
+      <a class="btn-link" href="/petroleum/normativas-control">Control de vigencias</a>
+      <a class="btn-link" href="/admin/stations">Estaciones</a>
+      <a class="btn-link" href="/admin/document-center">Centro documental</a>
+      <a class="btn-link" href="/admin/shared-folder">Carpeta compartida</a>
+      <a class="btn-link" href="/admin/pending-docs">Documentos por validar</a>
+      <a class="btn-link" href="#toolbox">+ Más herramientas</a>
+      {% else %}
+      <a class="btn-link" href="/admin/sgm">SGM</a>
+      <a class="btn-link" href="/admin/sasisopa">SASISOPA</a>
+      <a class="btn-link" href="/admin/stations">Estaciones</a>
+      <a class="btn-link" href="/admin/shared-folder">Carpeta compartida</a>
+      <a class="btn-link" href="/admin/pending-docs">Documentos por validar</a>
+      <a class="btn-link" href="#toolbox">+ Más herramientas</a>
+      {% endif %}
+    </div>
+
+    <div class="helper-strip" aria-label="Resumen de navegación">
+      <div class="helper-pill">Menos accesos visibles al mismo tiempo</div>
+      <div class="helper-pill">Módulos principales arriba</div>
+      <div class="helper-pill">Herramientas secundarias agrupadas</div>
+    </div>
+
+    <section class="stage" aria-label="Mapa de módulos principales">
+      <svg class="net" viewBox="0 0 1000 620" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="gLine" x1="0" x2="1">
+            <stop offset="0" stop-color="{% if brand=='petroleum' %}rgba(214,175,69,.34){% else %}rgba(34,197,94,.28){% endif %}"/>
+            <stop offset="1" stop-color="{% if brand=='petroleum' %}rgba(77,144,254,.22){% else %}rgba(234,179,8,.18){% endif %}"/>
+          </linearGradient>
+        </defs>
+        <path d="M156 112 C 290 174, 360 234, 430 300" fill="none" stroke="url(#gLine)" stroke-width="2.2" opacity=".7" stroke-dasharray="14 8" style="animation:dash-flow 3.6s linear infinite;"/>
+        <path d="M208 512 C 316 432, 374 380, 438 326" fill="none" stroke="url(#gLine)" stroke-width="2.2" opacity=".7" stroke-dasharray="14 8" style="animation:dash-flow 4.2s linear infinite;animation-delay:-1.2s;"/>
+        <path d="M844 112 C 710 174, 640 234, 570 300" fill="none" stroke="url(#gLine)" stroke-width="2.2" opacity=".7" stroke-dasharray="14 8" style="animation:dash-flow 3.9s linear infinite;animation-delay:-0.6s;"/>
+        <path d="M792 512 C 684 432, 626 380, 562 326" fill="none" stroke="url(#gLine)" stroke-width="2.2" opacity=".7" stroke-dasharray="14 8" style="animation:dash-flow 4.6s linear infinite;animation-delay:-2.1s;"/>
+      </svg>
+
+      <div class="hub" aria-hidden="true">
+        <div class="hub-inner">
+          <img class="hub-logo"
+            src="{{ '/static/img/petroleum-logo-full.png' if brand=='petroleum' else '/static/img/consulting-logo-full.png' }}"
+            alt="{{ 'Petroleum' if brand=='petroleum' else 'Consulting' }}">
+          <div class="hub-divider"></div>
+          <div class="hub-copy">{{ 'Módulos principales Petroleum' if brand=='petroleum' else 'Módulos principales Consulting' }}</div>
+        </div>
+      </div>
+
+      <div class="grid-mobile">
+        {% if brand=='petroleum' %}
+        <a class="tile pos-lt" href="/mod/activities">
+          <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M8 3v3M16 3v3" stroke-linecap="round"/><path d="M4 7h16" stroke-linecap="round"/><path d="M6 11h4M6 15h8" stroke-linecap="round"/><path d="M6 21h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2Z"/></svg></div>
+          <div><h3 class="tile-title">Agenda</h3><p class="tile-sub">Operación diaria, calendario y seguimiento por estación.</p><span class="tile-tag">Operación</span></div>
+        </a>
+        <a class="tile pos-lb" href="/petroleum/normativas-control">
+          <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M9 12l2 2 4-5" stroke-linecap="round" stroke-linejoin="round"/><path d="M21 12c0 5-4 8-9 10-5-2-9-5-9-10V5l9-3 9 3v7Z" stroke-linejoin="round"/></svg></div>
+          <div><h3 class="tile-title">Control de vigencias</h3><p class="tile-sub">Responsables, renovaciones, pagos y seguimiento por estación.</p><span class="tile-tag">Normativo</span></div>
+        </a>
+        <a class="tile pos-rt" href="/admin/stations">
+          <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M7 21V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v16"/><path d="M5 21h14" stroke-linecap="round"/><path d="M9 7h4M9 11h4" stroke-linecap="round"/><path d="M17 10h2a1 1 0 0 1 1 1v10"/></svg></div>
+          <div><h3 class="tile-title">Estaciones</h3><p class="tile-sub">Alta, estatus mensual, accesos y tablero por estación.</p><span class="tile-tag">Base</span></div>
+        </a>
+        <a class="tile pos-rb" href="/admin/document-center">
+          <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 7 4 11l8 4 8-4-8-4Z"/><path d="m4 15 8 4 8-4"/><path d="m4 11 8 4 8-4"/></svg></div>
+          <div><h3 class="tile-title">Centro documental</h3><p class="tile-sub">Versiones, entregas, revisiones y comparador documental.</p><span class="tile-tag">Documentos</span></div>
+        </a>
+        {% else %}
+        <a class="tile pos-lt" href="/admin/sgm">
+          <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 2l8 10-8 10L4 12 12 2z"/></svg></div>
+          <div><h3 class="tile-title">SGM</h3><p class="tile-sub">Sistema de gestión y documentos administrados por central.</p><span class="tile-tag">Calidad</span></div>
+        </a>
+        <a class="tile pos-lb" href="/admin/sasisopa" id="tileSasisopa">
+          <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M12 6v6l4 2"/><path d="M20.5 12a8.5 8.5 0 1 1-17 0 8.5 8.5 0 0 1 17 0z"/></svg></div>
+          <div><h3 class="tile-title">SASISOPA</h3><p class="tile-sub">Seguridad, plantillas y envío de documentos por estación.</p><span class="tile-tag">Seguridad</span></div>
+        </a>
+        <a class="tile pos-rt" href="/admin/stations">
+          <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M7 21V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v16"/><path d="M5 21h14" stroke-linecap="round"/><path d="M9 7h4M9 11h4" stroke-linecap="round"/><path d="M17 10h2a1 1 0 0 1 1 1v10"/></svg></div>
+          <div><h3 class="tile-title">Estaciones</h3><p class="tile-sub">Inventario, accesos, mensualidad y control por estación.</p><span class="tile-tag">Base</span></div>
+        </a>
+        <a class="tile pos-rb" href="/admin/inbox">
+          <div class="tile-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M4 13h4l2 3h4l2-3h4" stroke-linejoin="round"/><path d="M5 21h14a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2Z"/></svg></div>
+          <div><h3 class="tile-title">Inbox admin</h3><p class="tile-sub">Revisa envíos, pendientes y documentos asignados por estación.</p><span class="tile-tag">Revisión</span></div>
+        </a>
+        {% endif %}
+      </div>
+    </section>
+
+    <section class="toolbox" id="toolbox" aria-label="Herramientas agrupadas">
+      {% if brand=='petroleum' %}
+      <article class="tool-card">
+        <h3>Operación diaria</h3>
+        <p>Accesos para captura cotidiana y trabajo en campo, sin mezclar opciones administrativas de segundo nivel.</p>
+        <div class="tool-links">
+          <a href="/mod/panel">Mi panel</a>
+          <a href="/mod/operational-calendar">Calendario</a>
+          <a href="/mod/evidencias">Evidencias</a>
+          <a href="/admin/organigrama">Organigrama</a>
+          <a href="/mod/notifications">Notificaciones</a>
+        </div>
+      </article>
+      <article class="tool-card">
+        <h3>Control y seguimiento</h3>
+        <p>Herramientas para monitorear desempeño, riesgos y carga operativa sin saturar la pantalla principal.</p>
+        <div class="tool-links">
+          <a href="/mod/reports">Reportes</a>
+          <a href="/admin/executive">Ejecutivo</a>
+          <a href="/admin/audit">Auditoría</a>
+          <a href="/mod/incidents">Incidencias</a>
+        </div>
+      </article>
+      <article class="tool-card">
+        <h3>Administración</h3>
+        <p>Opciones de soporte y configuración que conviene mantener agrupadas para que el inicio se vea más limpio.</p>
+        <div class="tool-links">
+          <a href="/admin/backup">Backups</a>
+          <a href="/admin/setup-wizard">Configuración</a>
+          <a href="/admin/docs/compare">Comparador</a>
+          <a href="/mod/corrections">Correcciones</a>
+        </div>
+      </article>
+      {% else %}
+      <article class="tool-card">
+        <h3>Operación diaria</h3>
+        <p>Vista rápida para trabajo cotidiano, captura y seguimiento sin mostrar de golpe todos los módulos disponibles.</p>
+        <div class="tool-links">
+          <a href="/mod/activities">Bitácora</a>
+          <a href="/mod/panel">Mi panel</a>
+          <a href="/mod/operational-calendar">Calendario</a>
+          <a href="/mod/evidencias">Evidencias</a>
+        </div>
+      </article>
+      <article class="tool-card">
+        <h3>Control administrativo</h3>
+        <p>Módulos clave para revisión, catálogo base y gestión de usuarios agrupados en una sola zona.</p>
+        <div class="tool-links">
+          <a href="/admin/inbox">Inbox</a>
+          <a href="/admin/calibraciones">Calibraciones</a>
+          <a href="/admin/users">Usuarios</a>
+          <a href="/admin/document-center">Centro documental</a>
+        </div>
+      </article>
+      <article class="tool-card">
+        <h3>Supervisión y soporte</h3>
+        <p>Opciones de análisis y soporte técnico que quedan disponibles pero ya no saturan el bloque principal.</p>
+        <div class="tool-links">
+          <a href="/admin/executive">Ejecutivo</a>
+          <a href="/admin/audit">Auditoría</a>
+          <a href="/admin/backup">Backups</a>
+          <a href="/admin/setup-wizard">Configuración</a>
+        </div>
+      </article>
+      {% endif %}
+    </section>
+
+    <div class="footer-tag">
+      <span>{{ 'Petroleum' if brand=='petroleum' else 'Consulting' }}</span>
+      <span class="line"></span>
+      <span>Unified System</span>
+    </div>
+  </main>
+
+  <script src="/static/js/admin_menu.js" defer></script>
+</body>
+</html>

@@ -1,0 +1,220 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Trámites · gestión documental</h1>
+    <div class="sub">Control maestro tipo Excel para Consulting. Opera sobre base de datos, con filtros, folio automático, responsables, fechas límite y adjuntos.</div>
+  </div>
+  <div class="formactions">
+    <a class="btn ghost" href="/admin/expedientes">Expediente documental</a>
+    <a class="btn ghost" href="/admin/tramites/control-documental">Control documental</a>
+    <a class="btn ghost" href="/admin/document-deadlines">Control maestro</a>
+    <a class="btn ghost" href="/mod/document-renewals-calendar">Vencimientos</a>
+    <a class="btn ghost" href="/api/tramites/export.csv">Exportar CSV</a>
+    <button class="btn primary" onclick="createTramite()">Guardar trámite</button>
+  </div>
+</div>
+
+<section class="page-intro"><article class="info-card"><h3>Cómo usar este módulo</h3><p>Empieza aquí si vas a capturar o editar un trámite. Después entra a Expedientes para ver la carpeta completa y a Vencimientos para revisar fechas próximas.</p><div class="step-grid"><div class="step"><b>1</b><span>Captura o actualiza el trámite en la tabla.</span></div><div class="step"><b>2</b><span>Revisa en Expedientes si ya está completa la carpeta de la estación.</span></div><div class="step"><b>3</b><span>Usa Vencimientos para avisos de renovación.</span></div></div></article><article class="info-card"><h3>Diferencia rápida</h3><div class="soft-list"><div class="soft-item">Trámites = gestión y seguimiento.</div><div class="soft-item">Expedientes = carpeta documental por estación o cliente.</div><div class="soft-item">Vencimientos = calendario de renovaciones.</div></div></article></section><div class="grid cols-3">
+  <section class="card kpi"><div><div class="l">Pendientes</div><div id="kPending" class="v">0</div></div><span class="tag warn">Seguimiento</span></section>
+  <section class="card kpi"><div><div class="l">En revisión</div><div id="kReview" class="v">0</div></div><span class="tag ok">Control</span></section>
+  <section class="card kpi"><div><div class="l">Vencidos / críticos</div><div id="kDue" class="v">0</div></div><span class="tag bad">Atención</span></section>
+</div>
+
+<section class="card" style="margin-top:14px;">
+  <div class="pagehead" style="margin-bottom:12px;align-items:center;">
+    <div>
+      <div class="h1" style="font-size:18px;">Nuevo trámite</div>
+      <div class="sub">Captura rápida en formato operativo. La tabla de abajo funciona como hoja editable.</div>
+    </div>
+  </div>
+  <div class="formrow">
+    <div><label>Cliente / estación</label><input id="fClient" class="input" placeholder="Cliente o razón social"/></div>
+    <div><label>Estación</label><select id="fStation"></select></div>
+  </div>
+  <div class="formrow" style="margin-top:10px;">
+    <div><label>Tipo de trámite</label><select id="fType"></select></div>
+    <div><label>Dependencia</label><select id="fDependency"></select></div>
+  </div>
+  <div class="formrow" style="margin-top:10px;">
+    <div><label>Asunto</label><input id="fSubject" class="input" placeholder="Ej. Renovación anual / respuesta a oficio"/></div>
+    <div><label>Responsable</label><select id="fResponsible"></select></div>
+  </div>
+  <div class="formrow" style="margin-top:10px;">
+    <div><label>Fecha de inicio</label><input id="fStart" type="date" class="input"/></div>
+    <div><label>Fecha límite</label><input id="fDue" type="date" class="input"/></div>
+  </div>
+  <div class="formrow" style="margin-top:10px;">
+    <div><label>Estatus</label><select id="fStatus"></select></div>
+    <div><label>Prioridad</label><select id="fPriority"></select></div>
+  </div>
+  <div style="margin-top:10px;"><label>Observaciones</label><textarea id="fObs" rows="3" class="input" placeholder="Comentarios, requisitos faltantes, observaciones o siguiente paso"></textarea></div>
+</section>
+
+<section class="card" style="margin-top:14px;">
+  <div class="pagehead" style="margin-bottom:12px;align-items:center;">
+    <div>
+      <div class="h1" style="font-size:18px;">Filtro operativo</div>
+      <div class="sub">Busca por folio, cliente, tipo, dependencia, responsable o notas.</div>
+    </div>
+  </div>
+  <div class="formrow">
+    <div><input id="q" class="input" placeholder="Buscar..." oninput="refresh()"/></div>
+    <div><select id="fltStation" onchange="refresh()"></select></div>
+  </div>
+  <div class="formrow" style="margin-top:10px;">
+    <div><select id="fltStatus" onchange="refresh()"></select></div>
+    <div><select id="fltPriority" onchange="refresh()"></select></div>
+  </div>
+</section>
+
+<section class="card" style="margin-top:14px;">
+  <div class="pagehead" style="margin-bottom:12px;align-items:center;">
+    <div>
+      <div class="h1" style="font-size:18px;">Tabla de control</div>
+      <div class="sub">Edición rápida por fila. Guarda solo la fila modificada, como hoja operativa.</div>
+    </div>
+  </div>
+  <div class="tablewrap excel-wrap">
+    <table class="excel-table">
+      <thead>
+        <tr>
+          <th>Folio</th>
+          <th>Cliente</th>
+          <th>Estación</th>
+          <th>Tipo</th>
+          <th>Dependencia</th>
+          <th>Asunto</th>
+          <th>Inicio</th>
+          <th>Límite</th>
+          <th>Responsable</th>
+          <th>Estatus</th>
+          <th>Prioridad</th>
+          <th>Observaciones</th>
+          <th>Adjunto</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}
+
+{% block head %}
+<style>
+  .excel-wrap{overflow:auto}
+  .excel-table{min-width:1500px}
+  .excel-table td{padding:8px; min-width:120px;}
+  .excel-table input,.excel-table select,.excel-table textarea{min-width:100%;font-size:13px;padding:8px 10px;border-radius:10px}
+  .excel-table textarea{min-height:76px;resize:vertical}
+  .excel-table .col-narrow{min-width:90px}
+  .excel-table .col-wide{min-width:210px}
+  .inline-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .row-folio{font-weight:900;font-size:12px;white-space:nowrap}
+  .pill.status-pendiente{background:rgba(245,158,11,.12);color:#b45309}
+  .pill.status-en_proceso{background:rgba(59,130,246,.12);color:#1d4ed8}
+  .pill.status-en_revision{background:rgba(124,58,237,.12);color:#6d28d9}
+  .pill.status-requiere_correccion{background:rgba(239,68,68,.12);color:#b91c1c}
+  .pill.status-finalizado{background:rgba(22,163,74,.12);color:#166534}
+  .pill.status-vencido{background:rgba(220,38,38,.12);color:#991b1b}
+  .pill.status-cancelado{background:rgba(107,114,128,.12);color:#374151}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let META = {stations:[], users:[], statuses:[], priorities:[], dependencies:[], types:[]};
+function options(list, extra=''){ return extra + (list||[]).map(v=>`<option value="${_esc(v.value ?? v)}">${_esc(v.label ?? v.name ?? v.username ?? v.code ?? v)}</option>`).join(''); }
+function stationOptions(selected=''){ return '<option value="">Todas / sin estación</option>' + (META.stations||[]).map(s=>`<option value="${s.id}" ${String(selected)==String(s.id)?'selected':''}>${_esc(s.code)} · ${_esc(s.name)}</option>`).join(''); }
+function userOptions(selected=''){ return '<option value="">Sin responsable</option>' + (META.users||[]).map(u=>`<option value="${u.id}" ${String(selected)==String(u.id)?'selected':''}>${_esc(u.username)} · ${_esc(u.role)}</option>`).join(''); }
+function statusPill(status){ return `<span class="pill status-${_esc(status||'')}">${_esc((status||'').replaceAll('_',' '))}</span>`; }
+async function loadMeta(){
+  META = await api('/api/tramites/meta');
+  fStation.innerHTML = stationOptions('');
+  fltStation.innerHTML = stationOptions('');
+  fType.innerHTML = options(META.types);
+  fDependency.innerHTML = options(META.dependencies);
+  fResponsible.innerHTML = userOptions('');
+  fStatus.innerHTML = options(META.statuses);
+  fPriority.innerHTML = options(META.priorities);
+  fltStatus.innerHTML = '<option value="">Todos los estatus</option>' + options(META.statuses);
+  fltPriority.innerHTML = '<option value="">Todas las prioridades</option>' + options(META.priorities);
+  fStart.value = new Date().toISOString().slice(0,10);
+}
+function rowTemplate(it){
+  const att = it.attachment_path ? `<a href="/uploads/${_esc(it.attachment_path)}" target="_blank" rel="noopener">Ver archivo</a>` : '<span class="help">Sin adjunto</span>';
+  return `<tr data-id="${it.id}">
+    <td class="col-narrow"><div class="row-folio">${_esc(it.folio||'')}</div><div class="help">${statusPill(it.status)}</div></td>
+    <td class="col-wide"><input data-k="client_name" value="${_esc(it.client_name||'')}"/></td>
+    <td><select data-k="station_id">${stationOptions(it.station_id)}</select><div class="help">${_esc(it.station_code||'')}</div></td>
+    <td><select data-k="tramite_type">${options(META.types.map(v=>({value:v,label:v})), '')}</select></td>
+    <td><select data-k="dependency">${options(META.dependencies.map(v=>({value:v,label:v})), '')}</select></td>
+    <td class="col-wide"><input data-k="subject" value="${_esc(it.subject||'')}"/></td>
+    <td class="col-narrow"><input data-k="start_date" type="date" value="${_esc(it.start_date||'')}"/></td>
+    <td class="col-narrow"><input data-k="due_date" type="date" value="${_esc(it.due_date||'')}"/></td>
+    <td><select data-k="responsible_user_id">${userOptions(it.responsible_user_id)}</select></td>
+    <td><select data-k="status">${options(META.statuses.map(v=>({value:v,label:v})), '')}</select></td>
+    <td><select data-k="priority">${options(META.priorities.map(v=>({value:v,label:v})), '')}</select></td>
+    <td class="col-wide"><textarea data-k="observations">${_esc(it.observations||'')}</textarea></td>
+    <td><div>${att}</div><input type="file" data-upload accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" style="margin-top:8px;max-width:180px"/></td>
+    <td><div class="inline-actions"><button class="btn small primary" onclick="saveRow(${it.id})">Guardar</button><button class="btn small ghost" onclick="uploadFile(${it.id})">Adjuntar</button></div></td>
+  </tr>`;
+}
+async function refresh(){
+  const qv = encodeURIComponent(q.value||'');
+  const st = encodeURIComponent(fltStatus.value||'');
+  const pr = encodeURIComponent(fltPriority.value||'');
+  const sid = encodeURIComponent(fltStation.value||'');
+  const r = await api(`/api/tramites?q=${qv}&status=${st}&priority=${pr}&station_id=${sid}`);
+  const items = r.items || [];
+  tbody.innerHTML = items.map(rowTemplate).join('') || '<tr><td colspan="14" class="help">Sin resultados.</td></tr>';
+  for (const tr of tbody.querySelectorAll('tr[data-id]')){
+    const id = tr.getAttribute('data-id');
+    const item = items.find(x=>String(x.id)===String(id));
+    if(!item) continue;
+    tr.querySelector('[data-k="tramite_type"]').value = item.tramite_type || '';
+    tr.querySelector('[data-k="dependency"]').value = item.dependency || '';
+    tr.querySelector('[data-k="status"]').value = item.status || '';
+    tr.querySelector('[data-k="priority"]').value = item.priority || '';
+  }
+  const pending = items.filter(i=>['pendiente','en_proceso','requiere_correccion'].includes(i.status)).length;
+  const review = items.filter(i=>i.status==='en_revision').length;
+  const due = items.filter(i=>['vencido','critica'].includes(i.status) || i.priority==='critica').length;
+  kPending.textContent = pending;
+  kReview.textContent = review;
+  kDue.textContent = due;
+}
+function rowData(id){
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  const data = {};
+  tr.querySelectorAll('[data-k]').forEach(el=> data[el.dataset.k] = el.value);
+  return data;
+}
+async function saveRow(id){
+  await api('/api/tramites/'+id, {method:'PATCH', body: JSON.stringify(rowData(id))});
+  toast('Trámite actualizado','Se guardó la fila.');
+  await refresh();
+}
+async function uploadFile(id){
+  const tr = document.querySelector(`tr[data-id="${id}"]`);
+  const inp = tr.querySelector('[data-upload]');
+  if(!inp.files.length){ toast('Selecciona un archivo'); return; }
+  const fd = new FormData(); fd.append('file', inp.files[0]);
+  await api('/api/tramites/'+id+'/attachment', {method:'POST', body: fd});
+  toast('Adjunto cargado','Archivo vinculado al trámite.');
+  await refresh();
+}
+async function createTramite(){
+  await api('/api/tramites', {method:'POST', body: JSON.stringify({
+    client_name:fClient.value, station_id:fStation.value, tramite_type:fType.value, dependency:fDependency.value,
+    subject:fSubject.value, responsible_user_id:fResponsible.value, start_date:fStart.value, due_date:fDue.value,
+    status:fStatus.value, priority:fPriority.value, observations:fObs.value
+  })});
+  toast('Trámite creado','Se agregó al control maestro.');
+  fClient.value=''; fSubject.value=''; fObs.value=''; fDue.value='';
+  await refresh();
+}
+document.addEventListener('DOMContentLoaded', async()=>{ await loadMeta(); await refresh(); });
+</script>
+{% endblock %}

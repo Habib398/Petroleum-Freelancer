@@ -1,0 +1,263 @@
+================================================================================
+REGISTRO DE CAMBIOS — PROYECTO WORKLOG
+Fecha: 2026-04-26
+================================================================================
+
+RESUMEN EJECUTIVO
+-----------------
+Se realizaron dos fases de trabajo en el proyecto:
+
+  1. Refactorizacion de assets de plantillas HTML (sesiones anteriores)
+  2. Reestructuracion modular del backend Flask (sesion actual)
+
+================================================================================
+FASE 1 — REFACTORIZACION DE ASSETS FRONTEND
+================================================================================
+
+OBJETIVO
+--------
+Extraer todo CSS y JavaScript inline de los archivos HTML a archivos
+estaticos externos, mejorando el cacheo, mantenibilidad y rendimiento.
+
+PATRON IMPLEMENTADO
+-------------------
+- CSS con variables dinamicas de marca (Jinja2):
+  Se retuvo un bloque <style> minimo con :root { --var: {{ valor }} }
+  El resto del CSS se movio al archivo .css externo.
+
+- JS con datos del servidor:
+  Se implemento el patron "Configuration Bridge":
+  Un objeto global window.NombreConfig = { dato: "{{ valor }}" }
+  El archivo .js externo lee ese objeto al iniciarse.
+
+ARCHIVOS MODIFICADOS
+--------------------
+
+templates/admin_menu.html
+  → Extraido CSS a: static/css/admin_menu.css
+  → Retenido bloque :root con variables de marca (Jinja2)
+
+templates/gateway.html
+  → Extraido JS a: static/js/gateway_bot.js
+  → Implementado puente: window.GatewayConfig = { urls... }
+
+templates/inicio.html
+  → Extraido JS a: static/js/inicio.js
+
+templates/layout.html
+  → Extraido CSS estructural a: static/css/layout.css
+  → Retenido bloque :root con variables de marca (Jinja2)
+
+templates/login.html
+  → Extraido CSS a: static/css/login.css
+  → Extraido JS a: static/js/login.js
+  → CSRF token leido desde <meta name="csrf-token">
+
+templates/mapa.html
+  → Extraido CSS a: static/css/mapa.css
+
+templates/pending_docs.html
+  → Extraido CSS a: static/css/pending_docs.css
+  → Extraido JS a: static/js/pending_docs.js
+  → Implementado puente: window.PendingDocsConfig = { isAdmin, ... }
+
+templates/public_legal.html
+  → Extraido CSS a: static/css/public_legal.css
+
+templates/shared_folder.html
+  → Extraido CSS a: static/css/shared_folder.css
+  → Extraido JS a: static/js/shared_folder.js
+  → Implementado puente: window.SharedFolderConfig = { moduleSettings... }
+
+templates/staff_menu.html
+  → Extraido CSS a: static/css/staff_menu.css
+  → Extraido JS a: static/js/staff_menu.js
+
+ARCHIVOS CREADOS (estaticos)
+----------------------------
+  static/css/admin_menu.css
+  static/css/layout.css
+  static/css/login.css
+  static/css/mapa.css
+  static/css/pending_docs.css
+  static/css/public_legal.css
+  static/css/shared_folder.css
+  static/css/staff_menu.css
+  static/js/gateway_bot.js
+  static/js/inicio.js
+  static/js/login.js
+  static/js/pending_docs.js
+  static/js/shared_folder.js
+  static/js/staff_menu.js
+
+
+================================================================================
+FASE 2 — REESTRUCTURACION MODULAR DEL BACKEND
+================================================================================
+
+OBJETIVO
+--------
+Reorganizar el proyecto de una arquitectura horizontal (todo en routes/)
+a una arquitectura modular vertical (organizada por dominio de negocio),
+usando Flask Blueprints, sin romper el funcionamiento existente.
+
+ARQUITECTURA ANTERIOR
+---------------------
+app.py importaba 30+ modulos directamente desde routes/ y llamaba
+module.register(app) uno por uno.
+
+  routes/
+    admin.py, advanced.py, activities.py, alerts.py, analytics_exports.py,
+    audit.py, auth.py, backup.py, bitacoras.py, calibraciones.py, capa.py,
+    compliance.py, docs.py, documental_docs.py, executive.py, extras.py,
+    internal_tasks.py, maintenance.py, notifications.py, orgchart.py,
+    pages.py, payments.py, petroleum.py, pipas.py, profile.py, reports.py,
+    sasisopa_docs.py, sgm_docs.py, stations.py, tramites_normativas.py,
+    uploads.py, users.py
+
+ARQUITECTURA NUEVA
+------------------
+app.py importa 7 modulos de dominio desde modules/ y cada uno agrupa
+los archivos de rutas relacionados.
+
+  modules/
+    __init__.py
+    auth/
+      __init__.py   → agrupa: auth + users + profile
+    core/
+      __init__.py   → agrupa: pages + uploads + notifications +
+                               internal_tasks + backup + extras
+    stations/
+      __init__.py   → Blueprint nativo (migrado completamente)
+      routes.py     → Blueprint "stations" con 6 endpoints
+    operations/
+      __init__.py   → agrupa: activities + pipas + maintenance +
+                               alerts + payments + calibraciones + bitacoras
+    compliance/
+      __init__.py   → agrupa: docs + compliance + sasisopa_docs +
+                               sgm_docs + tramites_normativas + capa + audit
+    admin/
+      __init__.py   → agrupa: admin + advanced + reports +
+                               analytics_exports + executive + orgchart
+    petroleum/
+      __init__.py   → agrupa: petroleum
+
+ARCHIVOS CREADOS
+----------------
+  modules/__init__.py
+  modules/auth/__init__.py
+  modules/core/__init__.py
+  modules/stations/__init__.py
+  modules/stations/routes.py          ← Blueprint nativo (NUEVO)
+  modules/operations/__init__.py
+  modules/compliance/__init__.py
+  modules/admin/__init__.py
+  modules/petroleum/__init__.py
+
+ARCHIVOS MODIFICADOS
+--------------------
+  app.py
+    → Eliminados 30 imports individuales de routes.*
+    → Reemplazados por 7 imports de modulos de dominio:
+        import modules.auth as mod_auth
+        import modules.core as mod_core
+        import modules.stations as mod_stations
+        import modules.operations as mod_operations
+        import modules.compliance as mod_compliance
+        import modules.admin as mod_admin
+        import modules.petroleum as mod_petroleum
+    → Registro simplificado a 7 llamadas:
+        mod_auth.register(app)
+        mod_core.register(app)
+        mod_stations.register(app)
+        mod_operations.register(app)
+        mod_compliance.register(app)
+        mod_admin.register(app)
+        mod_petroleum.register(app)
+
+ARCHIVOS ELIMINADOS
+-------------------
+  routes/stations.py
+    → Migrado completamente a modules/stations/routes.py
+    → Verificado y eliminado tras confirmacion de funcionamiento
+
+MIGRACION DEL MODULO STATIONS (Blueprint nativo)
+-------------------------------------------------
+El modulo stations fue el primero en migrarse completamente a un
+Blueprint real de Flask:
+
+  ANTES (routes/stations.py):
+    def register(app):
+        stations_bp = Blueprint("stations", __name__)  # dentro de register
+        ctx = app.extensions['ctx']
+        login_required = ctx.login_required            # cerrado en variable
+        @stations_bp.get("/api/stations")
+        def api_stations(): ...
+        app.register_blueprint(stations_bp)
+
+  AHORA (modules/stations/routes.py):
+    from routes.auth import login_required, role_required  # importados
+    bp = Blueprint("stations", __name__)                   # nivel de modulo
+
+    @bp.get("/api/stations")
+    @login_required
+    def api_stations():
+        ctx = current_app.extensions['ctx']   # accedido dentro de la funcion
+        ...
+
+  Diferencias clave:
+  - Blueprint a nivel de modulo (no encapsulado en una funcion)
+  - Decoradores importados directamente, no cerrados sobre ctx
+  - ctx accedido via current_app.extensions['ctx'] en cada view
+  - Patron estandar y oficial de Flask Blueprints
+
+VERIFICACION REALIZADA
+----------------------
+  [OK] App arranca sin errores de importacion
+  [OK] GET /api/health                      -> HTTP 200
+  [OK] GET /api/stations (sin auth)         -> HTTP 401
+  [OK] GET /api/map/stations (sin auth)     -> HTTP 401
+  [OK] GET /api/map/fuel (sin auth)         -> HTTP 401
+  [OK] POST /api/stations (sin auth)        -> HTTP 403
+  [OK] PUT /api/stations/1 (sin auth)       -> HTTP 403
+  [OK] DELETE /api/stations/1 (sin auth)    -> HTTP 403
+  [OK] POST /api/stations/import-kml        -> HTTP 403
+  [OK] Total de rutas registradas: 336 (sin cambios)
+  [OK] routes/stations.py eliminado y app sigue funcionando
+
+================================================================================
+ESTADO ACTUAL
+================================================================================
+
+COMPLETADO
+----------
+  [x] Refactorizacion de 10 plantillas HTML (CSS/JS a archivos externos)
+  [x] Creacion de carpeta modules/ con 7 subdominios
+  [x] Actualizacion de app.py para usar arquitectura modular
+  [x] Migracion completa de stations a Blueprint nativo
+  [x] Eliminacion de routes/stations.py
+
+PENDIENTE (proximos pasos sugeridos)
+-------------------------------------
+  [ ] Migrar modules/auth/ a Blueprint nativo
+        routes/auth.py + routes/users.py + routes/profile.py
+  [ ] Migrar modules/operations/ a Blueprint nativo (es el mas grande)
+  [ ] Migrar modules/compliance/ a Blueprint nativo
+  [ ] Migrar modules/admin/ a Blueprint nativo
+  [ ] Migrar modules/core/ a Blueprint nativo
+  [ ] Migrar modules/petroleum/ a Blueprint nativo
+  [ ] Eliminar carpeta routes/ cuando este vacia
+  [ ] Planificar migracion de base de datos (SQLite -> PostgreSQL)
+
+NOTA TECNICA
+------------
+La carpeta routes/ todavia existe con los archivos originales para los
+modulos que aun no se han migrado completamente a Blueprints nativos.
+Los modulos en modules/ (excepto stations) actualmente funcionan como
+adaptadores que redirigen las llamadas a los archivos en routes/.
+Esto es intencional y seguro: garantiza que el proyecto sigue
+funcionando en todo momento durante la migracion gradual.
+
+================================================================================
+FIN DEL REGISTRO
+================================================================================

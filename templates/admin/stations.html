@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+{% block head %}
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+  <style>#stationMap{height:360px;border-radius:12px;border:1px solid var(--hme-border);}</style>
+{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Estaciones</h1>
+    <div class="sub">Alta, edición y bloqueo por mensualidad.</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div style="font-weight:900;">Crear / editar estación</div>
+    <div style="display:grid;gap:10px;margin-top:10px;">
+      <div class="formrow">
+        <div><div class="help">Nombre</div><input id="sName" class="input"></div>
+        <div><div class="help">Código</div><input id="sCode" class="input" placeholder="EST-002"></div>
+      </div>
+      <div class="formrow">
+        <div>
+          <div class="help">Empresa</div>
+          <select id="sBrand" class="input">
+            <option value="consulting">Consulting</option>
+            <option value="petroleum">Petroleum</option>
+          </select>
+        </div>
+        <div>
+          <div class="help">Mensualidad fin</div>
+          <input id="sMonthlyEnd" class="input" type="date">
+        </div>
+      </div>
+      <div class="formrow">
+        <div><div class="help">Número de estación</div><input id="sNum" class="input" type="number" step="1" placeholder="Ej. 12"></div>
+        <div><div class="help">Grupo</div><input id="sGroup" class="input" placeholder="Ej. Grupo López / Marca X"></div>
+      </div>
+      <div class="formrow">
+        <div><div class="help">Estado</div><input id="sState" class="input"></div>
+        <div><div class="help">Ciudad</div><input id="sCity" class="input"></div>
+      </div>
+      <div><div class="help">Dirección</div><input id="sAddr" class="input"></div>
+      <div>
+        <div class="help">Coordenada (pega en DMS o decimal)</div>
+        <input id="sCoord" class="input" placeholder="Ej. 25°40'11.97&quot;N 100°18'05.72&quot;W  ó  25.66999,-100.30158">
+        <div class="help">Se convierte automáticamente a Lat/Lng al guardar.</div>
+      </div>
+      <div class="formrow">
+        <div><div class="help">Lat (auto)</div><input id="sLat" class="input" type="number" step="0.000001" readonly></div>
+        <div><div class="help">Lng (auto)</div><input id="sLng" class="input" type="number" step="0.000001" readonly></div>
+      </div>
+      <div class="formactions" style="justify-content:space-between;">
+        <button id="sPreview" type="button" class="btn">Probar en mapa</button>
+        <button id="sAdd" class="btn primary">Crear</button>
+      </div>
+      <dialog id="dlgStationMap">
+        <div class="card" style="border:none;box-shadow:none;">
+          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+            <div>
+              <div style="font-weight:900;">Vista previa en mapa</div>
+              <div class="help">Verifica que el marcador caiga donde corresponde antes de crear.</div>
+            </div>
+            <button type="button" id="sMapClose" class="btn ghost small">Cerrar</button>
+          </div>
+          <div id="stationMap" style="margin-top:12px;"></div>
+        </div>
+      </dialog>
+<input type="hidden" id="sId">
+      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;">
+        <button class="btn ghost small" id="sCancelEdit" type="button" hidden>Cancelar edición</button>
+      </div>
+      <div id="sErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+      <div style="margin-top:14px;border-top:1px solid var(--hme-border);padding-top:14px;">
+        <div style="font-weight:900;">Importar estaciones (KML)</div>
+        <div class="help">Sube un archivo .kml (Google Earth). Se importan puntos (Placemark/Point) en la empresa actual.</div>
+        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
+          <input id="kmlFile" type="file" accept=".kml" class="input" style="max-width:320px;">
+          <button id="kmlImport" type="button" class="btn">Importar KML</button>
+        </div>
+        <div id="kmlMsg" class="help" style="margin-top:8px;" hidden></div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;">Listado</div>
+    <div class="help">Puedes cambiar el estado de mensualidad para bloquear/desbloquear.</div>
+    <div class="tablewrap" style="margin-top:10px;">
+      <table><thead><tr><th>#</th><th>Nombre</th><th>Empresa</th><th>Grupo</th><th>Código</th><th>Status</th><th>Acción</th></tr></thead><tbody id="sT"></tbody></table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="/static/js/admin_stations.js"></script>
+{% endblock %}

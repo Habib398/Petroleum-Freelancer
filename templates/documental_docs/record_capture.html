@@ -1,0 +1,82 @@
+{% extends "layout.html" %}
+{% block head %}
+<style>
+.grid2{display:grid;grid-template-columns:.95fr 1.05fr;gap:16px}
+.cardx{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,.05)}
+.field{display:grid;gap:6px;margin-bottom:12px}
+.field input,.field select,.field textarea{padding:10px 12px;border-radius:12px;border:1px solid #cbd5e1}
+.field textarea{min-height:88px}
+.btnx{display:inline-flex;padding:10px 14px;border-radius:12px;background:#0f766e;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
+.btnx.alt{background:#0f172a}
+.preview{width:100%;border:1px solid #e5e7eb;border-radius:14px;display:block;margin-bottom:14px}
+.muted{color:#64748b}
+.pill{display:inline-flex;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#f1f5f9}
+@media (max-width: 980px){.grid2{grid-template-columns:1fr}}
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+    <div>
+      <h1 style="margin:0 0 6px">Generar y guardar documento</h1>
+      <div class="muted">{{ module_label }} • {{ template_row.name }} {% if template_row.month_key %}• {{ template_row.month_key }}{% endif %}</div>
+      {% if current_record %}
+        <div style="margin-top:6px"><span class="pill">Guardado</span> <span class="muted">Última edición: {{ current_record.updated_at }}</span></div>
+      {% endif %}
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btnx alt" href="{{ admin_base }}/templates">Plantillas</a>
+      <a class="btnx alt" href="{{ admin_base }}/records">Documentos guardados</a>
+      {% if current_record %}
+        <a class="btnx" href="{{ admin_base }}/records/{{ current_record.id }}/download">Descargar PDF</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<div class="grid2" style="margin-top:16px">
+  <section class="cardx">
+    <h3 style="margin-top:0">Datos</h3>
+    <form method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field">
+        <label>Estación</label>
+        <select name="station_id" required>
+          <option value="">Selecciona…</option>
+          {% for st in stations %}
+            <option value="{{ st.id }}" {% if station_id and (station_id|int)==(st.id|int) %}selected{% endif %}>
+              {{ st.code }} • {{ st.name }}
+            </option>
+          {% endfor %}
+        </select>
+        <div class="muted">Solo el administrador puede editar. Los demás usuarios podrán ver/descargar su estación.</div>
+      </div>
+
+      {% for field in schema %}
+        <div class="field">
+          <label>{{ field.label or field.key }}</label>
+          {% set ftype = field.type or 'text' %}
+          {% set ph = field.placeholder or '' %}
+          {% set val = (values.get(field.key) if values else '') %}
+          {% if ftype in ['textarea','multiline','paragraph'] or (field.h and field.h|int > 28) %}
+            <textarea name="{{ field.key }}" placeholder="{{ ph }}">{{ val }}</textarea>
+          {% else %}
+            <input type="{{ 'date' if ftype=='date' else 'text' }}" name="{{ field.key }}" value="{{ val }}" placeholder="{{ ph }}">
+          {% endif %}
+          <div class="muted">p{{ field.page }} • x{{ field.x }} y{{ field.y }} • {{ field.w }}×{{ field.h }}</div>
+        </div>
+      {% endfor %}
+
+      <button class="btnx" type="submit">Guardar y generar PDF</button>
+    </form>
+  </section>
+
+  <section class="cardx">
+    <h3 style="margin-top:0">Vista previa del PDF</h3>
+    <div class="muted" style="margin-bottom:12px">Usa estas páginas como referencia visual.</div>
+    {% for preview in previews %}
+      <img class="preview" src="/uploads/{{ preview }}" alt="preview {{ loop.index }}">
+    {% endfor %}
+  </section>
+</div>
+{% endblock %}

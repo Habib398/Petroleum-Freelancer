@@ -1,0 +1,39 @@
+{% extends "layout.html" %}
+{% block content %}
+  <div class="pagehead">
+    <div>
+      <h1 class="h1">Backups</h1>
+      <div class="sub">Respaldo y restauración (DB + uploads). Solo administrador.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn primary" id="btnCreate" type="button">Crear backup</button>
+      <button class="btn ghost" id="btnRefresh" type="button">Actualizar</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <div style="font-weight:900;">Backups disponibles</div>
+    <div class="help">Se guardan los últimos 7 backups automáticos/creados.</div>
+    <div id="list" style="margin-top:10px;" class="help">Cargando…</div>
+  </div>
+
+  <div class="card" style="margin-top:14px;">
+    <div style="font-weight:900;">Restaurar</div>
+    <div class="help">Esto reemplaza la base de datos y los uploads. Es destructivo.</div>
+    <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+      <select id="restoreSelect" class="input" style="min-width:260px;"></select>
+      <input id="confirm" class="input" placeholder="Escribe RESTAURAR" style="min-width:220px;" />
+      <button class="btn" id="btnRestore" type="button">Restaurar seleccionado</button>
+    </div>
+    <div class="help" style="margin-top:10px;">O subir un ZIP:</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+      <input type="file" id="restoreFile" accept=".zip" />
+      <button class="btn" id="btnRestoreUpload" type="button">Restaurar ZIP</button>
+    </div>
+    <div id="msg" class="help" style="margin-top:10px;"></div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/backup.js"></script>
+{% endblock %}

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ chart.title if chart else 'Organigrama' }}</title>
+  <link rel="stylesheet" href="/static/css/orgchart.css">
+</head>
+<body class="org-body brand-{{ brand }}{% if request.args.get('presentation') %} is-presentation{% endif %}{% if request.args.get('embed') %} is-embed{% endif %}">
+  <div class="org-shell">
+    {% if not request.args.get('embed') and not request.args.get('presentation') %}
+    <header class="org-topbar">
+      <a class="back-link" href="{{ '/admin/menu' if can_edit else '/staff/menu' }}">← Volver</a>
+      <div class="top-actions">
+        {% if can_edit %}<a class="pill-btn" href="/admin/organigrama">Editar organigrama</a>{% endif %}
+        <a class="pill-btn" href="/mod/organigrama/export/png">Descargar PNG</a>
+        <a class="pill-btn" href="/mod/organigrama/export/pdf">Descargar PDF</a>
+        <a class="pill-btn" href="/mod/organigrama/print">Imprimir</a>
+      </div>
+    </header>
+    {% endif %}
+
+    <section class="org-hero glass-panel{% if request.args.get('embed') %} compact-hero{% endif %}">
+      <div class="hero-glow hero-glow-a"></div>
+      <div class="hero-glow hero-glow-b"></div>
+      <div class="brand-lockup">
+        <img class="brand-logo" src="{{ '/static/img/consulting-logo-full.png' if brand=='consulting' else '/static/img/petroleum-logo-full.png' }}" alt="Logo {{ brand }}">
+      </div>
+      <div class="hero-copy">
+        <div class="eyebrow">{{ 'Consulting' if brand=='consulting' else 'Petroleum' }} &middot; Estructura organizacional</div>
+        <h1>{{ chart.title if chart else 'Organigrama' }}</h1>
+        <p>{{ chart.subtitle if chart and chart.subtitle else ('Renewable Energy HME, S.A. de C.V.' if brand=='consulting' else 'Oil &amp; Gas Inspection Unit') }}</p>
+      </div>
+    </section>
+
+    {% if brand == 'petroleum' and petro %}
+    <section class="petro-stack">
+      <section class="petro-panel glass-panel">
+        <div class="petro-section-head">
+          <span class="petro-kicker">Anexo A</span>
+          <h2>Organigrama general</h2>
+          <p>Estructura base corporativa para Petroleum IU.</p>
+        </div>
+        <div class="petro-general-wrap">
+          <div class="petro-company-box">
+            <strong>Petroleum Oil &amp; Gas Inspection Unit, S.A. de C.V.</strong>
+          </div>
+          <div class="petro-general-branches">
+            {% for branch in petro.general_units %}
+            <div class="petro-branch-col">
+              <div class="petro-branch-title" style="--accent:{{ branch.accent }}">{{ branch.name }}</div>
+              <div class="petro-branch-items {% if branch['items']|length == 3 %}three{% endif %}">
+                {% for item in branch['items'] %}
+                <div class="petro-item-box">{{ item }}</div>
+                {% endfor %}
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+
+      <section class="petro-panel glass-panel">
+        <div class="petro-section-head">
+          <span class="petro-kicker">Anexo B</span>
+          <h2>Organigrama funcional</h2>
+          <p>Base editable para agregar fotos, teléfonos, correos y ajustes desde administración.</p>
+        </div>
+        <div class="petro-functional-wrap">
+          <div class="petro-gold-box">Alta Dirección</div>
+          <div class="petro-role-grid top-level">
+            <div class="petro-green-box">{{ petro.quality.name if petro.quality else 'Gerente de Calidad' }}</div>
+            <div class="petro-green-box">{{ petro.unit.name if petro.unit else 'Unidad de Inspección' }}</div>
+            <div class="petro-green-box">{{ petro.third.name if petro.third else 'Tercer Autorizado' }}</div>
+          </div>
+
+          <div class="petro-role-grid mid-level">
+            {% for person in petro.managers %}
+            <article class="person-card glass-panel compact petroleum-card top-person">
+              <div class="card-photo-wrap compact-photo">
+                {% if person.photo_path %}
+                <img class="card-photo" src="{{ ('/uploads/' ~ person.photo_path ~ '?inline=1') if not person.photo_path.startswith('static/') else ('/' ~ person.photo_path) }}" alt="{{ person.name }}">
+                {% else %}
+                <div class="card-photo card-photo--placeholder petroleum-placeholder">{{ person.name[:1] }}</div>
+                {% endif %}
+              </div>
+              <div class="role-chip compact-chip" style="--chip:{{ person.accent_color or '#5b8def' }}">{{ person.title or 'Puesto' }}</div>
+              <div class="card-name small">{{ person.name or 'Pendiente de asignar' }}</div>
+              <div class="card-meta-grid compact-meta">
+                <div class="meta-row"><span>Profesión</span><b>{{ person.profession or '—' }}</b></div>
+                <div class="meta-row"><span>Correo</span><b>{{ person.email or '—' }}</b></div>
+                <div class="meta-row"><span>Teléfono</span><b>{{ person.phone or '—' }}</b></div>
+              </div>
+            </article>
+            {% endfor %}
+            {% for role in petro.third_roles %}
+            <article class="person-card glass-panel compact petroleum-card top-person role-only-card">
+              <div class="card-photo-wrap compact-photo">
+                {% if role.photo_path %}
+                <img class="card-photo" src="{{ ('/uploads/' ~ role.photo_path ~ '?inline=1') if not role.photo_path.startswith('static/') else ('/' ~ role.photo_path) }}" alt="{{ role.name or role.title }}">
+                {% else %}
+                <div class="card-photo card-photo--placeholder petroleum-placeholder">{{ (role.name or role.title or 'R')[:1] }}</div>
+                {% endif %}
+              </div>
+              <div class="role-chip compact-chip" style="--chip:{{ role.accent_color or '#5b8def' }}">{{ role.title or 'Puesto' }}</div>
+              <div class="card-name small">{{ role.name or 'Pendiente de asignar' }}</div>
+              <div class="card-meta-grid compact-meta">
+                <div class="meta-row"><span>Profesión</span><b>{{ role.profession or 'Disponible para captura' }}</b></div>
+                <div class="meta-row"><span>Correo</span><b>{{ role.email or '—' }}</b></div>
+                <div class="meta-row"><span>Teléfono</span><b>{{ role.phone or '—' }}</b></div>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+
+          <div class="petro-inspector-head">Equipo de inspección y apoyo</div>
+          {% set petro_people = petro.inspectors + petro.support %}
+          <div class="petro-people-grid">
+            {% for person in petro_people %}
+            <article class="person-card glass-panel compact petroleum-card">
+              <div class="card-photo-wrap compact-photo">
+                {% if person.photo_path %}
+                <img class="card-photo" src="{{ ('/uploads/' ~ person.photo_path ~ '?inline=1') if not person.photo_path.startswith('static/') else ('/' ~ person.photo_path) }}" alt="{{ person.name }}">
+                {% else %}
+                <div class="card-photo card-photo--placeholder petroleum-placeholder">{{ person.name[:1] }}</div>
+                {% endif %}
+              </div>
+              <div class="role-chip compact-chip" style="--chip:{{ person.accent_color or '#d7a24c' }}">{{ person.title or 'Puesto' }}</div>
+              <div class="card-name small">{{ person.name }}</div>
+              <div class="card-meta-grid compact-meta">
+                <div class="meta-row"><span>Profesión</span><b>{{ person.profession or '—' }}</b></div>
+                <div class="meta-row"><span>Correo</span><b>{{ person.email or '—' }}</b></div>
+                <div class="meta-row"><span>Teléfono</span><b>{{ person.phone or '—' }}</b></div>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+        </div>
+      </section>
+    </section>
+    {% elif director %}
+    <section class="org-stage">
+      <div class="director-wrap">
+        <article class="person-card person-card--director glass-panel">
+          <div class="card-photo-wrap">
+            {% if director.photo_path %}
+            <img class="card-photo" src="{{ ('/uploads/' ~ director.photo_path ~ '?inline=1') if not director.photo_path.startswith('static/') else ('/' ~ director.photo_path) }}" alt="{{ director.name }}">
+            {% else %}
+            <div class="card-photo card-photo--placeholder">{{ director.name[:1] }}</div>
+            {% endif %}
+          </div>
+          <div class="role-chip" style="--chip:{{ director.accent_color or '#5b8def' }}">{{ director.title or 'Dirección' }}</div>
+          <div class="card-name">{{ director.name }}</div>
+          <div class="card-meta-grid">
+            <div class="meta-row"><span>Profesión</span><b>{{ director.profession or '—' }}</b></div>
+            <div class="meta-row"><span>Correo</span><b>{{ director.email or '—' }}</b></div>
+            <div class="meta-row"><span>Teléfono</span><b>{{ director.phone or '—' }}</b></div>
+          </div>
+        </article>
+        <div class="connector-head"></div>
+      </div>
+
+      <div class="departments-connector"></div>
+      <div class="departments-grid {% if departments|length == 1 %}one{% elif departments|length == 2 %}two{% endif %}">
+        {% for dep in departments %}
+        <section class="department-column">
+          <div class="dep-line"></div>
+          <div class="department-title" style="--accent:{{ dep.accent_color or '#5b8def' }}">{{ dep.name }}</div>
+          <div class="people-grid {% if dep.children|length == 1 %}single{% endif %}">
+            {% for person in dep.children %}
+            <article class="person-card glass-panel compact">
+              <div class="card-photo-wrap compact-photo">
+                {% if person.photo_path %}
+                <img class="card-photo" src="{{ ('/uploads/' ~ person.photo_path ~ '?inline=1') if not person.photo_path.startswith('static/') else ('/' ~ person.photo_path) }}" alt="{{ person.name }}">
+                {% else %}
+                <div class="card-photo card-photo--placeholder">{{ person.name[:1] }}</div>
+                {% endif %}
+              </div>
+              <div class="role-chip compact-chip" style="--chip:{{ person.accent_color or dep.accent_color or '#5b8def' }}">{{ person.title or dep.name }}</div>
+              <div class="card-name small">{{ person.name }}</div>
+              <div class="card-meta-grid compact-meta">
+                <div class="meta-row"><span>Profesión</span><b>{{ person.profession or '—' }}</b></div>
+                <div class="meta-row"><span>Correo</span><b>{{ person.email or '—' }}</b></div>
+                <div class="meta-row"><span>Teléfono</span><b>{{ person.phone or '—' }}</b></div>
+              </div>
+            </article>
+            {% endfor %}
+          </div>
+        </section>
+        {% endfor %}
+      </div>
+    </section>
+    {% else %}
+    <section class="empty-state glass-panel">
+      <h2>Este organigrama aún no está configurado.</h2>
+      <p>{% if can_edit %}Puedes crearlo desde la administración.{% else %}Solicita al administrador que capture la estructura primero.{% endif %}</p>
+    </section>
+    {% endif %}
+  </div>
+</body>
+</html>

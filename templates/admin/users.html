@@ -1,0 +1,120 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Usuarios</h1>
+    <div class="sub">El administrador crea usuarios por rol y estación. Los accesos por estación se asignan desde aquí.</div>
+    <div class="help" style="margin-top:8px;">Si necesitas cambiar nombres globales de NOM o anexos en Petroleum, entra a <a href="/admin/setup-wizard">Configuración</a>.</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div style="font-weight:900;">Crear usuario</div>
+    <div style="display:grid;gap:10px;margin-top:10px;">
+      <div class="formrow">
+        <div>
+          <div class="help">Usuario</div>
+          <input id="uName" class="input">
+        </div>
+        <div>
+          <div class="help">Contraseña</div>
+          <input id="uPass" class="input" type="password">
+        </div>
+      </div>
+
+      <div class="formrow">
+        <div>
+          <div class="help">Correo</div>
+          <input id="uEmail" class="input" type="email" placeholder="usuario@dominio.com">
+        </div>
+        <div></div>
+      </div>
+
+      <div class="formrow">
+        <div>
+          <div class="help">Rol</div>
+          <select id="uRole" class="input">
+            <option value="operador">Operador</option>
+            <option value="jefe_estacion">Jefe de estación</option>
+            <option value="contador">Contador</option>
+            <option value="auditor">Auditor</option>
+            <option value="admin">Administrador</option>
+          </select>
+        </div>
+        <div>
+          <div class="help">Estación (si aplica)</div>
+          <select id="uStation" class="input"></select>
+        </div>
+      </div>
+
+      <div class="formrow">
+        <div>
+          <div class="help">Sistema</div>
+          <select id="uBrands" class="input">
+            <option value="{{ session.get('brand','consulting') }}">{{ 'Petroleum' if session.get('brand')=='petroleum' else 'Consulting' }} (actual)</option>
+            <option value="consulting,petroleum">Ambos (Consulting + Petroleum)</option>
+            <option value="consulting">Solo Consulting</option>
+            <option value="petroleum">Solo Petroleum</option>
+          </select>
+        </div>
+        <div></div>
+      </div>
+
+      <div class="formactions">
+        <button id="uAdd" class="btn primary" type="button">Crear</button>
+      </div>
+      <div id="uErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;">Listado</div>
+    <div class="tablewrap" style="margin-top:10px;">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Usuario</th>
+            <th>Correo</th>
+            <th>Rol</th>
+            <th>Estación</th>
+            <th>Activo</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+        <tbody id="uT"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<dialog id="dlgAccess">
+  <form method="dialog" class="dlgform" id="accessForm">
+    <h3 style="margin:0 0 10px 0;">Accesos por estación</h3>
+    <div class="help" id="accessMeta"></div>
+
+    <div class="card" style="margin-top:10px;">
+      <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+        <div><b>Selecciona estaciones</b> <span class="help">(si está vacío, solo aplica la estación asignada en el usuario)</span></div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn" type="button" id="accessAll">Todas</button>
+          <button class="btn" type="button" id="accessNone">Ninguna</button>
+        </div>
+      </div>
+      <div id="accessList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-top:10px;"></div>
+    </div>
+
+    <div id="accessErr" class="help" style="color:var(--hme-danger);font-weight:900;margin-top:10px;" hidden></div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+      <button class="btn ghost" value="cancel">Cerrar</button>
+      <button class="btn primary" id="accessSave" value="ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/admin_users.js"></script>
+{% endblock %}

@@ -1,0 +1,4 @@
+title,start_date,repeat,until,station_id,station_code,description
+"Limpieza general","2026-03-01",daily,,,
+"Revisión extintores","2026-03-01",monthly,2026-12-31,,,
+"Inspección anual","2026-03-15",yearly,,,

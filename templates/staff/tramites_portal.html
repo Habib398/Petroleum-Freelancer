@@ -1,0 +1,181 @@
+{% extends 'layout.html' %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Mis trámites · subida de documentos</h1>
+    <div class="sub">Sube los documentos de tu estación, revisa el avance del expediente y detecta qué falta por completar.</div>
+  </div>
+  <div class="formactions">
+    <a class="btn ghost" href="/staff/menu">Menú</a>
+    <a class="btn ghost" href="/mod/dashboard">Dashboard</a>
+    <a class="btn ghost" href="/mod/document-renewals-calendar">Vencimientos</a>
+  </div>
+</div>
+
+{% if not_available %}
+<section class="card" style="margin-top:14px;">
+  <div class="empty-state">
+    <h3>Disponible solo en Consulting</h3>
+    <p>Este apartado de carga documental pertenece a Consulting. Cambia de empresa para usarlo.</p>
+  </div>
+</section>
+{% else %}
+<section class="page-intro">
+  <article class="info-card">
+    <h3>Cómo usar este módulo</h3>
+    <p>Empieza aquí si vas a subir o actualizar documentos de tu estación.</p>
+    <div class="step-grid">
+      <div class="step"><b>1</b><span>Sube o corrige el documento en la tabla.</span></div>
+      <div class="step"><b>2</b><span>Revisa el porcentaje y los faltantes obligatorios.</span></div>
+      <div class="step"><b>3</b><span>Si hay vencimientos cercanos, entra al calendario de renovaciones.</span></div>
+    </div>
+  </article>
+  <article class="info-card">
+    <h3>Qué verás aquí</h3>
+    <div class="soft-list">
+      <div class="soft-item">Porcentaje del expediente de tu estación.</div>
+      <div class="soft-item">Documentos faltantes por subir.</div>
+      <div class="soft-item">Carga y actualización de archivos.</div>
+    </div>
+  </article>
+</section>
+<div class="grid cols-3">
+  <section class="card kpi"><div><div class="l">Estación</div><div id="stationTitle" class="v" style="font-size:20px;">{{ (station.code ~ ' · ' ~ station.name) if station else 'Sin estación' }}</div></div><span class="tag ok">Consulting</span></section>
+  <section class="card kpi"><div><div class="l">Documentos vigentes</div><div id="kOk" class="v">0</div></div><span class="tag ok">Completados</span></section>
+  <section class="card kpi"><div><div class="l">Faltantes obligatorios</div><div id="kMissing" class="v">0</div></div><span class="tag bad">Pendientes</span></section>
+</div>
+
+<div class="grid cols-2" style="margin-top:14px;align-items:start;">
+  <section class="card progress-card">
+    <div class="pagehead" style="margin-bottom:10px;">
+      <div>
+        <div class="h1" style="font-size:18px;">Avance del expediente</div>
+        <div class="sub">Si todos los documentos requeridos están vigentes, el expediente llegará al 100%.</div>
+      </div>
+    </div>
+    <div class="progress-hero">
+      <div class="ring-wrap">
+        <svg viewBox="0 0 120 120" class="ring-svg">
+          <circle cx="60" cy="60" r="52" class="ring-bg"></circle>
+          <circle cx="60" cy="60" r="52" class="ring-meter" id="ringMeter"></circle>
+        </svg>
+        <div class="ring-center"><span id="pct">0%</span><small>completo</small></div>
+      </div>
+      <div class="progress-copy">
+        <div class="progress-bar"><span id="barFill"></span></div>
+        <div id="progressHint" class="help" style="margin-top:8px;">Aún no se han cargado los documentos requeridos.</div>
+        <div class="mini-stats">
+          <div><b id="kSoon">0</b><span>Próx. a vencer</span></div>
+          <div><b id="kBad">0</b><span>Vencidos</span></div>
+          <div><b id="kTotal">0</b><span>Total docs</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="pagehead" style="margin-bottom:10px;">
+      <div>
+        <div class="h1" style="font-size:18px;">Qué falta por subir</div>
+        <div class="sub">Aquí se listan los documentos obligatorios que todavía faltan.</div>
+      </div>
+    </div>
+    <div id="missingBox" class="missing-list"></div>
+  </section>
+</div>
+
+<section class="card" style="margin-top:14px;">
+  <div class="pagehead" style="margin-bottom:12px;align-items:center;">
+    <div>
+      <div class="h1" style="font-size:18px;">Carga documental</div>
+      <div class="sub">Completa fila por fila. Guarda el estatus y adjunta el archivo del documento correspondiente.</div>
+    </div>
+  </div>
+  <div class="tablewrap excel-wrap">
+    <table class="excel-table">
+      <thead>
+        <tr>
+          <th>Documento</th>
+          <th>Estatus</th>
+          <th>Emisión</th>
+          <th>Vigencia</th>
+          <th>Notas</th>
+          <th>Archivo</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endblock %}
+
+{% block head %}
+<style>
+  .excel-wrap{overflow:auto}
+  .excel-table{min-width:1080px}
+  .excel-table td{padding:8px;min-width:120px;vertical-align:top}
+  .excel-table input,.excel-table select,.excel-table textarea{min-width:100%;font-size:13px;padding:8px 10px;border-radius:10px}
+  .excel-table textarea{min-height:74px;resize:vertical}
+  .inline-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .progress-card{min-height:100%}
+  .progress-hero{display:grid;grid-template-columns:220px 1fr;gap:20px;align-items:center}
+  .ring-wrap{position:relative;width:190px;height:190px;margin:auto}
+  .ring-svg{width:190px;height:190px;transform:rotate(-90deg)}
+  .ring-bg{fill:none;stroke:rgba(148,163,184,.18);stroke-width:10}
+  .ring-meter{fill:none;stroke:#16a34a;stroke-width:10;stroke-linecap:round;stroke-dasharray:326.73;stroke-dashoffset:326.73;transition:stroke-dashoffset .35s ease}
+  .ring-center{position:absolute;inset:0;display:grid;place-items:center;text-align:center}
+  .ring-center span{display:block;font-size:34px;font-weight:900;line-height:1}
+  .ring-center small{display:block;color:#64748b;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+  .progress-bar{height:14px;border-radius:999px;background:rgba(148,163,184,.16);overflow:hidden}
+  .progress-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#22c55e,#16a34a);transition:width .35s ease}
+  .mini-stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-top:14px}
+  .mini-stats div{padding:10px 12px;border-radius:14px;background:rgba(248,250,252,.9);border:1px solid rgba(148,163,184,.18)}
+  .mini-stats b{display:block;font-size:22px}
+  .mini-stats span{display:block;color:#64748b;font-size:12px;font-weight:700}
+  .missing-list{display:flex;flex-direction:column;gap:10px}
+  .missing-item{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 14px;border-radius:14px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.14)}
+  .missing-item strong{display:block}
+  .missing-item small{display:block;color:#7f1d1d}
+  .pill.status-faltante{background:rgba(239,68,68,.12);color:#b91c1c}
+  .pill.status-vigente{background:rgba(22,163,74,.12);color:#166534}
+  .pill.status-proximo_a_vencer{background:rgba(245,158,11,.12);color:#b45309}
+  .pill.status-vencido{background:rgba(220,38,38,.12);color:#991b1b}
+  .pill.status-en_revision{background:rgba(59,130,246,.12);color:#1d4ed8}
+  .pill.status-no_aplica{background:rgba(107,114,128,.12);color:#374151}
+  .empty-state{padding:20px;text-align:center}
+  @media (max-width: 900px){ .progress-hero{grid-template-columns:1fr}.ring-wrap{width:170px;height:170px}.ring-svg{width:170px;height:170px}.mini-stats{grid-template-columns:1fr 1fr}.grid.cols-2{grid-template-columns:1fr!important} }
+  @media (max-width: 640px){ .mini-stats{grid-template-columns:1fr}.grid.cols-3{grid-template-columns:1fr!important} }
+</style>
+{% endblock %}
+
+{% block scripts %}
+{% if not not_available %}
+<script>
+const CIRC = 2 * Math.PI * 52;
+function statusOptions(selected=''){ const vals=['faltante','vigente','proximo_a_vencer','vencido','en_revision','no_aplica']; return vals.map(v=>`<option value="${_esc(v)}" ${String(v)===String(selected)?'selected':''}>${_esc(String(v).replaceAll('_',' '))}</option>`).join(''); }
+function rowTemplate(it){
+  const rid = it.id || '';
+  const att = it.current_file_path ? `<a href="${_esc(it.file_url)}" target="_blank" rel="noopener">Ver / descargar</a><div class="help">Versiones: ${_esc(it.version_count||0)}</div>` : '<span class="help">Sin archivo cargado</span>';
+  const title = it.title || it.template_title || 'Documento';
+  return `<tr data-id="${rid}" data-template="${_esc(it.template_id||'')}">
+    <td><div style="font-weight:900;">${_esc(title)}</div><div class="help">${it.is_required ? 'Obligatorio' : 'Opcional'}</div></td>
+    <td><select data-k="status">${statusOptions(it.computed_status || it.status || 'faltante')}</select></td>
+    <td><input data-k="issue_date" type="date" value="${_esc(it.issue_date||'')}"/></td>
+    <td><input data-k="expiry_date" type="date" value="${_esc(it.expiry_date||'')}"/></td>
+    <td><textarea data-k="notes">${_esc(it.notes||'')}</textarea></td>
+    <td>${att}<input type="file" data-upload accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" style="margin-top:8px;max-width:180px"/></td>
+    <td><div class="inline-actions"><button class="btn small primary" onclick="saveRow(this)">Guardar</button>${rid ? `<button class="btn small ghost" onclick="uploadFile(${rid})">Subir archivo</button>` : ''}</div></td>
+  </tr>`;
+}
+function applyProgress(pct){ pct = Math.max(0, Math.min(100, Number(pct)||0)); pctEl.textContent = pct + '%'; barFill.style.width = pct + '%'; ringMeter.style.strokeDashoffset = String(CIRC * (1 - pct/100)); progressHint.textContent = pct >= 100 ? 'Expediente completo. Todos los documentos obligatorios están cubiertos.' : (pct > 0 ? 'El avance refleja documentos obligatorios vigentes o no aplicables.' : 'Aún no se han cubierto los documentos obligatorios.'); }
+function renderMissing(items){ if(!items.length){ missingBox.innerHTML = '<div class="missing-item" style="background:rgba(22,163,74,.10);border-color:rgba(22,163,74,.18)"><div><strong>Expediente completo</strong><small>No faltan documentos obligatorios por subir.</small></div><span class="pill status-vigente">100%</span></div>'; return; } missingBox.innerHTML = items.map(it=>`<div class="missing-item"><div><strong>${_esc(it.title||'Documento')}</strong><small>${_esc(it.template_code||'Pendiente de carga')}</small></div><span class="pill status-faltante">Falta subir</span></div>`).join(''); }
+async function refresh(){ const r = await api('/api/tramites/my-expediente'); tbody.innerHTML = (r.items||[]).map(rowTemplate).join('') || '<tr><td colspan="7" class="help">Sin documentos.</td></tr>'; kOk.textContent = r.summary.vigente || 0; kMissing.textContent = r.summary.required_missing || 0; kSoon.textContent = r.summary.proximo_a_vencer || 0; kBad.textContent = r.summary.vencido || 0; kTotal.textContent = r.summary.total || 0; stationTitle.textContent = `${r.station.code} · ${r.station.name}`; applyProgress(r.completion_pct || 0); renderMissing(r.missing_required_items || []); }
+function rowPayload(tr){ const data={}; tr.querySelectorAll('[data-k]').forEach(el=>data[el.dataset.k]=el.value); const rid = tr.dataset.id; const tid = tr.dataset.template; if(rid) data.record_id = rid; if(tid) data.template_id = tid; const titleCell = tr.children[0]; data.title = titleCell.querySelector('div').textContent.trim(); return data; }
+async function saveRow(btn){ const tr=btn.closest('tr'); const r = await api('/api/tramites/my-expediente/records', {method:'POST', body: JSON.stringify(rowPayload(tr))}); toast('Documento guardado'); await refresh(); }
+async function uploadFile(id){ const tr=document.querySelector(`tr[data-id="${id}"]`); const inp=tr.querySelector('[data-upload]'); if(!inp.files.length){ toast('Selecciona un archivo'); return; } const fd=new FormData(); fd.append('file', inp.files[0]); await api('/api/tramites/my-expediente/'+id+'/file', {method:'POST', body:fd}); toast('Archivo cargado'); await refresh(); }
+document.addEventListener('DOMContentLoaded', ()=>{ ringMeter.style.strokeDasharray = String(CIRC); ringMeter.style.strokeDashoffset = String(CIRC); refresh(); });
+</script>
+{% endif %}
+{% endblock %}

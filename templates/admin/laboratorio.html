@@ -1,0 +1,50 @@
+{% extends "layout.html" %}
+{% block content %}
+<div style="max-width:1100px;margin:18px auto;padding:0 12px;">
+  <div class="card" style="padding:18px;border-radius:18px;">
+    <div style="display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;">
+      <div>
+        <div style="font-weight:900;letter-spacing:.14em;color:var(--hme-text-soft);font-size:12px;">ADMIN</div>
+        <h1 style="margin:4px 0 0;font-size:34px;letter-spacing:.01em;">LABORATORIO</h1>
+        <div class="help" style="max-width:70ch;">Módulo para control de análisis, resultados y evidencias de laboratorio por estación y empresa.</div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <a class="btn" href="/admin/menu">← Volver</a>
+        <a class="btn primary" href="javascript:void(0)">Nuevo registro</a>
+      </div>
+    </div>
+  </div>
+
+  <div style="height:14px"></div>
+
+  <div class="grid" style="grid-template-columns:1.1fr .9fr;">
+    <div class="card" style="padding:16px;border-radius:18px;">
+      <div style="font-weight:900;letter-spacing:.14em;color:var(--hme-text-soft);font-size:12px;">REGISTROS</div>
+      <div style="height:10px"></div>
+      <table class="table">
+        <thead><tr><th>Fecha</th><th>Estación</th><th>Análisis</th><th>Estatus</th></tr></thead>
+        <tbody>
+          <tr><td>—</td><td>—</td><td>—</td><td><span class="badge">Sin datos</span></td></tr>
+        </tbody>
+      </table>
+      <div style="height:10px"></div>
+      <div class="help">Aquí se mostrará el historial (con filtros por estación/periodo) cuando conectes la captura/carga.</div>
+    </div>
+
+    <div class="card" style="padding:16px;border-radius:18px;">
+      <div style="font-weight:900;letter-spacing:.14em;color:var(--hme-text-soft);font-size:12px;">ACCIONES</div>
+      <div style="height:10px"></div>
+      <div style="display:grid;gap:10px;">
+        <a class="btn primary" href="javascript:void(0)">Subir resultado (PDF/IMG)</a>
+        <a class="btn" href="javascript:void(0)">Descargar plantilla</a>
+        <a class="btn" href="javascript:void(0)">Imprimir reporte</a>
+      </div>
+      <div style="height:12px"></div>
+      <div class="card" style="padding:14px;border-radius:16px;background:rgba(134,184,33,.08);border-color:rgba(134,184,33,.22);">
+        <div style="font-weight:1000;">Tip</div>
+        <div class="help">Mantén el control por empresa y estación para que los datos no se mezclen.</div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

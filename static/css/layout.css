@@ -1,0 +1,115 @@
+/* layout.css
+   Estilos del layout principal: barra de navegación colapsable,
+   guía de rol rápida y correcciones de legibilidad para brand-petroleum.
+   Las variables de color de marca (--hme-green, etc.) se definen en el
+   bloque <style> inline del template (procesado por Jinja2).
+*/
+
+/* ── Navegación colapsable (navdetails) ──────────────────────────────────── */
+.navdetails{margin-top:10px;border-top:1px solid rgba(148,163,184,.18);padding-top:10px}
+.navdetails details{border:1px solid rgba(148,163,184,.18);border-radius:14px;background:rgba(255,255,255,.03);margin-bottom:10px;overflow:hidden}
+.navdetails summary{list-style:none;cursor:pointer;padding:11px 12px;font-weight:800;color:var(--hme-text-soft);display:flex;align-items:center;justify-content:space-between}
+.navdetails summary::-webkit-details-marker{display:none}
+.navdetails summary::after{content:'+';font-size:18px;line-height:1;color:var(--hme-text-soft)}
+.navdetails details[open] summary::after{content:'−'}
+.navdetails .nav{padding:0 8px 8px}
+.navcompact .nav a{font-size:13px}
+
+/* ── Guía rápida de rol ──────────────────────────────────────────────────── */
+.role-guide-card{background:linear-gradient(180deg,rgba(134,184,33,.10),rgba(255,255,255,.92));border:1px solid rgba(134,184,33,.22)}
+.guide-kicker{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--hme-text-soft)}
+.role-guide-steps{display:grid;gap:8px}
+.role-guide-step{display:flex;gap:10px;align-items:flex-start;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.66);border:1px solid rgba(148,163,184,.14)}
+.role-guide-step b{display:grid;place-items:center;min-width:22px;height:22px;border-radius:999px;background:rgba(134,184,33,.16);color:var(--hme-green-dark);font-size:12px}
+.role-guide-step span{font-size:12px;line-height:1.35;color:var(--hme-text)}
+
+/* ── Petroleum: correcciones de legibilidad en tarjetas internas ─────────── */
+body.brand-petroleum .cardx,
+body.brand-petroleum .sasi-card,
+body.brand-petroleum .modal-card,
+body.brand-petroleum .note,
+body.brand-petroleum .tank-visual,
+body.brand-petroleum .probe-visual,
+body.brand-petroleum .cal-card,
+body.brand-petroleum .kpi{
+  background:
+    radial-gradient(520px 180px at 100% 0%, rgba(47,111,237,.08), rgba(47,111,237,0) 55%),
+    linear-gradient(180deg, rgba(17,28,46,.96), rgba(12,21,35,.94));
+  border:1px solid rgba(49,67,96,.92);
+  box-shadow:0 18px 38px rgba(0,0,0,.22);
+  color:#EAF1FB;
+}
+
+body.brand-petroleum .cardx h1,
+body.brand-petroleum .cardx h2,
+body.brand-petroleum .cardx h3,
+body.brand-petroleum .cardx h4,
+body.brand-petroleum .sasi-card h1,
+body.brand-petroleum .sasi-card h2,
+body.brand-petroleum .sasi-card h3,
+body.brand-petroleum .modal-card h1,
+body.brand-petroleum .modal-card h2,
+body.brand-petroleum .modal-card h3{
+  color:#F7FAFF;
+}
+
+body.brand-petroleum .cardx .muted,
+body.brand-petroleum .cardx .help,
+body.brand-petroleum .sasi-card .muted,
+body.brand-petroleum .sasi-card .help,
+body.brand-petroleum .modal-card .muted,
+body.brand-petroleum .modal-card .help,
+body.brand-petroleum .note,
+body.brand-petroleum .helper-note{
+  color:#B8C7DA !important;
+}
+
+body.brand-petroleum .cardx .table,
+body.brand-petroleum .sasi-card .table,
+body.brand-petroleum .modal-card .table{
+  color:#EAF1FB;
+}
+
+body.brand-petroleum .cardx .table th,
+body.brand-petroleum .sasi-card .table th,
+body.brand-petroleum .modal-card .table th{
+  background:linear-gradient(180deg, rgba(24,38,60,.98), rgba(19,31,50,.96));
+  color:#F7FAFF;
+  border-bottom:1px solid rgba(67,86,117,.68);
+}
+
+body.brand-petroleum .cardx .table td,
+body.brand-petroleum .sasi-card .table td,
+body.brand-petroleum .modal-card .table td{
+  color:#E7EEF9;
+  border-bottom:1px solid rgba(67,86,117,.45);
+  background:transparent;
+}
+
+body.brand-petroleum .cardx .btnx.alt,
+body.brand-petroleum .sasi-card .btnx.alt,
+body.brand-petroleum .modal-card .btnx.alt{
+  background:#0F172A;
+  color:#F8FAFC;
+  border:1px solid rgba(148,163,184,.28);
+}
+
+body.brand-petroleum .cardx .pill,
+body.brand-petroleum .sasi-card .pill,
+body.brand-petroleum .modal-card .pill{
+  background:rgba(200,162,74,.16);
+  color:#F1D287;
+  border:1px solid rgba(200,162,74,.22);
+}
+
+body.brand-petroleum .cardx .badge.pending,
+body.brand-petroleum .cardx .badge.approved,
+body.brand-petroleum .cardx .badge.rejected{
+  border:1px solid rgba(255,255,255,.08);
+}
+
+body.brand-petroleum .cardx a,
+body.brand-petroleum .sasi-card a,
+body.brand-petroleum .modal-card a{
+  color:#9EC5FF;
+}

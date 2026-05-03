@@ -1,0 +1,147 @@
+{% extends 'layout.html' %}
+{% block content %}
+<section class="page-intro"><article class="info-card"><h3>Cómo usar este módulo</h3><p>Entra aquí cuando quieras revisar si una estación ya tiene completa su carpeta documental.</p><div class="step-grid"><div class="step"><b>1</b><span>Selecciona la estación o cliente.</span></div><div class="step"><b>2</b><span>Revisa faltantes, vigencias y archivo actual.</span></div><div class="step"><b>3</b><span>Si falta algo, vuelve a Trámites para gestionarlo.</span></div></div></article><article class="info-card"><h3>Qué verás aquí</h3><div class="soft-list"><div class="soft-item">Porcentaje de expediente.</div><div class="soft-item">Documentos faltantes y vencidos.</div><div class="soft-item">Versiones y archivo vigente.</div></div></article></section>
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Expedientes · carpeta documental</h1>
+    <div class="sub">Aquí ves la carpeta completa por estación o cliente: documentos obligatorios, faltantes, vigencias, archivos actuales e historial.</div>
+  </div>
+  <div class="formactions">
+    <a class="btn ghost" href="/admin/tramites">Volver a Trámites</a>
+    <button class="btn primary" onclick="addCustomDoc()">Agregar documento extra</button>
+  </div>
+</div>
+
+<div class="grid cols-4">
+  <section class="card kpi"><div><div class="l">Vigentes</div><div id="kOk" class="v">0</div></div><span class="tag ok">Al día</span></section>
+  <section class="card kpi"><div><div class="l">Próx. a vencer</div><div id="kSoon" class="v">0</div></div><span class="tag warn">30 días</span></section>
+  <section class="card kpi"><div><div class="l">Vencidos</div><div id="kBad" class="v">0</div></div><span class="tag bad">Atención</span></section>
+  <section class="card kpi"><div><div class="l">Obligatorios faltantes</div><div id="kMissing" class="v">0</div></div><span class="tag bad">Pendientes</span></section>
+</div>
+
+<section class="card" style="margin-top:14px;">
+  <div class="pagehead" style="margin-bottom:12px;align-items:center;">
+    <div>
+      <div class="h1" style="font-size:18px;">Selecciona el expediente</div>
+      <div class="sub">Puedes trabajar por estación o por cliente libre. Si eliges estación, el expediente se concentra en esa estación.</div>
+    </div>
+  </div>
+  <div class="formrow">
+    <div><label>Estación</label><select id="fltStation"></select></div>
+    <div><label>Cliente / expediente libre</label><input id="fltOwner" class="input" placeholder="Ej. Cliente Demo, Razón social o proyecto"/></div>
+  </div>
+  <div class="formactions" style="margin-top:10px;">
+    <button class="btn primary" onclick="refresh()">Abrir expediente</button>
+  </div>
+  <div id="scopeLabel" class="help" style="margin-top:10px;">Selecciona una estación o captura un cliente.</div>
+</section>
+
+<section class="card" style="margin-top:14px;">
+  <div class="pagehead" style="margin-bottom:12px;align-items:center;">
+    <div>
+      <div class="h1" style="font-size:18px;">Checklist documental</div>
+      <div class="sub">Cada fila representa un documento requerido o adicional. Guarda fila por fila y adjunta versiones cuando cambie el archivo.</div>
+    </div>
+  </div>
+  <div class="tablewrap excel-wrap">
+    <table class="excel-table">
+      <thead>
+        <tr>
+          <th>Folio / plantilla</th>
+          <th>Documento</th>
+          <th>Estatus</th>
+          <th>Emisión</th>
+          <th>Vigencia</th>
+          <th>Notas</th>
+          <th>Archivo actual</th>
+          <th>Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+</section>
+
+<section class="card" style="margin-top:14px;">
+  <div class="pagehead" style="margin-bottom:12px;align-items:center;">
+    <div>
+      <div class="h1" style="font-size:18px;">Plantillas obligatorias</div>
+      <div class="sub">Administra el catálogo base de documentos que deben aparecer automáticamente en cada expediente.</div>
+    </div>
+    <div class="formactions"><button class="btn primary" onclick="createTemplate()">Guardar plantilla</button></div>
+  </div>
+  <div class="formrow">
+    <div><label>Código</label><input id="tCode" class="input" placeholder="acta_constitutiva"/></div>
+    <div><label>Título</label><input id="tTitle" class="input" placeholder="Acta constitutiva"/></div>
+  </div>
+  <div class="formrow" style="margin-top:10px;">
+    <div><label>Días de vigencia sugeridos</label><input id="tValidity" class="input" type="number" min="0" step="30" value="365"/></div>
+    <div><label>Orden</label><input id="tSort" class="input" type="number" min="0" step="10" value="100"/></div>
+  </div>
+  <div class="formrow" style="margin-top:10px;">
+    <div><label>Descripción</label><textarea id="tDesc" rows="2" class="input"></textarea></div>
+    <div><label style="display:flex;align-items:center;gap:8px;margin-top:28px;"><input id="tRequired" type="checkbox" checked/> Documento obligatorio</label></div>
+  </div>
+</section>
+{% endblock %}
+
+{% block head %}
+<style>
+  .excel-wrap{overflow:auto}
+  .excel-table{min-width:1200px}
+  .excel-table td{padding:8px; min-width:120px; vertical-align:top}
+  .excel-table input,.excel-table select,.excel-table textarea{min-width:100%;font-size:13px;padding:8px 10px;border-radius:10px}
+  .excel-table textarea{min-height:76px;resize:vertical}
+  .inline-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .pill.status-faltante{background:rgba(239,68,68,.12);color:#b91c1c}
+  .pill.status-vigente{background:rgba(22,163,74,.12);color:#166534}
+  .pill.status-proximo_a_vencer{background:rgba(245,158,11,.12);color:#b45309}
+  .pill.status-vencido{background:rgba(220,38,38,.12);color:#991b1b}
+  .pill.status-en_revision{background:rgba(59,130,246,.12);color:#1d4ed8}
+  .pill.status-no_aplica{background:rgba(107,114,128,.12);color:#374151}
+  .req-badge{display:inline-flex;padding:4px 8px;border-radius:999px;font-size:11px;font-weight:800;background:rgba(59,130,246,.10);color:#1d4ed8}
+</style>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let META={stations:[],templates:[],statuses:[]};
+function stationOptions(selected=''){ return '<option value="">Sin estación / expediente libre</option>' + (META.stations||[]).map(s=>`<option value="${s.id}" ${String(selected)==String(s.id)?'selected':''}>${_esc(s.code)} · ${_esc(s.name)}</option>`).join(''); }
+function statusOptions(selected=''){ return (META.statuses||[]).map(v=>`<option value="${_esc(v)}" ${String(v)===String(selected)?'selected':''}>${_esc(String(v).replaceAll('_',' '))}</option>`).join(''); }
+function currentScope(){ return { area:'tramites', station_id: fltStation.value||'', owner_name:(fltOwner.value||'').trim() }; }
+async function loadMeta(){ META = await api('/api/expedientes/meta?area=tramites'); fltStation.innerHTML = stationOptions(''); }
+function rowTemplate(it){
+  const rid = it.id || '';
+  const att = it.current_file_path ? `<a href="/uploads/${_esc(it.current_file_path)}" target="_blank" rel="noopener">Ver archivo</a><div class="help">Versiones: ${_esc(it.version_count||0)}</div>` : '<span class="help">Sin archivo</span>';
+  return `<tr data-id="${rid}" data-template="${_esc(it.template_id||'')}">
+    <td><div style="font-weight:900;font-size:12px;">${_esc(it.folio || it.template_code || 'PENDIENTE')}</div><div class="help">${it.is_required ? '<span class="req-badge">Obligatorio</span>' : '<span class="req-badge" style="background:rgba(107,114,128,.12);color:#374151;">Opcional</span>'}</div></td>
+    <td><input data-k="title" value="${_esc(it.title || it.template_title || '')}"/><div class="help">${_esc(it.template_description||'')}</div></td>
+    <td><select data-k="status">${statusOptions(it.computed_status || it.status || 'faltante')}</select></td>
+    <td><input data-k="issue_date" type="date" value="${_esc(it.issue_date||'')}"/></td>
+    <td><input data-k="expiry_date" type="date" value="${_esc(it.expiry_date||'')}"/></td>
+    <td><textarea data-k="notes">${_esc(it.notes||'')}</textarea></td>
+    <td>${att}<input type="file" data-upload accept=".pdf,.png,.jpg,.jpeg,.webp,.doc,.docx,.xls,.xlsx" style="margin-top:8px;max-width:180px"/></td>
+    <td><div class="inline-actions"><button class="btn small primary" onclick="saveRow(this)">Guardar</button>${rid ? `<button class="btn small ghost" onclick="uploadFile(${rid})">Adjuntar</button><button class="btn small ghost" onclick="showVersions(${rid})">Versiones</button>` : ''}</div></td>
+  </tr>`;
+}
+async function refresh(){
+  const scope = currentScope();
+  if(!scope.station_id && !scope.owner_name){ tbody.innerHTML = '<tr><td colspan="8" class="help">Selecciona una estación o captura un cliente.</td></tr>'; scopeLabel.textContent='Selecciona una estación o captura un cliente.'; return; }
+  const q = new URLSearchParams(scope).toString();
+  const r = await api('/api/expedientes/items?'+q);
+  tbody.innerHTML = (r.items||[]).map(rowTemplate).join('') || '<tr><td colspan="8" class="help">Sin filas.</td></tr>';
+  scopeLabel.textContent = 'Expediente actual: ' + (r.scope_label || 'Sin nombre');
+  kOk.textContent = r.summary.vigente || 0;
+  kSoon.textContent = r.summary.proximo_a_vencer || 0;
+  kBad.textContent = r.summary.vencido || 0;
+  kMissing.textContent = r.summary.required_missing || 0;
+}
+function rowPayload(tr){ const data={...currentScope()}; tr.querySelectorAll('[data-k]').forEach(el=>data[el.dataset.k]=el.value); const rid = tr.dataset.id; const tid = tr.dataset.template; if(rid) data.record_id = rid; if(tid) data.template_id = tid; return data; }
+async function saveRow(btn){ const tr = btn.closest('tr'); const r = await api('/api/expedientes/records', {method:'POST', body: JSON.stringify(rowPayload(tr))}); toast('Documento guardado'); await refresh(); if(!tr.dataset.id && r.id){ await refresh(); } }
+async function uploadFile(id){ const tr=document.querySelector(`tr[data-id="${id}"]`); const inp=tr.querySelector('[data-upload]'); if(!inp.files.length){toast('Selecciona un archivo'); return;} const fd=new FormData(); fd.append('file', inp.files[0]); await api('/api/expedientes/'+id+'/file',{method:'POST', body:fd}); toast('Archivo cargado'); await refresh(); }
+async function showVersions(id){ const r = await api('/api/expedientes/'+id+'/versions'); const lines = (r.items||[]).map(v=>`V${v.version_no} · ${v.uploaded_at} · ${v.file_url||''}`); alert(lines.length ? lines.join('\n') : 'Sin versiones'); }
+async function addCustomDoc(){ const title = prompt('Nombre del documento extra'); if(!title) return; const scope = currentScope(); if(!scope.station_id && !scope.owner_name){ toast('Primero selecciona estación o cliente'); return; } await api('/api/expedientes/records', {method:'POST', body: JSON.stringify({...scope, title, status:'faltante'})}); toast('Documento extra agregado'); await refresh(); }
+async function createTemplate(){ const body = { area:'tramites', code:tCode.value, title:tTitle.value, description:tDesc.value, default_validity_days:tValidity.value, sort_order:tSort.value, is_required:tRequired.checked ? 1 : 0 }; await api('/api/expedientes/templates', {method:'POST', body:JSON.stringify(body)}); toast('Plantilla guardada'); tCode.value=''; tTitle.value=''; tDesc.value=''; tValidity.value='365'; tSort.value='100'; tRequired.checked=true; await loadMeta(); await refresh(); }
+document.addEventListener('DOMContentLoaded', async()=>{ await loadMeta(); });
+</script>
+{% endblock %}

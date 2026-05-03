@@ -1,0 +1,71 @@
+{% extends 'layout.html' %}
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+<style>
+  .renew-grid{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(320px,.95fr);gap:14px}
+  #renewalCalendar{background:rgba(255,255,255,.96);border:1px solid var(--hme-border);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;min-height:720px}
+  .legend{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}.legend .item{display:inline-flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--hme-border);border-radius:999px;background:#fff;font-size:12px;font-weight:700}
+  .dot{width:12px;height:12px;border-radius:999px;display:inline-block}.listbox{max-height:720px;overflow:auto}
+  .eventrow{display:grid;grid-template-columns:96px 1fr;gap:10px;padding:10px 0;border-bottom:1px solid rgba(2,6,23,.08)}
+  .eventrow .date{font-weight:900}.eventrow .meta{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:4px}
+  .filters{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-top:14px}
+  .modal-backdrop{position:fixed;inset:0;background:rgba(2,6,23,.5);display:none;align-items:center;justify-content:center;padding:18px;z-index:60}.modal-backdrop.show{display:flex}.modal-card{width:min(680px,100%);background:#fff;border-radius:22px;box-shadow:var(--shadow);padding:18px}
+  @media (max-width: 980px){.renew-grid,.filters,.summary-grid{grid-template-columns:1fr}#renewalCalendar{min-height:560px}.listbox{max-height:none}}
+</style>
+{% endblock %}
+{% block content %}
+<section class="page-intro"><article class="info-card"><h3>Qué hace este calendario</h3><p>Aquí no subes documentos: aquí revisas qué trámite, normativa o expediente está próximo a vencer o renovar.</p><div class="step-grid"><div class="step"><b>1</b><span>Filtra por estación, módulo o urgencia.</span></div><div class="step"><b>2</b><span>Abre el evento para ir al módulo correcto.</span></div><div class="step"><b>3</b><span>Renueva o sube la nueva versión del documento.</span></div></div></article><article class="info-card"><h3>Diferencia rápida</h3><div class="soft-list">{% if active_brand=='petroleum' %}<div class="soft-item">Normativas = donde capturas.</div><div class="soft-item">Expediente normativo = donde ves la carpeta completa.</div><div class="soft-item">Vencimientos = donde ves fechas de renovación.</div>{% else %}<div class="soft-item">Por ahora este calendario se usa para vencimientos normativos de Petroleum.</div><div class="soft-item">En Consulting, los anexos los carga el administrador por estación.</div><div class="soft-item">Las estaciones solo consultan los documentos que les corresponden.</div>{% endif %}</div></article></section>
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Vencimientos y renovaciones</h1>
+    <div class="sub">{% if active_brand=='petroleum' %}Motor central de vencimientos para normativas y expedientes normativos, con filtros, detalle y renovación controlada.{% else %}Este calendario queda reservado para módulos normativos. En Consulting los anexos se administran por estación desde admin.{% endif %}</div>
+  </div>
+  <div class="formactions">
+    {% if active_brand == 'petroleum' %}
+    <a class="btn ghost" href="/petroleum/normativas">Normativas</a>
+    <a class="btn ghost" href="/petroleum/expedientes">Expediente normativo</a>
+    {% else %}
+        {% endif %}
+    <a class="btn ghost" href="/admin/document-deadlines" data-admin-only hidden>Control maestro</a>
+    <button class="btn primary" id="btnReload">Actualizar</button>
+  </div>
+</div>
+<section class="card">
+  <div class="filters">
+    <div><label>Desde</label><input id="dFrom" type="date" class="input"></div>
+    <div><label>Hasta</label><input id="dTo" type="date" class="input"></div>
+    <div><label>Estación</label><select id="fStation" class="input"><option value="">Todas</option></select></div>
+    <div><label>Módulo</label><select id="fModule" class="input"><option value="">Todos</option><option value="normativas">Normativa</option><option value="expediente_normativas">Documento normativo</option></select></div>
+    <div><label>Urgencia</label><select id="fUrgency" class="input"><option value="">Todas</option><option value="vencido">Vencido</option><option value="hoy">Vence hoy</option><option value="critico">0-7 días</option><option value="atencion">8-15 días</option><option value="proximo">16-30 días</option><option value="programado">Programado</option></select></div>
+    <div><label>Búsqueda</label><input id="fQ" class="input" placeholder="Documento, folio, estación"></div>
+  </div>
+  <div class="legend">
+    <span class="item"><span class="dot" style="background:#dc2626"></span>Vencido</span>
+    <span class="item"><span class="dot" style="background:#ea580c"></span>Vence hoy</span>
+    <span class="item"><span class="dot" style="background:#f97316"></span>0 a 7 días</span>
+    <span class="item"><span class="dot" style="background:#f59e0b"></span>8 a 15 días</span>
+    <span class="item"><span class="dot" style="background:#eab308"></span>16 a 30 días</span>
+    <span class="item"><span class="dot" style="background:#2563eb"></span>Programado</span>
+  </div>
+  <div class="summary-grid">
+    <div class="card"><div class="help">Total</div><div class="h1" id="kTotal">0</div></div>
+    <div class="card"><div class="help">Próximos</div><div class="h1" id="kSoon">0</div></div>
+    <div class="card"><div class="help">Críticos</div><div class="h1" id="kCrit">0</div></div>
+    <div class="card"><div class="help">Vencidos</div><div class="h1" id="kOver">0</div></div>
+  </div>
+</section>
+<div class="renew-grid" style="margin-top:14px;">
+  <section class="card"><div id="renewalCalendar"></div></section>
+  <section class="card">
+    <div class="pagehead" style="margin-bottom:10px;align-items:center;">
+      <div><div class="h1" style="font-size:18px;">Lista operativa</div><div class="sub">Haz clic sobre un evento para ver detalle, archivo y renovar.</div></div>
+    </div>
+    <div id="renewalList" class="listbox"></div>
+  </section>
+</div>
+<div class="modal-backdrop" id="detailModal"><div class="modal-card"><div class="pagehead"><div><div class="h1" id="mTitle" style="font-size:22px;">Detalle</div><div class="sub" id="mSub"></div></div><button class="btn ghost" id="mClose">Cerrar</button></div><div id="mBody" class="card"></div><div class="formactions" style="margin-top:12px;"><a class="btn ghost" id="mOpen" href="#">Abrir módulo</a><a class="btn ghost" id="mFile" href="#" target="_blank" rel="noopener">Ver archivo</a><button class="btn primary" id="mRenew">Renovar</button></div></div></div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="/static/js/document_renewals_calendar.js"></script>
+{% endblock %}

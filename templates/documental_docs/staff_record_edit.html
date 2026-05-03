@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+{% block head %}
+<style>
+.cardx{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,.05)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:14px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-weight:800;color:#0f172a}
+.field input,.field textarea{border:1px solid #cbd5e1;border-radius:12px;padding:10px 12px;font:inherit}
+.field textarea{min-height:110px;resize:vertical}
+.muted{color:#64748b}
+.btnx{display:inline-flex;padding:10px 14px;border-radius:12px;background:#0f766e;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
+.btnx.alt{background:#0f172a}
+.actions{display:flex;gap:10px;flex-wrap:wrap}
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+    <div>
+      <h1 style="margin:0 0 6px">Editar partes permitidas</h1>
+      <div class="muted">{{ module_label }} • {{ record.station_code }} • {{ record.station_name }}</div>
+      <div class="muted">Documento: {{ record.template_name or record.title }}</div>
+    </div>
+    <div class="actions">
+      <a class="btnx alt" href="{{ staff_base }}/records">Volver</a>
+      <a class="btnx alt" href="{{ staff_base }}/records/{{ record.id }}/download">Descargar PDF actual</a>
+    </div>
+  </div>
+</div>
+
+<form class="cardx" style="margin-top:16px" method="post">
+  <div class="grid">
+    {% for field in schema or editable_fields %}
+    <div class="field" style="grid-column:{% if field.type == 'textarea' %}1 / -1{% else %}auto{% endif %}">
+      <label for="f_{{ field.key }}">{{ field.label }}</label>
+      {% set current = values.get(field.key, '') %}
+      {% if field.type == 'textarea' %}
+      <textarea id="f_{{ field.key }}" name="{{ field.key }}" maxlength="{{ field.max_len or 160 }}" placeholder="{{ field.placeholder or '' }}">{{ current }}</textarea>
+      {% elif field.type == 'date' %}
+      <input id="f_{{ field.key }}" type="date" name="{{ field.key }}" value="{{ current }}" maxlength="{{ field.max_len or 160 }}" placeholder="{{ field.placeholder or '' }}">
+      {% elif field.type == 'number' %}
+      <input id="f_{{ field.key }}" type="number" step="any" name="{{ field.key }}" value="{{ current }}" maxlength="{{ field.max_len or 160 }}" placeholder="{{ field.placeholder or '' }}">
+      {% else %}
+      <input id="f_{{ field.key }}" type="text" name="{{ field.key }}" value="{{ current }}" maxlength="{{ field.max_len or 160 }}" placeholder="{{ field.placeholder or '' }}">
+      {% endif %}
+      {% if field.placeholder %}<div class="muted">{{ field.placeholder }}</div>{% endif %}
+    </div>
+    {% endfor %}
+  </div>
+  <div class="actions" style="margin-top:18px">
+    <button class="btnx" type="submit">Guardar cambios permitidos</button>
+    <a class="btnx alt" href="{{ staff_base }}/records">Cancelar</a>
+  </div>
+</form>
+{% endblock %}

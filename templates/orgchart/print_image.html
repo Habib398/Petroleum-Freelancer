@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Impresión · {{ chart.title if chart else "Organigrama" }}</title>
+  <style>
+    html,body{margin:0;padding:0;background:#0b1220;color:#eef4ff;font-family:Inter,Segoe UI,Arial,sans-serif}
+    .bar{position:sticky;top:0;z-index:2;display:flex;gap:10px;align-items:center;justify-content:space-between;padding:14px 18px;background:rgba(7,12,22,.94);backdrop-filter:blur(10px);border-bottom:1px solid rgba(255,255,255,.08)}
+    .actions{display:flex;gap:10px;flex-wrap:wrap}
+    .btn{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#eef4ff;font-weight:700;text-decoration:none}
+    .stage{padding:18px}
+    .sheet{max-width:1600px;margin:0 auto;background:white;border-radius:18px;box-shadow:0 20px 70px rgba(0,0,0,.28);overflow:hidden}
+    .sheet img{display:block;width:100%;height:auto}
+    @media print{
+      html,body{background:#fff}
+      .bar{display:none}
+      .stage{padding:0}
+      .sheet{max-width:none;border-radius:0;box-shadow:none}
+      @page{size:auto;margin:8mm}
+    }
+  </style>
+</head>
+<body>
+  <header class="bar">
+    <div><strong>{{ chart.title if chart else 'Organigrama' }}</strong><div style="font-size:12px;opacity:.78">Vista optimizada para imprimir sin deformar el diseño.</div></div>
+    <div class="actions">
+      <a class="btn" href="/mod/organigrama">Volver</a>
+      <a class="btn" href="/mod/organigrama/export/pdf">Descargar PDF</a>
+      <button class="btn" onclick="window.print()">Imprimir</button>
+    </div>
+  </header>
+  <main class="stage">
+    <div class="sheet">
+      <img src="/mod/organigrama/export/png?inline=1" alt="{{ chart.title if chart else 'Organigrama' }}">
+    </div>
+  </main>
+</body>
+</html>

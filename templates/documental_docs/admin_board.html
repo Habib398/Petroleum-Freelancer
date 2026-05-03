@@ -1,0 +1,165 @@
+{% extends "layout.html" %}
+{% block head %}
+<style>
+  .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+  .grid.grid-mini{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px}
+  .cardx{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:16px;box-shadow:0 10px 30px rgba(2,6,23,.05)}
+  .muted{color:#64748b}
+  .stat{font-size:22px;font-weight:900}
+  .table{width:100%;border-collapse:collapse}
+  .table th,.table td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px;vertical-align:top}
+  .actions{display:flex;gap:8px;flex-wrap:wrap}
+  .btnx{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:12px;background:#0f766e;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
+  .btnx.alt{background:#0f172a}
+  .btnx.ghost{background:transparent;color:#0f172a;border:1px solid rgba(2,6,23,.14)}
+  .pill{display:inline-flex;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:900;border:1px solid transparent}
+  .pill.pending{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.25);color:#92400e}
+  .pill.submitted{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.25);color:#1e40af}
+  .pill.approved{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.25);color:#166534}
+  .pill.rejected{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.25);color:#991b1b}
+  .pill.none{background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.22);color:#334155}
+  .pill.other{background:rgba(2,6,23,.06);border-color:rgba(2,6,23,.12);color:#0f172a}
+  .topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
+  .filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto auto;gap:10px;align-items:end}
+  .filters .field{display:grid;gap:6px}
+  .filters input,.filters select{padding:10px 12px;border-radius:12px;border:1px solid rgba(2,6,23,.18);min-width:0}
+  .substats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+  .substats .mini{padding:10px 12px;border-radius:14px;background:rgba(15,23,42,.03);border:1px solid rgba(15,23,42,.08);min-width:160px}
+  .quickdays{display:flex;gap:8px;flex-wrap:wrap}
+  @media (max-width: 1100px){
+    .filters{grid-template-columns:repeat(2,minmax(0,1fr));}
+  }
+  @media (max-width: 980px){
+    .grid{grid-template-columns:1fr 1fr}
+    .grid.grid-mini{grid-template-columns:1fr 1fr}
+    .actions{flex-direction:column;align-items:stretch}
+  }
+  @media (max-width: 700px){
+    .filters{grid-template-columns:1fr}
+    .grid,.grid.grid-mini{grid-template-columns:1fr}
+    .quickdays,.substats{flex-direction:column}
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="card">
+  <div class="topbar">
+    <div>
+      <h1 style="margin:0 0 6px">{{ module_label }} • Tablero por estación</h1>
+      <div class="muted">Estatus por estación para el día seleccionado: Pendiente (OPEN), Enviado (SUBMITTED), Aprobado, Rechazado.</div>
+    </div>
+    <div class="actions">
+      <a class="btnx ghost" href="{{ admin_base }}">Volver</a>
+      <a class="btnx" href="{{ admin_base }}/templates">Plantillas y programación</a>
+      <a class="btnx alt" href="{{ admin_base }}/reviews">Revisión admin</a>
+    </div>
+  </div>
+</div>
+
+<div class="cardx" style="margin-top:14px">
+  <form method="get" class="filters">
+    <div class="field">
+      <div class="muted" style="font-weight:900">Fecha</div>
+      <input type="date" name="date" value="{{ day }}" />
+    </div>
+    <div class="field">
+      <div class="muted" style="font-weight:900">Estatus</div>
+      <select name="status">
+        <option value="all" {{ 'selected' if status_filter=='all' else '' }}>Todos</option>
+        <option value="pending" {{ 'selected' if status_filter=='pending' else '' }}>Pendiente</option>
+        <option value="submitted" {{ 'selected' if status_filter=='submitted' else '' }}>Enviado</option>
+        <option value="approved" {{ 'selected' if status_filter=='approved' else '' }}>Aprobado</option>
+        <option value="rejected" {{ 'selected' if status_filter=='rejected' else '' }}>Rechazado</option>
+        <option value="unplanned" {{ 'selected' if status_filter=='unplanned' else '' }}>Sin programación</option>
+      </select>
+    </div>
+    <div class="field">
+      <div class="muted" style="font-weight:900">Buscar</div>
+      <input type="text" name="q" value="{{ q }}" placeholder="Estación, código, documento, plantilla o usuario" />
+    </div>
+    <div class="field">
+      <div class="muted" style="font-weight:900">Acciones rápidas</div>
+      <div class="quickdays">
+        <a class="btnx ghost" href="{{ admin_base }}/board?date={{ day_prev }}&status={{ status_filter }}&q={{ q|urlencode }}">Ayer</a>
+        <a class="btnx ghost" href="{{ admin_base }}/board">Hoy</a>
+        <a class="btnx ghost" href="{{ admin_base }}/board?date={{ day_next }}&status={{ status_filter }}&q={{ q|urlencode }}">Mañana</a>
+      </div>
+    </div>
+    <button class="btnx" type="submit">Aplicar</button>
+    <div class="actions">
+      <a class="btnx ghost" href="{{ admin_base }}/board">Limpiar</a>
+      <a class="btnx alt" href="{{ admin_base }}/board?date={{ day }}&status={{ status_filter }}&q={{ q|urlencode }}&export=csv">Exportar CSV</a>
+    </div>
+  </form>
+
+  <div class="substats">
+    <div class="mini"><div class="muted">Filas visibles</div><div class="stat">{{ filtered_counts.visible }}</div></div>
+    <div class="mini"><div class="muted">Con documento programado</div><div class="stat">{{ filtered_counts.with_requirements }}</div></div>
+    <div class="mini"><div class="muted">Con envío registrado</div><div class="stat">{{ filtered_counts.with_submission }}</div></div>
+    <div class="mini"><div class="muted">Total de estaciones</div><div class="stat">{{ filtered_counts.total }}</div></div>
+  </div>
+</div>
+
+<div class="grid" style="margin-top:14px">
+  <div class="cardx"><div class="muted">Pendiente</div><div class="stat">{{ counts["Pendiente"] }}</div></div>
+  <div class="cardx"><div class="muted">Enviado</div><div class="stat">{{ counts["Enviado"] }}</div></div>
+  <div class="cardx"><div class="muted">Aprobado</div><div class="stat">{{ counts["Aprobado"] }}</div></div>
+  <div class="cardx"><div class="muted">Rechazado</div><div class="stat">{{ counts["Rechazado"] }}</div></div>
+  <div class="cardx"><div class="muted">Sin programación</div><div class="stat">{{ counts["Sin programación"] }}</div></div>
+</div>
+
+<div class="cardx" style="margin-top:14px">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px">
+    <h3 style="margin:0">Estaciones</h3>
+    <div class="muted">Mostrando {{ filtered_counts.visible }} resultado{{ '' if filtered_counts.visible==1 else 's' }} para {{ day }}</div>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Estación</th>
+        <th>Documento</th>
+        <th>Estatus</th>
+        <th>Vence</th>
+        <th>Enviado</th>
+        <th>Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for r in rows %}
+      <tr>
+        <td>
+          <div style="font-weight:900">{{ r.station_name }}</div>
+          {% if r.station_code %}<div class="muted">{{ r.station_code }}</div>{% endif %}
+        </td>
+        <td>
+          {% if r.has_req %}
+            <div style="font-weight:800">{{ r.title }}</div>
+            <div class="muted">{{ r.template_name }}{% if r.assigned_user %} • {{ r.assigned_user }}{% endif %}</div>
+          {% else %}
+            <div class="muted">—</div>
+          {% endif %}
+        </td>
+        <td>
+          <span class="pill {{ r.status_pill }}">{{ r.status_label }}</span>
+          {% if r.review_status %}
+            <div class="muted" style="margin-top:6px">Revisión: {{ r.review_status }}</div>
+          {% endif %}
+        </td>
+        <td>{{ r.due_date or "—" }}</td>
+        <td>{{ r.submitted_at or "—" }}</td>
+        <td>
+          <div class="actions">
+            {% for a in r.actions %}
+              <a class="btnx {% if loop.index>1 %}ghost{% endif %}" href="{{ a.href }}">{{ a.label }}</a>
+            {% endfor %}
+          </div>
+        </td>
+      </tr>
+      {% else %}
+      <tr><td colspan="6" class="muted">No hay coincidencias con el filtro actual.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

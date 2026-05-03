@@ -1,0 +1,323 @@
+<!doctype html>
+<html lang="es">
+
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="csrf-token" content="{{ csrf_token }}" />
+  <title>Sistema Corporativo • Gestión y Cumplimiento</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="/static/css/inicio.css">
+</head>
+
+<body>
+  {% set consulting = brand_cfg('consulting') %}
+  {% set petroleum = brand_cfg('petroleum') %}
+
+  <div class="page">
+    <div class="shell">
+      <header class="topbar">
+        <div class="container topbar-inner">
+          <div class="brand-chip" aria-label="Nombre del sistema">
+            <strong>{{ consulting.system_title or 'Sistema Corporativo de Gestión y Cumplimiento' }}</strong>
+            <span>{{ consulting.system_subtitle or 'Plataforma corporativa integrada para estaciones y proyectos
+              energéticos' }}</span>
+          </div>
+          <div class="top-actions">
+            <a class="ghost-btn" href="#footer-info">Contacto</a>
+            <a class="solid-btn" href="/login">Iniciar sesión</a>
+          </div>
+        </div>
+      </header>
+
+      <main>
+        <section class="hero" id="introduccion">
+          <div class="container hero-grid">
+            <div class="logo-row" aria-label="Empresas del sistema">
+              <div class="logo-card">
+                <img
+                  src="{{ ('/uploads/' ~ consulting.logo_path) if consulting.logo_path else '/static/img/consulting-logo-full.png' }}"
+                  alt="{{ consulting.display_name }}" />
+              </div>
+              <div class="logo-separator">—</div>
+              <div class="logo-card">
+                <img
+                  src="{{ ('/uploads/' ~ petroleum.logo_path) if petroleum.logo_path else '/static/img/petroleum-logo-full.png' }}"
+                  alt="{{ petroleum.display_name }}" />
+              </div>
+            </div>
+
+            <h1 class="hero-title">Sistema Corporativo de Gestión, Cumplimiento y Control Operativo</h1>
+            <p class="hero-text">Gestión operativa y cumplimiento normativo en una sola plataforma documental para
+              estaciones, evidencias, revisiones y seguimiento corporativo.</p>
+            <div class="hero-actions">
+              <a class="solid-btn" href="/login">Acceder al sistema</a>
+              <a class="outline-btn" href="#empresas">Conocer empresas</a>
+              <a class="outline-btn" href="#cotizacion-directa">Solicitar cotización</a>
+            </div>
+            <div class="ecosystem-title">Operan dentro del mismo <strong>ecosistema corporativo</strong></div>
+          </div>
+        </section>
+
+        <section class="section companies" id="empresas">
+          <div class="container company-grid" aria-label="Resumen por empresa">
+            <article class="company-card consulting" data-reveal="up" data-reveal-delay="0">
+              <div class="company-head">
+                <div class="company-icon">
+                  <img src="/static/img/consulting-globe-real.png" alt="Logo Consulting" />
+                </div>
+                <div>
+                  <h2 class="company-title">{{ consulting.display_name or 'Consulting Oil & Gas' }}</h2>
+                  <div class="company-subtitle">{{ consulting.subtitle or 'Renewable Energy HME, S.A. de C.V.' }}</div>
+                </div>
+              </div>
+              <div class="divider"></div>
+              <ul class="feature-list">
+                <li><span class="check">✓</span><span>Supervisión ambiental y energética</span></li>
+                <li><span class="check">✓</span><span>Gestión documental y trazabilidad</span></li>
+                <li><span class="check">✓</span><span>Planeación operativa con auditoría</span></li>
+              </ul>
+              <div class="company-footer">
+                <a class="card-link green" href="{{ consulting.public_url or 'https://consultinghme.com/' }}"
+                  target="_blank" rel="noopener">Sitio oficial</a>
+              </div>
+            </article>
+
+            <article class="company-card petroleum" data-reveal="up" data-reveal-delay="2">
+              <div class="company-head">
+                <div class="company-icon">
+                  <img src="/static/img/petroleum-logo-gold.png" alt="Logo Petroleum" />
+                </div>
+                <div>
+                  <h2 class="company-title">{{ petroleum.display_name or 'Petroleum IU' }}</h2>
+                  <div class="company-subtitle">{{ petroleum.subtitle or 'Oil & Gas Inspection Unit' }}</div>
+                </div>
+              </div>
+              <div class="divider"></div>
+              {% set petroleum_features = norm_items('petroleum', True) %}
+              <ul class="feature-list">
+                {% if petroleum_features %}
+                {% for item in petroleum_features[:3] %}
+                <li><span class="check">{{ item.icon or '✓' }}</span><span>{{ item.description or item.title }}</span>
+                </li>
+                {% endfor %}
+                {% else %}
+                <li><span class="check">✓</span><span>{{ norm_titles_line('petroleum') }}</span></li>
+                <li><span class="check">✓</span><span>Semáforo de cumplimiento por estación</span></li>
+                <li><span class="check">✓</span><span>Centro documental y evidencias</span></li>
+                {% endif %}
+              </ul>
+              <div class="company-footer">
+                <a class="card-link gold" href="{{ petroleum.public_url or 'https://petroleumiu.com/' }}"
+                  target="_blank" rel="noopener">Sitio oficial</a>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section modules-wrap" id="modulos">
+          <div class="container">
+            <h2 class="section-heading" data-reveal="up">Módulos de la plataforma integrada <span>para operación
+                documental, control operativo y cumplimiento</span></h2>
+            <div class="modules-grid">
+              <article class="module-card" data-reveal="up" data-reveal-delay="1">
+                <div class="module-icon green">▣</div>
+                <h3>Gestión documental</h3>
+                <p>Organización, control de archivos, carga de evidencias y acceso seguro por rol y estación.</p>
+              </article>
+              <article class="module-card" data-reveal="up" data-reveal-delay="2">
+                <div class="module-icon gold">⚖</div>
+                <h3>Cumplimiento normativo</h3>
+                <p>Control de normas NOM, anexos, renovaciones, vencimientos y seguimiento regulatorio.</p>
+              </article>
+              <article class="module-card" data-reveal="up" data-reveal-delay="3">
+                <div class="module-icon gold">☑</div>
+                <h3>Evidencias y trazabilidad</h3>
+                <p>Registro histórico de inspecciones, entregas, aprobaciones y respaldo documental interno.</p>
+              </article>
+              <article class="module-card" data-reveal="up" data-reveal-delay="2">
+                <div class="module-icon green">⌂</div>
+                <h3>Operación por estaciones</h3>
+                <p>Gestión local de cada estación con visibilidad diferenciada para administración y operación.</p>
+              </article>
+              <article class="module-card" data-reveal="up" data-reveal-delay="3">
+                <div class="module-icon gold">◉</div>
+                <h3>Control por roles</h3>
+                <p>Accesos jerárquicos para administradores, jefes de estación y operadores con permisos definidos.</p>
+              </article>
+              <article class="module-card" data-reveal="up" data-reveal-delay="4">
+                <div class="module-icon gold">🔔</div>
+                <h3>Alertas y seguimiento</h3>
+                <p>Notificaciones internas, recordatorios y monitoreo de actividades críticas y documentación.</p>
+              </article>
+            </div>
+          </div>
+        </section>
+
+        <section class="section showcase" id="sobre-nosotros">
+          <div class="container showcase-shell">
+            <div class="showcase-grid">
+              <div class="showcase-visual" aria-hidden="true">
+                <div class="showcase-stat" data-reveal="up" data-reveal-delay="1">
+                  <div class="stat-value" data-counter="98" data-suffix="%">98%</div>
+                  <div class="stat-label">Control documental</div>
+                </div>
+                <div class="showcase-stat" data-reveal="up" data-reveal-delay="2">
+                  <div class="stat-value" data-counter="24" data-suffix="h">24h</div>
+                  <div class="stat-label">Respuesta normativa</div>
+                </div>
+                <div class="showcase-stat" data-reveal="up" data-reveal-delay="3">
+                  <div class="stat-value" data-counter="6" data-suffix="">6</div>
+                  <div class="stat-label">Módulos integrados</div>
+                </div>
+                <div class="showcase-stat" data-reveal="up" data-reveal-delay="4">
+                  <div class="stat-value">Sync</div>
+                  <div class="stat-label">Actualización en tiempo real</div>
+                </div>
+              </div>
+
+              <div class="showcase-copy" data-reveal="right" data-reveal-delay="2">
+                <h3>Una plataforma pensada para trabajo real en campo, revisión y administración</h3>
+                <p>La pantalla pública puede presentar ambas marcas dentro de una sola experiencia corporativa, mientras
+                  que por dentro el sistema conserva separación por empresa, permisos por rol, control documental y
+                  operación por estación.</p>
+              </div>
+            </div>
+            <div class="closing-claim" data-reveal="up" data-reveal-delay="1">Dos especialidades, una sola
+              <strong>plataforma operativa</strong>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer" id="footer-info">
+        <div class="container">
+          <div class="footer-grid">
+            <section data-reveal="up" data-reveal-delay="1">
+              <h4>Links Importantes</h4>
+              <ul>
+                <li><a href="/privacy-policy">Política de Privacidad</a></li>
+                <li><a href="/cookies-policy">Política de Cookies</a></li>
+                <li><a href="/terms-and-conditions">Términos y Condiciones</a></li>
+              </ul>
+            </section>
+
+            <section data-reveal="up" data-reveal-delay="2">
+              <h4>Navegación</h4>
+              <ul>
+                <li><a href="#introduccion">Introducción</a></li>
+                <li><a href="#empresas">Nuestras empresas</a></li>
+                <li><a href="#modulos">Módulos del sistema</a></li>
+                <li><a href="/login">Acceso al sistema</a></li>
+              </ul>
+            </section>
+
+            <section data-reveal="up" data-reveal-delay="3">
+              <h4>Contacto y cotización</h4>
+              <div class="contact-list">
+                <div class="contact-row">
+                  <div>
+                    <span class="contact-label">Línea principal</span>
+                    <a class="contact-cta" href="https://wa.me/527713795843" target="_blank" rel="noopener noreferrer"
+                      aria-label="WhatsApp línea principal">
+                      <span>→</span>
+                      <span>Contactar vía WhatsApp</span>
+                    </a>
+                  </div>
+                </div>
+                <div class="contact-row">
+                  <div>
+                    <span class="contact-label">Ubicación</span>
+                    <a class="contact-cta"
+                      href="https://www.google.com/maps/search/?api=1&query=5+de+Mayo+1106%2C+Campo+Nuevo%2C+96980+Las+Choapas%2C+Ver."
+                      target="_blank" rel="noopener noreferrer" aria-label="Google Maps">
+                      <span>→</span>
+                      <span>Ver en Google Maps</span>
+                    </a>
+                  </div>
+                </div>
+              </div>
+
+              <div class="quote-panel" id="cotizacion-directa">
+                <h5>Solicitud de cotización</h5>
+                <p>Genera tu propuesta preliminar en PDF con folio, vigencia y monto estimado directamente desde aquí.
+                </p>
+                <div class="quote-alert" id="quoteAlert" aria-live="polite"></div>
+                <form class="quote-form" id="quoteForm">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                  <div class="quote-grid">
+                    <div class="quote-field">
+                      <label for="quoteName">Nombre</label>
+                      <input id="quoteName" name="full_name" type="text" placeholder="Completo" required>
+                    </div>
+                    <div class="quote-field">
+                      <label for="quoteCompany">Empresa</label>
+                      <input id="quoteCompany" name="company" type="text" placeholder="Nombre o estación">
+                    </div>
+                    <div class="quote-field">
+                      <label for="quotePhone">Teléfono</label>
+                      <input id="quotePhone" name="phone" type="text" placeholder="Número de contacto" required>
+                    </div>
+                    <div class="quote-field">
+                      <label for="quoteEmail">Correo</label>
+                      <input id="quoteEmail" name="contact_email" type="email" placeholder="tu@correo.com">
+                    </div>
+                  </div>
+                  <div class="quote-field">
+                    <label for="quoteService">Servicio de interés</label>
+                    <select id="quoteService" name="service_interest" required>
+                      <option value="">Selecciona una opción</option>
+                      <option>Consultoría y cumplimiento</option>
+                      <option>Inspección y normativas</option>
+                      <option>Control documental</option>
+                      <option>Work Log corporativo</option>
+                      <option>Otro</option>
+                    </select>
+                  </div>
+                  <div class="quote-field">
+                    <label for="quoteDetails">Detalles</label>
+                    <textarea id="quoteDetails" name="details" placeholder="Describe qué necesitas y el alcance deseado"
+                      required></textarea>
+                  </div>
+                  <button class="quote-submit" id="quoteSubmit" type="submit">
+                    <span>Generar propuesta PDF</span>
+                  </button>
+                </form>
+                <div class="quote-meta" id="quoteMeta"></div>
+                <div class="quote-result-actions" id="quoteActions">
+                  <a class="quote-secondary" id="quotePdfLink" href="#" target="_blank" rel="noopener">
+                    <span>→</span>
+                    <span>Abrir PDF</span>
+                  </a>
+                  <a class="quote-secondary" id="quotePdfDownloadLink" href="#" target="_blank" rel="noopener">
+                    <span>↓</span>
+                    <span>Descargar</span>
+                  </a>
+                </div>
+              </div>
+            </section>
+          </div>
+
+          <div class="footer-bottom">
+            <div>Sistema Corporativo de <strong>Gestión</strong> v5.0 Corporate</div>
+            <div>© 2026 Consulting Oil & Gas & Petroleum IU. Todos los derechos reservados.</div>
+          </div>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <a class="contact-floating" href="https://wa.me/527713795843" target="_blank" rel="noopener noreferrer"
+    aria-label="WhatsApp">
+    <span class="contact-floating-icon">→</span>
+    <span class="contact-floating-text">WhatsApp<small>Contactar ahora</small></span>
+  </a>
+
+  <script src="/static/js/inicio.js" defer></script>
+</body>
+
+</html>

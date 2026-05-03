@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="csrf-token" content="{{ csrf_token }}"/>
+  <title>{{ brand_settings.system_title or "COG WORK LOG" }}</title>
+  <style>:root{--hme-green:{{ brand_settings.primary_color or "#86B821" }};--hme-accent:{{ brand_settings.secondary_color or brand_settings.primary_color or "#2C7BE5" }};--hme-green-dark:{{ brand_settings.primary_color or "#86B821" }};}</style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/theme-hme.css"/>
+  {% block head %}{% endblock %}
+
+  <link rel="stylesheet" href="/static/css/layout.css"/>
+</head>
+<body class="brand-{{ session.get('brand','consulting') }}">
+  <div class="topbar">
+    <div class="brand">
+      {% set _brand = session.get('brand','consulting') %}
+      {% if _brand == 'petroleum' %}
+        <img src="{{ ('/uploads/' ~ brand_settings.logo_path) if brand_settings.logo_path else '/static/img/petroleum-logo.png' }}" alt="PETROLEUM"/>
+        <div>
+          <div class="title">{{ brand_settings.system_title or 'PETROLEUM • Work Log' }}</div>
+          <div style="font-size:12px;color:var(--hme-text-soft);font-weight:700;">{{ brand_settings.system_subtitle or 'Oil & Gas Inspection Unit' }}</div>
+        </div>
+      {% else %}
+        <img src="{{ ('/uploads/' ~ brand_settings.logo_path) if brand_settings.logo_path else '/static/img/logo.png' }}" alt="CONSULTING"/>
+        <div>
+          <div class="title">{{ brand_settings.system_title or 'CONSULTING • Work Log' }}</div>
+          <div style="font-size:12px;color:var(--hme-text-soft);font-weight:700;">{{ brand_settings.system_subtitle or 'Plataforma corporativa para estaciones' }}</div>
+        </div>
+      {% endif %}
+    </div>
+    <div class="userbox">
+      <button class="iconbtn" id="nav-toggle" aria-label="Menú" aria-controls="app-sidebar" aria-expanded="false">☰</button>
+      <button class="iconbtn" id="theme-toggle" aria-label="Tema">🌓</button>
+      <span id="me-name"></span>
+      <a href="/logout">Salir</a>
+    </div>
+  </div>
+
+  <div id="blocked-banner" class="card" style="margin:14px 22px 0; border-color:rgba(245,158,11,.35); background:rgba(245,158,11,.08);" hidden>
+    <div style="font-weight:900;">Modo vista (mensualidad pendiente)</div>
+    <div class="help">Tu estación está bloqueada para crear, editar o descargar. Solo puedes subir tu comprobante en <b>Mensualidad</b>.</div>
+  </div>
+
+  <div class="layout">
+    <aside class="sidebar" id="app-sidebar">
+      <div class="navgrp navcompact">
+        <div class="navtitle">Acceso rápido</div>
+        <nav class="nav">
+          <a href="/mod/dashboard">Dashboard</a>
+          <a href="/mod/panel">Mi panel</a>
+          <a href="/mod/notifications">Notificaciones <span id="notifBadge" class="badge" style="display:none;margin-left:6px;">0</span></a>
+          <a href="/mod/profile">Perfil / FIEL</a>
+          <a href="/mod/organigrama">Organigrama</a>
+        </nav>
+        <div class="navdetails">
+          <details open>
+            <summary>Operación</summary>
+            <nav class="nav">
+              <a href="/mod/activities">{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividades" }}</a>
+              <a href="/mod/operational-calendar">Calendario operativo</a>
+              {% if session.get('brand','consulting') == 'petroleum' %}<a href="/mod/document-renewals-calendar">Vencimientos y renovaciones</a>{% endif %}
+              <a href="/mod/evidencias">Evidencias</a>
+              <a href="/mod/incidents">Incidencias</a>
+              <a href="/mod/corrections">Tareas / Correcciones</a>
+            </nav>
+          </details>
+          <details>
+            <summary>{{ 'Normativa y control' if session.get('brand','consulting') == 'petroleum' else 'Operación técnica' }}</summary>
+            <nav class="nav">
+              {% if session.get('brand','consulting') == 'petroleum' %}
+              <a href="/petroleum/normativas">Normativas</a>
+              <a href="/petroleum/expedientes">Expediente normativo (carpeta)</a>
+              <a href="/mod/reports" data-not-operador hidden>Reportes</a>
+              {% else %}
+              <a href="/mod/pipas">Pipas</a>
+              <a href="/mod/maintenance">Mantenimiento</a>
+              <a href="/mod/alerts">Alertas</a>
+              <a href="/mod/reports" data-not-operador hidden>Reportes</a>
+              {% endif %}
+              <a href="/mod/payments" data-not-operador hidden>Mensualidad</a>
+            </nav>
+          </details>
+          <details>
+            <summary>Ayuda y soporte</summary>
+            <nav class="nav">
+              <a href="/mod/help-center">Centro de ayuda</a>
+              <a href="/mod/signature-pad">Firma dibujada</a>
+              <a href="/mod/analytics" data-admin-auditor-only hidden>Analíticas</a>
+            </nav>
+          </details>
+        </div>
+            <div class="card role-guide-card" id="roleGuideCard" style="margin-top:12px;">
+        <div class="guide-kicker">Guía rápida</div>
+        <div id="roleGuideTitle" style="font-weight:900;font-size:15px;margin-top:4px;">Cargando…</div>
+        <div id="roleGuideText" class="help" style="margin-top:6px;">Preparando accesos recomendados según tu rol.</div>
+        <div id="roleGuideSteps" class="role-guide-steps" style="margin-top:10px;"></div>
+      </div>
+    </div>
+
+      <div class="navgrp navcompact" data-admin-only hidden>
+        <div class="navtitle">Administrador</div>
+        <div class="navdetails">
+          <details open>
+            <summary>Control principal</summary>
+            <nav class="nav">
+              <a href="/admin/menu">{{ "Centro de módulos Petroleum" if session.get('brand','consulting') == 'petroleum' else "Módulos (SGM / SASISOPA)" }}</a>
+              <a href="/admin/inbox">Inbox (Revisión)</a>
+              <a href="/admin/stations">Estaciones</a>
+              <a href="/admin/users">Usuarios</a>
+              {% if session.get('brand','consulting') == 'petroleum' %}
+              <a href="/petroleum/normativas-control">Control de vigencias</a>
+              <a href="/petroleum/normativas">Normativas por estación</a>
+              <a href="/petroleum/expedientes">Expediente normativo (carpeta)</a>
+              {% else %}
+              {% endif %}
+            </nav>
+          </details>
+          <details>
+            <summary>Supervisión</summary>
+            <nav class="nav">
+              <a href="/admin/executive">Ejecutivo</a>
+{% if session.get('brand','consulting') == 'petroleum' %}              <a href="/admin/document-deadlines">Control maestro (admin)</a>
+{% endif %}              <a href="/admin/audit">Auditoría</a>
+              <a href="/admin/docs/compare">Comparador documental</a>
+              <a href="/admin/reports/print/consolidated" target="_blank" rel="noopener">Impresión pro</a>
+            </nav>
+          </details>
+          <details>
+            <summary>Configuración</summary>
+            <nav class="nav">
+              <a href="/admin/backup">Backups</a>
+              <a href="/admin/setup-wizard">Configuración</a>
+            </nav>
+          </details>
+        </div>
+      </div>
+    </aside>
+
+    <main class="main">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+
+  <div id="toast" class="toast"><div class="t"></div><div class="b"></div></div>
+  <script src="/static/js/common.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

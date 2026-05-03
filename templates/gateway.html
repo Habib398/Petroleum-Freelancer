@@ -1,0 +1,78 @@
+{% extends "layout_public.html" %}
+{% block title %}Unified System | Selecciona una empresa{% endblock %}
+{% block body %}
+<div class="gate">
+  <div class="gate__bg" aria-hidden="true"></div>
+
+  <main class="gate__wrap" aria-label="Selector de empresa">
+    <section class="gate__grid">
+      <a class="gate__panel gate__panel--consulting" href="/login?brand=consulting" aria-label="Entrar al sistema de Consulting Oil & Gas">
+        <div class="gate__logo">
+          <img src="/static/img/consulting-globe.png" alt="Consulting Oil & Gas" />
+        </div>
+        <div class="gate__title">Consulting Oil &amp; Gas</div>
+        <div class="gate__subtitle">Renewable Energy HME, S.A. de C.V.</div>
+      </a>
+
+      <div class="gate__divider" aria-hidden="true"></div>
+
+      <a class="gate__panel gate__panel--petroleum" href="/petroleum" aria-label="Entrar al sistema Petroleum">
+        <div class="gate__logo gate__logo--wide">
+          <img src="/static/img/petroleum-logo.png" alt="PETROLEUM - Oil & Gas Inspection Unit" />
+        </div>
+        <div class="gate__title gate__title--petroleum">PETROLEUM</div>
+        <div class="gate__subtitle">OIL &amp; GAS INSPECTION UNIT</div>
+      </a>
+    </section>
+
+    <section class="gate__footer" aria-label="Acciones">
+      <div class="gate__footerLine gate__footerLine--left" aria-hidden="true"></div>
+      <div class="gate__footerMark" aria-hidden="true">
+        <svg width="46" height="46" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <path d="M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" stroke="currentColor" stroke-width="1.5"/>
+          <path d="M3.6 9h16.8M3.6 15h16.8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <path d="M12 3c2.5 2.8 4 5.7 4 9s-1.5 6.2-4 9c-2.5-2.8-4-5.7-4-9s1.5-6.2 4-9Z" stroke="currentColor" stroke-width="1.5"/>
+        </svg>
+      </div>
+      <div class="gate__footerLine gate__footerLine--right" aria-hidden="true"></div>
+
+      <div class="gate__footerText">UNIFIED SYSTEM</div>
+
+      <div class="gate__actions">
+        <a class="gate__btn" href="{{ consulting_url|default('https://consultinghme.com/') }}" target="_blank" rel="noopener" aria-label="Abrir sitio oficial de Consulting Oil & Gas">¿QUIERES SABER MÁS?</a>
+        <button class="gate__chatBtn" id="openBot" type="button" aria-label="Abrir chat informativo">
+          <span class="gate__chatIcon" aria-hidden="true">💬</span>
+          Chat informativo
+        </button>
+      </div>
+    </section>
+  </main>
+</div>
+
+<!-- Chatbot (solo informativo, sin datos privados) -->
+<div class="bot" id="bot" aria-hidden="true">
+  <div class="bot__panel" role="dialog" aria-modal="true" aria-label="Chat informativo">
+    <header class="bot__head">
+      <div class="bot__headTitle">Consultoría Oil &amp; Gas</div>
+      <button type="button" class="bot__close" id="closeBot" aria-label="Cerrar">✕</button>
+    </header>
+
+    <div class="bot__body" id="botBody" aria-live="polite"></div>
+
+    <div class="bot__chips" id="botChips" aria-label="Preguntas rápidas"></div>
+
+    <form class="bot__form" id="botForm" autocomplete="off">
+      <input class="bot__input" id="botInput" placeholder="Escribe tu pregunta..." />
+      <button class="bot__send" aria-label="Enviar">➤</button>
+    </form>
+  </div>
+</div>
+
+<script>
+  window.GatewayConfig = {
+    consultingUrl: "{{ consulting_url|default('https://consultinghme.com/') }}",
+    partnerUrl: "{{ partner_url|default('https://petroleumiu.com/') }}"
+  };
+</script>
+<script src="/static/js/gateway_bot.js" defer></script>
+{% endblock %}

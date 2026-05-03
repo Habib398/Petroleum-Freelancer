@@ -1,0 +1,54 @@
+{% extends "layout.html" %}
+
+{% block head %}
+  <link rel="stylesheet" href="/static/css/petroleum_cumplimiento_simple.css"/>
+{% endblock %}
+
+{% block content %}
+{% set can_upload = session.get('role') == 'admin' %}
+<div class="pn-page">
+  <div class="pn-hero">
+    <div class="pn-crumb">Petroleum <span>›</span> Normativas</div>
+    <h1>Normativas</h1>
+    <p>Módulo simple de 3 documentos. El administrador sube o actualiza; jefes de estación y operadores solo pueden ver en vista previa y descargar el archivo vigente de su estación.</p>
+
+    <div class="pn-controls">
+      <label for="pnStation">Estación</label>
+      <select id="pnStation" class="pn-select"></select>
+      {% if can_upload %}<a class="pn-btn pn-outline" href="/petroleum/normativas-control">Control de vigencias</a>{% endif %}
+    </div>
+  </div>
+
+  <div class="pn-grid" data-can-upload="{{ '1' if can_upload else '0' }}">
+    {% for item in norm_items('petroleum', True) %}
+    <section class="pn-card pn-dynamic" data-doc="{{ item.code }}" style="--pn-accent: {{ item.color }};">
+      <header>
+        <div class="pn-badge">{{ item.badge }}</div>
+        <div class="pn-title-wrap">
+          <div class="pn-icon" aria-hidden="true">{{ item.icon or '•' }}</div>
+          <div>
+            <h2>{{ item.title }}</h2>
+            <div class="pn-desc">{{ item.description or ('Documentación y evidencias relacionadas con ' ~ item.title ~ '.') }}</div>
+          </div>
+        </div>
+        <div class="pn-meta" data-meta></div>
+        <div class="pn-status" data-status></div>
+      </header>
+      <div class="pn-actions">
+        <a class="pn-btn pn-outline" data-preview href="#" target="_blank" rel="noopener">Vista previa</a>
+        <a class="pn-btn" data-download href="#">Descargar</a>
+        {% if can_upload %}
+          <button class="pn-btn pn-outline" data-upload>Subir / Actualizar</button>
+        {% endif %}
+      </div>
+    </section>
+    {% endfor %}
+  </div>
+
+  <input id="pnFile" type="file" accept=".pdf,.png,.jpg,.jpeg" hidden>
+
+  <div class="pn-toast" id="pnToast" hidden></div>
+</div>
+
+<script src="/static/js/petroleum_cumplimiento_simple.js"></script>
+{% endblock %}

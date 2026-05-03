@@ -1,0 +1,271 @@
+{% extends "layout.html" %}
+{% block head %}
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
+  <style>
+    #calendar{background:rgba(255,255,255,.96);border:1px solid var(--hme-border);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;}
+    dialog{border:none;border-radius:16px;box-shadow:0 22px 60px rgba(0,0,0,.25);max-width:640px;width:95%;}
+    dialog::backdrop{background:rgba(0,0,0,.35);}
+  </style>
+{% endblock %}
+{% block content %}
+  <div class="pagehead">
+    <div>
+      <h1 class="h1">{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividades" }}</h1>
+      <div class="sub">{{ "Agenda operativa por estación (entrega y revisión de evidencias)." if session.get('brand','consulting') == 'petroleum' else "Calendario operativo por estación (entrega y revisión de evidencias)." }}</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button id="btnPrint" class="btn">Imprimir calendario</button>
+      <button id="btnPdf" class="btn ghost">Exportar PDF</button>
+      <button id="btnImportProgram" class="btn" data-admin-only hidden>Importar Excel/CSV</button>
+      <button id="btnNew" class="btn primary" data-admin-only hidden>{{ "Crear agenda" if session.get('brand','consulting') == 'petroleum' else "Crear actividad" }}</button>
+      <a class="btn ghost" href="/admin/inbox" data-admin-only hidden>Revisar entregas</a>
+    </div>
+  </div>
+
+<div class="card" data-export-bar style="margin-top:12px;" data-admin-auditor-only hidden>
+  <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;">
+    <div><b>Exportación</b> <span class="help">Descarga de datos para auditoría/analítica.</span></div>
+    <div style="display:flex;gap:10px;">
+      <a class="btn" href="/api/export/submissions.csv">CSV</a>
+      <a class="btn" href="/api/export/submissions.xlsx">Excel</a>
+    </div>
+  </div>
+</div>
+
+
+
+
+
+  <div id="calendar"></div>
+
+  <dialog id="dlgImport">
+    <form id="formImport" class="dlgform" enctype="multipart/form-data">
+      <h3 style="margin:0 0 8px 0;">{{ "Importar agenda (Excel/CSV)" if session.get('brand','consulting') == 'petroleum' else "Importar actividades (Excel/CSV)" }}</h3>
+      <div class="help">Sube un archivo <b>.xlsx</b> o <b>.csv</b> con las columnas: <code>title</code>, <code>start_date</code>, <code>repeat</code>, <code>until</code> (opcional), <code>station_id</code>/<code>station_code</code> (opcional), <code>description</code> (opcional).</div>
+      <div style="display:grid;gap:10px;margin-top:10px;">
+        <div>
+          <div class="help">Archivo</div>
+          <input class="input" type="file" name="file" id="impFile" accept=".csv,.xlsx" required>
+        </div>
+        <div class="help">Plantilla rápida: <a class="link" href="/static/templates/activities_template.csv" download>Descargar CSV</a></div>
+        <div id="impErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+      </div>
+      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+        <button class="btn ghost" type="button" id="impCancel">Cancelar</button>
+        <button class="btn primary" type="submit">Importar</button>
+      </div>
+    </form>
+  </dialog>
+  <details class="card" style="margin:12px 0;" >
+    <summary style="cursor:pointer;font-weight:900;">Filtros y reportes</summary>
+    <div style="margin-top:10px;">
+      <div class="card" style="margin:12px 0;">
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;justify-content:space-between;">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+            <div>
+              <div class="help">Frecuencia</div>
+              <select id="fFreq" class="input" style="min-width:180px;">
+                <option value="">Todas</option>
+                <option value="daily">Diarias</option>
+                <option value="weekly">Semanales</option>
+                <option value="monthly">Mensuales</option>
+                <option value="bimonthly">Bimestrales</option>
+                <option value="fourmonthly">Cada 4 meses</option>
+                <option value="semiannual">Semestrales</option>
+                <option value="quarterly">Trimestrales</option>
+                <option value="yearly">Anuales</option>
+                <option value="fiveyearly">Cada 5 años</option>
+                <option value="once">Únicas</option>
+              </select>
+            </div>
+            <div>
+              <div class="help">Buscar</div>
+              <input id="fSearch" class="input" placeholder="{{ "Nombre de agenda… (Enter)" if session.get('brand','consulting') == 'petroleum' else "Nombre de actividad… (Enter) " }}" style="min-width:260px;">
+            </div>
+            <label class="help" style="display:flex;gap:8px;align-items:center;margin:0 0 4px 0;">
+              <input id="fToday" type="checkbox"> Solo hoy
+            </label>
+          </div>
+    
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <a class="btn" href="/mod/activities/print">Bitácora del mes</a>
+            <a class="btn" href="/api/reports/activities.pdf" target="_blank" rel="noopener">PDF mensual</a>
+            <a class="btn" href="/api/reports/activities.ics" >ICS (Google Calendar)</a>
+          </div>
+        </div>
+        <div class="help" style="margin-top:10px;">Tip: puedes filtrar por frecuencia o buscar por nombre. “Solo hoy” sirve para operadores.</div>
+      </div>
+    </div>
+  </details>
+<div class="card" data-admin-only data-activity-manage-card hidden style="margin-top:14px;">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
+    <div>
+      <b>{{ "Gestión de agenda" if session.get('brand','consulting') == 'petroleum' else "Gestión de actividades" }}</b>
+      <div class="help">{{ "Editar, desactivar o borrar registros de agenda creados." if session.get('brand','consulting') == 'petroleum' else "Editar, desactivar o borrar actividades creadas." }}</div>
+    </div>
+    <button class="btn" id="btnRefreshActs" type="button">Actualizar</button>
+  </div>
+  <div style="overflow:auto;margin-top:10px;">
+    <table class="table">
+      <thead><tr><th>ID</th><th>Título</th><th>Requiere evidencia</th><th>Activa</th><th>Acciones</th></tr></thead>
+      <tbody id="aT"></tbody>
+    </table>
+  </div>
+</div>
+
+<dialog id="dlgActEdit">
+  <form method="dialog" class="dlgform">
+    <h3 style="margin:0 0 10px 0;">{{ "Editar agenda" if session.get('brand','consulting') == 'petroleum' else "Editar actividad" }}</h3>
+    <input type="hidden" id="aeId">
+    <div style="display:grid;gap:10px;">
+      <div><div class="help">Título</div><input id="aeTitle" class="input" required></div>
+      <div><div class="help">Descripción / instrucciones</div><textarea id="aeDesc" class="input" rows="4"></textarea></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <label style="display:flex;gap:8px;align-items:center;"><input type="checkbox" id="aeEvidence" checked> Requiere evidencia</label>
+        <label style="display:flex;gap:8px;align-items:center;"><input type="checkbox" id="aeActive" checked> Activa</label>
+      </div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+      <button class="btn ghost" value="cancel">Cancelar</button>
+      <button class="btn primary" id="aeSave" value="ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+
+  <dialog id="dlgNew">
+    <form id="formNewActivity" class="card" style="border:none;box-shadow:none;" enctype="multipart/form-data">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div>
+          <div style="font-weight:900;font-size:16px;">{{ "Crear agenda (con repetición)" if session.get('brand','consulting') == 'petroleum' else "Crear actividad (con repetición)" }}</div>
+          <div class="help">Define frecuencia y si aplica a todas las estaciones o a una en específico.</div>
+        </div>
+        <button type="button" id="newClose" class="btn ghost small">Cerrar</button>
+      </div>
+
+      <div style="display:grid;gap:10px;margin-top:10px;">
+        <div class="formrow">
+          <div>
+            <div class="help">Fecha de inicio</div>
+            <input class="input" name="start_date" id="newStart" placeholder="2026-02-18"/>
+          </div>
+          <div>
+            <div class="help">Repetición</div>
+            <select class="input" name="repeat" id="newRepeat">
+              <option value="once">Una vez</option>
+              <option value="daily">Diaria</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+              <option value="bimonthly">Bimestral</option>
+              <option value="quarterly">Trimestral</option>
+              <option value="fourmonthly">Cada 4 meses</option>
+              <option value="semiannual">Semestral</option>
+              <option value="yearly">Anual</option>
+              <option value="fiveyearly">Cada 5 años</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="formrow">
+          <div>
+            <div class="help">Hasta (opcional)</div>
+            <input class="input" name="until" id="newUntil" placeholder="2026-12-31"/>
+          </div>
+          <div>
+            <div class="help">Estación</div>
+            <select class="input" name="station_id" id="newStation"></select>
+          </div>
+        </div>
+
+        <div>
+          <div class="help">{{ "Nombre de la agenda" if session.get('brand','consulting') == 'petroleum' else "Nombre de la actividad" }}</div>
+          <input class="input" name="title" id="newTitle" placeholder="Ej. Limpieza de área"/>
+        </div>
+        <div>
+          <div class="help">Descripción / instrucciones</div>
+          <textarea class="input" name="description" id="newDesc" rows="3" placeholder="Describe qué se debe hacer, puntos de control, etc."></textarea>
+        </div>
+
+        <div class="formrow">
+          <div>
+            <div class="help">Manual / Formato (PDF) (opcional)</div>
+            <input class="input" type="file" name="manual_pdf" accept="application/pdf">
+          </div>
+          <div>
+            <div class="help">Documento adicional (PDF) (opcional)</div>
+            <input class="input" type="file" name="extra_pdf" accept="application/pdf">
+          </div>
+        </div>
+
+        <div class="formactions">
+          <button class="btn primary" type="submit">{{ "Crear agenda" if session.get('brand','consulting') == 'petroleum' else "Crear actividad" }}</button>
+        </div>
+        <div id="newErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgSubmit">
+    <form id="submitForm" class="card" style="border:none;box-shadow:none;">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div>
+          <div style="font-weight:900;font-size:16px;">Entregar evidencia</div>
+          <div id="submitMeta" class="help"></div>
+        </div>
+        <button type="button" id="submitClose" class="btn ghost small">Cerrar</button>
+      </div>
+      <input type="hidden" name="event_id" id="subEventId"/>
+      <input type="hidden" name="activity_id" id="subActivityId"/>
+      <div style="display:grid;gap:10px;margin-top:10px;">
+        <div>
+          <div class="help">Notas</div>
+          <textarea class="input" name="notes" rows="3" placeholder="Observaciones..."></textarea>
+        </div>
+        <div>
+          <div class="help">Archivo de evidencia (foto / PDF)</div>
+          <input class="input" type="file" name="evidence" required>
+        </div>
+        <div class="formactions">
+          <button class="btn primary" type="submit">Enviar</button>
+        </div>
+        <div id="subErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+      </div>
+    </form>
+  </dialog>
+
+
+<dialog id="dlgMoveEvent">
+  <form method="dialog" class="dlgform">
+    <h3 style="margin:0 0 10px 0;">{{ "Reprogramar agenda" if session.get('brand','consulting') == 'petroleum' else "Reprogramar actividad" }}</h3>
+    <div class="help" id="mvInfo" style="margin-bottom:10px;"></div>
+    <input type="hidden" id="mvEventId">
+    <input type="hidden" id="mvOldDate">
+    <input type="hidden" id="mvNewDate">
+
+    <div style="display:grid;gap:10px;">
+      <div class="help">¿Qué deseas mover?</div>
+      <label style="display:flex;gap:8px;align-items:center;">
+        <input type="radio" name="mvScope" value="single" checked>
+        {{ "Solo este elemento de agenda (solo este día)" if session.get('brand','consulting') == 'petroleum' else "Solo esta actividad (solo este día)" }}
+      </label>
+      <label style="display:flex;gap:8px;align-items:center;">
+        <input type="radio" name="mvScope" value="series">
+        {{ "Todos los registros de agenda de esta plantilla a partir de esta fecha" if session.get('brand','consulting') == 'petroleum' else "Todas las actividades de esta plantilla a partir de esta fecha" }}
+      </label>
+    </div>
+
+    <div class="formactions" style="margin-top:12px;">
+      <button class="btn" value="cancel">Cancelar</button>
+      <button id="mvSave" class="btn primary" value="ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+
+
+{% endblock %}
+
+{% block scripts %}
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  <script src="/static/js/activities.js"></script>
+{% endblock %}

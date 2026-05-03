@@ -1,0 +1,26 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead"><div><h1 class="h1">Bitácora de incidencias</h1><div class="sub">Registro y seguimiento de hallazgos, observaciones e incidentes operativos.</div></div></div>
+<div class="grid cols-2" style="margin-top:14px;">
+  <div class="card">
+    <div class="help">Nueva incidencia</div>
+    <div style="display:grid;gap:10px;margin-top:10px;">
+      <input id="title" class="input" placeholder="Título">
+      <textarea id="description" class="input" style="min-height:110px;" placeholder="Descripción"></textarea>
+      <div class="grid cols-3"><input id="station_id" class="input" placeholder="ID estación"><select id="severity" class="input"><option>medium</option><option>low</option><option>high</option><option>critical</option></select><input id="module" class="input" placeholder="Módulo"></div>
+      <button class="btn primary" id="btnCreate">Registrar incidencia</button>
+      <div id="msg" class="help"></div>
+    </div>
+  </div>
+  <div class="card"><div class="help">Filtro</div><select id="filter" class="input" style="margin-top:10px;"><option value="">Todas</option><option value="open">Abiertas</option><option value="in_progress">En progreso</option><option value="closed">Cerradas</option></select><div class="help" style="margin-top:10px;">Tip: desde aquí puedes cerrar incidencias y dejar trazabilidad.</div></div>
+</div>
+<div id="list" class="grid cols-2" style="margin-top:14px;"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function refresh(){const st=document.getElementById('filter').value||''; const r=await api('/api/incidents'+(st?('?status='+encodeURIComponent(st)):'')); const box=document.getElementById('list'); box.innerHTML=(r.items||[]).map(it=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><div class="help">${_esc(it.folio||'')}</div><h3 style="margin:4px 0 8px;">${_esc(it.title||'')}</h3><div class="help">${_esc(it.station_code||'Global')} · ${_esc(it.severity||'medium')} · ${_esc(it.status||'open')}</div></div><div><button class="btn ghost" onclick="markIncident(${it.id},'in_progress')">Tomar</button> <button class="btn" onclick="markIncident(${it.id},'closed')">Cerrar</button></div></div><div style="margin-top:10px;white-space:pre-wrap;">${_esc(it.description||'')}</div></div>`).join('') || '<div class="card">Sin incidencias.</div>'; }
+async function createIncident(){await api('/api/incidents',{method:'POST',body:JSON.stringify({title:title.value,description:description.value,station_id:station_id.value,module:module.value,severity:severity.value})}); msg.textContent='Incidencia registrada.'; title.value=''; description.value=''; station_id.value=''; module.value=''; await refresh();}
+async function markIncident(id,status){await api('/api/incidents/'+id,{method:'PATCH',body:JSON.stringify({status})}); await refresh();}
+document.getElementById('btnCreate').addEventListener('click',()=>createIncident().catch(()=>msg.textContent='No se pudo registrar.')); document.getElementById('filter').addEventListener('change',()=>refresh().catch(()=>{})); window.markIncident=markIncident; refresh();
+</script>
+{% endblock %}

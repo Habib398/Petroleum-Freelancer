@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/shared_folder.css"/>
+{% endblock %}
+{% block content %}
+<div class="page">
+  <div class="card">
+    <div class="folder-hero">
+      <div>
+        <h1 style="margin:0 0 6px">{{ page_title }}</h1>
+        <div class="muted">{{ page_subtitle }}</div>
+      </div>
+      <div class="pill">PDF</div>
+    </div>
+  </div>
+  <div class="grid2">
+    <section class="cardx">
+      <div class="folder-toolbar">
+        <div>
+          <h3 style="margin:0">Archivos disponibles</h3>
+          <div class="help">Carpeta compartida por estación. Admin ve todas; estaciones solo su alcance.</div>
+        </div>
+        <div class="folder-actions">
+          <input id="q" class="input" placeholder="Buscar título" style="min-width:220px">
+          {% if is_admin %}
+          <select id="stationFilter" class="input">
+            <option value="">Todas las estaciones</option>
+            {% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}
+          </select>
+          {% elif stations|length > 1 %}
+          <select id="stationFilter" class="input">
+            <option value="">Mis estaciones</option>
+            {% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}
+          </select>
+          {% else %}
+          <input id="stationFilter" type="hidden" value="{{ default_station_id }}">
+          {% endif %}
+          <button id="btnRefresh" class="btnx alt" type="button">Actualizar</button>
+        </div>
+      </div>
+      <div id="msg" class="help" style="margin-top:10px"></div>
+      <div class="tablewrap folder-table">
+        <table class="table">
+          <thead><tr><th>Título</th><th>Estación</th><th>Fecha</th><th>Archivo</th></tr></thead>
+          <tbody id="tbody"><tr><td colspan="4" class="muted">Cargando…</td></tr></tbody>
+        </table>
+      </div>
+    </section>
+    <section class="cardx">
+      <h3 class="folder-upload-title">Subir documento</h3>
+      <div class="help" style="margin-bottom:12px">Disponible para admin y estaciones dentro de la carpeta compartida. El admin puede elegir estación; los demás usuarios solo su alcance.</div>
+      <form id="uploadForm" class="folder-form">
+        <div class="field"><label>Título</label><input name="title" required placeholder="Ej. evidencia, oficio, constancia"></div>
+        <div class="field">
+          <label>Estación</label>
+          {% if is_admin %}
+          <select name="station_id" required><option value="">Selecciona una estación</option>{% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}</select>
+          {% elif stations|length > 1 %}
+          <select name="station_id" required><option value="">Selecciona una estación</option>{% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}</select>
+          {% else %}
+          <input type="hidden" name="station_id" value="{{ default_station_id }}">
+          <input value="{% if stations %}{{ stations[0].code }} • {{ stations[0].name }}{% else %}Sin estación{% endif %}" disabled>
+          {% endif %}
+        </div>
+        <div class="field"><label>Archivo PDF</label><input type="file" name="file" accept="application/pdf" required></div>
+        <input type="hidden" name="module" value="{{ folder_module }}">
+        <input type="hidden" name="section" value="{{ folder_section }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <button class="btnx" type="submit">Subir a carpeta compartida</button>
+      </form>
+      <div class="help" id="uploadMsg" style="margin-top:10px"></div>
+    </section>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+  window.SharedFolderConfig = {
+    folderModule: {{ folder_module|tojson }},
+    folderSection: {{ folder_section|tojson }},
+    defaultStationId: {{ default_station_id|tojson }},
+    resetStationId: {{ (not is_admin and stations|length == 1)|tojson }}
+  };
+</script>
+<script src="/static/js/shared_folder.js" defer></script>
+{% endblock %}

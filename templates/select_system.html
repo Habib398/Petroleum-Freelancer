@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="csrf-token" content="{{ csrf_token }}"/>
+  <title>Seleccionar empresa</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/theme-hme.css"/>
+  <link rel="stylesheet" href="/static/css/entry.css"/>
+</head>
+<body class="entry">
+  <div class="shell">
+    <div class="sys-head premium">
+      <div>
+        <div class="sys-title">Selecciona la empresa</div>
+        <div class="sys-sub">Tu sesión ya inició. Elige el sistema que quieres administrar.</div>
+      </div>
+      <a class="btnxl ghost" href="/logout" style="text-decoration:none;">Salir</a>
+    </div>
+
+    <div class="sys-grid premium">
+      {% if 'consulting' in allowed %}
+      <div class="sys-card consulting premium" onclick="setBrand('consulting')" role="button" tabindex="0" onkeypress="if(event.key==='Enter'){setBrand('consulting')}">
+        <div class="sys-bg"></div>
+        <div class="top">
+          <div class="sys-logo big">
+            <img src="/static/img/consulting-globe.png" alt="Consulting">
+          </div>
+          <div class="sys-meta">
+            <div class="sys-kicker">CONSULTING</div>
+            <div class="sys-name">Consulting HME</div>
+            <div class="sys-desc">Panel administrativo, control documental y módulos de operación con identidad Consulting.</div>
+          </div>
+        </div>
+
+        <div class="sys-body">
+          <div class="sys-tags">
+            <span class="tag"><span class="dot" style="background: var(--hme-green); box-shadow:0 0 0 5px rgba(107,165,57,.20);"></span> SASISOPA</span>
+            <span class="tag"><span class="dot" style="background: #2563EB; box-shadow:0 0 0 5px rgba(37,99,235,.18);"></span> SGM</span>
+            <span class="tag"><span class="dot" style="background: #16A34A; box-shadow:0 0 0 5px rgba(22,163,74,.18);"></span> Reportes</span>
+          </div>
+
+          <div class="sys-actions">
+            <a class="mini-link" href="https://consultinghme.com/" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Sitio oficial</a>
+            <span class="cta">
+              <span>Entrar</span>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+
+      {% if 'petroleum' in allowed %}
+      <div class="sys-card petroleum premium" onclick="setBrand('petroleum')" role="button" tabindex="0" onkeypress="if(event.key==='Enter'){setBrand('petroleum')}">
+        <div class="sys-bg"></div>
+        <div class="top">
+          <div class="sys-logo big">
+            <img src="/static/img/petroleum-logo-gold.png" alt="Petroleum">
+          </div>
+          <div class="sys-meta">
+            <div class="sys-kicker">PETROLEUM</div>
+            <div class="sys-name">Petroleum IU</div>
+            <div class="sys-desc">Mismo sistema y flujo, con diseño Petroleum (Gold + Navy) y datos separados por empresa.</div>
+          </div>
+        </div>
+
+        <div class="sys-body">
+          <div class="sys-tags">
+            <span class="tag"><span class="dot" style="background:#0B1F3A; box-shadow:0 0 0 5px rgba(11,31,58,.16);"></span> Inspecciones</span>
+            <span class="tag"><span class="dot" style="background:#D0AC39; box-shadow:0 0 0 5px rgba(208,172,57,.20);"></span> Combustible</span>
+            <span class="tag"><span class="dot" style="background:#163A66; box-shadow:0 0 0 5px rgba(22,58,102,.14);"></span> Reportes</span>
+          </div>
+
+          <div class="sys-actions">
+            <a class="mini-link" href="https://petroleumiu.com/" target="_blank" rel="noreferrer" onclick="event.stopPropagation()">Sitio oficial</a>
+            <span class="cta">
+              <span>Entrar</span>
+              <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M9 18l6-6-6-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+          </div>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+<script src="/static/js/common.js"></script>
+<script>
+async function setBrand(brand){
+  try{
+    const res = await api("/api/set-brand", { method:"POST", body: JSON.stringify({brand}) });
+    // Backend returns the best landing route for the chosen brand/role.
+    location.href = (res && res.redirect) ? res.redirect : "/mod/dashboard";
+    return;
+  }catch(e){
+    alert("No se pudo seleccionar: " + (e && e.message ? e.message : "error"));
+    return;
+  }
+}
+</script>
+</body>
+</html>

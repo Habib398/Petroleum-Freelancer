@@ -1,0 +1,195 @@
+/* Public gateway (selector empresarial + chatbot) */
+.public { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #0f172a; }
+
+.gate { min-height: 100vh; position: relative; overflow: hidden; }
+.gate__bg{
+  position:absolute; inset:0;
+  background:
+    radial-gradient(1200px 600px at 12% 0%, rgba(34,197,94,.18), transparent 55%),
+    radial-gradient(900px 500px at 92% 10%, rgba(234,179,8,.14), transparent 55%),
+    linear-gradient(180deg, #ffffff 0%, #f8fafc 55%, #ffffff 100%);
+  pointer-events:none;
+}
+
+.gate__wrap{
+  position:relative;
+  min-height:100vh;
+  display:grid;
+  grid-template-rows: 1fr auto;
+  padding: clamp(18px, 3vw, 34px);
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.gate__grid{
+  align-self:center;
+  display:grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: clamp(14px, 3vw, 28px);
+  align-items:center;
+}
+
+.gate__divider{
+  width: 1px;
+  height: min(520px, 60vh);
+  background: rgba(148,163,184,.55);
+}
+
+.gate__panel{
+  display:grid;
+  justify-items:center;
+  text-decoration:none;
+  color: inherit;
+  padding: clamp(14px, 3vw, 26px);
+  border-radius: 24px;
+  transition: transform .15s ease, box-shadow .15s ease, background .15s ease;
+  outline: none;
+}
+.gate__panel--consulting{
+  background:rgba(255,255,255,.88);
+  border:1px solid rgba(15,23,42,.10);
+  box-shadow:0 18px 60px rgba(2,6,23,.08);
+}
+.gate__panel--consulting .gate__title{color:#0f172a;}
+.gate__panel--consulting .gate__subtitle{color:#334155;font-weight:600;}
+
+/* Petroleum branded panel */
+.gate__panel--petroleum{
+  background: linear-gradient(180deg, rgba(2,6,23,.72), rgba(2,6,23,.40)),
+              url('/static/img/petroleum-hero.png');
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+  box-shadow: 0 18px 60px rgba(2,6,23,.18);
+}
+.gate__panel--petroleum .gate__subtitle{ color: rgba(226,232,240,.92); }
+.gate__panel--petroleum:hover{ background: linear-gradient(180deg, rgba(2,6,23,.64), rgba(2,6,23,.34)), url('/static/img/petroleum-hero.png'); }
+.gate__panel:hover{ transform: translateY(-2px); box-shadow: 0 18px 60px rgba(2,6,23,.10); background: rgba(255,255,255,.72); }
+.gate__panel:focus-visible{ box-shadow: 0 0 0 4px rgba(34,197,94,.25), 0 18px 60px rgba(2,6,23,.10); }
+
+.gate__logo{
+  width: min(420px, 70%);
+  display:grid;
+  place-items:center;
+  margin-bottom: 18px;
+}
+.gate__logo img{ width: 100%; height: auto; display:block; filter: drop-shadow(0 14px 26px rgba(2,6,23,.14)); }
+.gate__logo--wide{ width: min(560px, 92%); }
+
+.gate__title{
+  font-size: clamp(28px, 3.4vw, 46px);
+  letter-spacing: .3px;
+  font-weight: 800;
+  text-align:center;
+  text-shadow:0 1px 0 rgba(255,255,255,.22);
+}
+.gate__title--petroleum{ font-weight: 800; letter-spacing: .8px; }
+
+.gate__subtitle{
+  margin-top: 8px;
+  font-size: clamp(14px, 1.5vw, 18px);
+  color: rgba(51,65,85,.94);
+  text-align:center;
+}
+
+.gate__footer{
+  padding-top: 14px;
+  display:grid;
+  justify-items:center;
+  gap: 10px;
+}
+
+.gate__footerLine{
+  height: 1px;
+  width: min(340px, 34vw);
+  background: rgba(148,163,184,.55);
+}
+.gate__footerMark{
+  color: rgba(100,116,139,.85);
+  display:grid;
+  place-items:center;
+}
+.gate__footerText{
+  margin-top: 2px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  color: rgba(71,85,105,.9);
+}
+
+.gate__actions{
+  margin-top: 10px;
+  display:flex;
+  flex-wrap:wrap;
+  gap: 12px;
+  justify-content:center;
+  align-items:center;
+}
+
+.gate__btn{
+  border: 1px solid rgba(34,197,94,.55);
+  color: rgba(22,101,52,.95);
+  background: rgba(255,255,255,.85);
+  padding: 12px 18px;
+  border-radius: 14px;
+  font-weight: 800;
+  letter-spacing: .6px;
+  text-decoration:none;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.gate__btn:hover{ transform: translateY(-1px); box-shadow: 0 14px 34px rgba(2,6,23,.10); }
+
+.gate__chatBtn{
+  border: 1px solid rgba(148,163,184,.55);
+  color: rgba(30,41,59,.95);
+  background: rgba(255,255,255,.85);
+  padding: 12px 14px;
+  border-radius: 14px;
+  font-weight: 700;
+  cursor:pointer;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.gate__chatBtn:hover{ transform: translateY(-1px); box-shadow: 0 14px 34px rgba(2,6,23,.10); }
+
+@media (max-width: 900px){
+  .gate__grid{ grid-template-columns: 1fr; gap: 16px; }
+  .gate__divider{ display:none; }
+  .gate__panel{ background: rgba(255,255,255,.72); box-shadow: 0 18px 60px rgba(2,6,23,.08); }
+  .gate__logo{ width: min(380px, 82%); }
+  .gate__logo--wide{ width: min(520px, 95%); }
+  .gate__footerLine{ width: min(240px, 65vw); }
+}
+
+/* --- Chatbot styles (unchanged) --- */
+.bot { position: fixed; inset: 0; background: rgba(2,6,23,.45); display: none; padding: 14px; }
+.bot.is-open { display: grid; place-items: end center; }
+.bot__panel {
+  width: min(560px, 100%);
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(148,163,184,.45);
+  border-radius: 22px;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 26px 70px rgba(2,6,23,.25);
+  overflow: hidden;
+}
+.bot__header { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 14px 10px; border-bottom: 1px solid rgba(148,163,184,.35); }
+.bot__title { font-weight: 900; }
+.bot__sub { font-size: 12px; color: rgba(15,23,42,.62); margin-top: 2px; }
+.bot__close { border: 0; background: transparent; cursor: pointer; font-size: 18px; padding: 8px 10px; border-radius: 12px; }
+.bot__close:hover { background: rgba(148,163,184,.20); }
+
+.bot__msgs { padding: 12px 14px; display: grid; gap: 10px; max-height: 46vh; overflow: auto; }
+.bot__msg { padding: 10px 12px; border-radius: 16px; font-size: 14px; line-height: 1.35; }
+.bot__msg--bot { background: rgba(34,197,94,.12); border: 1px solid rgba(34,197,94,.18); justify-self: start; }
+.bot__msg--me { background: rgba(15,23,42,.08); border: 1px solid rgba(148,163,184,.25); justify-self: end; }
+
+.bot__chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 12px; }
+.bot__chip { border: 1px solid rgba(148,163,184,.45); background: rgba(255,255,255,.7); border-radius: 999px; padding: 8px 10px; cursor: pointer; font-weight: 650; font-size: 12px; }
+.bot__chip:hover { background: rgba(255,255,255,.92); }
+
+.bot__form { display: flex; gap: 8px; padding: 12px 14px 14px; border-top: 1px solid rgba(148,163,184,.35); }
+.bot__input { flex: 1; padding: 11px 12px; border-radius: 14px; border: 1px solid rgba(148,163,184,.55); background: rgba(255,255,255,.85); outline: none; }
+.bot__input:focus { border-color: rgba(34,197,94,.55); box-shadow: 0 0 0 4px rgba(34,197,94,.14); }
+.bot__send { padding: 11px 12px; border-radius: 14px; border: 0; background: rgba(15,23,42,.92); color: white; font-weight: 800; cursor: pointer; }

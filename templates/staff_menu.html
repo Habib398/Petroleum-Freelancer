@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Menú • Operaciones • COG WORK LOG</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/theme-hme.css"/>
+  <link rel="stylesheet" href="/static/css/staff_menu.css"/>
+</head>
+<body class="{{ 'brand-petroleum' if brand=='petroleum' else 'brand-consulting' }}">
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <div class="brand-badge" aria-hidden="true">
+        <img src="/static/img/logo.png" alt="logo" style="width:28px;height:28px;border-radius:10px"/>
+      </div>
+      <div>
+        <div style="font-weight:900;letter-spacing:.2px;font-size:16px">COG WORK LOG</div>
+        <div style="font-size:12px;color:rgba(15,23,42,.60);font-weight:700">Menú de operaciones</div>
+      </div>
+    </div>
+    <div class="top-actions">
+      <a class="btn ghost" href="/mod/dashboard">Dashboard</a>
+      <a class="btn" href="/logout">Salir</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="hero">
+      <div class="hero-left">
+        <div class="kicker">Acceso rápido</div>
+        <h1>Bitácora</h1>
+        <p>Selecciona un módulo.</p>
+      </div>
+      <div class="hero-right">
+        <div class="stat">
+          <div class="s-num">{{ 3 if brand=='petroleum' else 4 }}</div>
+          <div class="s-lbl">Módulos</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="grid">
+      <a class="tile pos-1" href="/mod/activities">
+        <div class="t-top">
+          <div class="ico">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M9 12h6"/><path d="M9 16h6"/><path d="M9 8h6"/><path d="M5 4h14v16H5z"/></svg>
+          </div>
+          <div>
+            <h3>{{ "Agenda" if brand=='petroleum' else "Bitácora" }}</h3>
+            <p>{{ "Agenda, evidencias y calendario" if brand=='petroleum' else "Actividades, evidencias y calendario" }}</p>
+          </div>
+        </div>
+        <div class="t-bot">
+          <span class="pill ok">ENTRAR</span>
+          <span class="muted">FullCalendar + evidencias</span>
+        </div>
+      </a>
+
+      {% if brand == 'petroleum' %}
+      <a class="tile pos-2" href="/petroleum/normativas">
+        <div class="t-top"><div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M5 4h14v16H5z"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/></svg></div><div><h3>Normativas</h3><p>Vista previa y descarga de tus normas y anexos por estación</p></div></div>
+        <div class="t-bot"><span class="pill ok">ENTRAR</span><span class="muted">Solo tus documentos</span></div>
+      </a>
+      <a class="tile pos-2" href="/staff/shared-folder">
+        <div class="t-top"><div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M3 7a2 2 0 0 1 2-2h3l2 2"/></svg></div><div><h3>Carpeta compartida</h3><p>Sube y descarga documentos de tu estación</p></div></div>
+        <div class="t-bot"><span class="pill ok">ENTRAR</span><span class="muted">Solo tu estación</span></div>
+      </a>
+      <a class="tile pos-2" href="/petroleum/organigrama">
+        <div class="t-top"><div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M12 4v4"/><path d="M6 20v-3a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v3"/><circle cx="12" cy="9" r="3"/><path d="M3 8h3"/><path d="M18 8h3"/></svg></div><div><h3>Organigrama</h3><p>Consulta la estructura de Petroleum en solo lectura</p></div></div>
+        <div class="t-bot"><span class="pill ok">VER</span><span class="muted">Solo lectura</span></div>
+      </a>
+      {% endif %}
+
+      {% if brand != 'petroleum' %}
+      <a class="tile pos-2" href="/staff/sasisopa">
+        <div class="t-top"><div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M12 6v6l4 2"/><path d="M20.5 12a8.5 8.5 0 1 1-17 0 8.5 8.5 0 0 1 17 0z"/></svg></div><div><h3>SASISOPA</h3><p>Documentos recibidos por tu estación</p></div></div>
+        <div class="t-bot"><span class="pill ok">ENTRAR</span><span class="muted">Solo lectura</span></div>
+      </a>
+      <a class="tile pos-2" href="/staff/sgm">
+        <div class="t-top"><div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M12 2l8 10-8 10L4 12 12 2z"/></svg></div><div><h3>SGM</h3><p>Documentos recibidos por tu estación</p></div></div>
+        <div class="t-bot"><span class="pill ok">ENTRAR</span><span class="muted">Solo lectura</span></div>
+      </a>
+      <a class="tile pos-2" href="/staff/shared-folder">
+        <div class="t-top"><div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M3 7h5l2 2h11v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/><path d="M3 7a2 2 0 0 1 2-2h3l2 2"/></svg></div><div><h3>Carpeta compartida</h3><p>Sube y descarga documentos de tu estación</p></div></div>
+        <div class="t-bot"><span class="pill ok">ENTRAR</span><span class="muted">Solo tu estación</span></div>
+      </a>
+      <a class="tile pos-2" href="/consulting/organigrama">
+        <div class="t-top"><div class="ico"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#166534" stroke-width="2"><path d="M12 4v4"/><path d="M6 20v-3a3 3 0 0 1 3-3h6a3 3 0 0 1 3 3v3"/><circle cx="12" cy="9" r="3"/><path d="M3 8h3"/><path d="M18 8h3"/></svg></div><div><h3>Organigrama</h3><p>Consulta la estructura de Consulting en solo lectura</p></div></div>
+        <div class="t-bot"><span class="pill ok">VER</span><span class="muted">Solo lectura</span></div>
+      </a>
+      {% endif %}
+
+    </section>
+
+    <section class="note">
+      <div class="note-ico">ℹ️</div>
+      <div>
+        <div class="note-title">Tip</div>
+        <div class="note-txt">{% if brand=='petroleum' %}Ahora también puedes consultar el <b>Organigrama</b> de Petroleum en modo solo lectura, además de tus normas y anexos por estación.{% else %}Además del trabajo operativo, ahora también puedes consultar el <b>Organigrama</b> de Consulting en modo solo lectura.{% endif %}</div>
+      </div>
+    </section>
+  </main>
+
+  <script src="/static/js/staff_menu.js" defer></script>
+</body>
+</html>

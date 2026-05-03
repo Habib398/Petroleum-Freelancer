@@ -1,0 +1,145 @@
+.pc-page{padding:18px 18px 28px;color:#e7eef9}
+.pc-hero{position:relative;border-radius:18px;overflow:hidden;min-height:190px;background:
+  radial-gradient(900px 320px at 22% 15%, rgba(200,162,74,.22), rgba(0,0,0,0)),
+  linear-gradient(180deg, rgba(11,18,32,.88), rgba(11,18,32,.62)),
+  url('/static/img/petroleum-hero.png');
+background-size:cover;background-position:center 45%;
+box-shadow:0 14px 34px rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.08)}
+.pc-hero-overlay{position:absolute;inset:0;background:linear-gradient(90deg, rgba(11,18,32,.92) 0%, rgba(11,18,32,.70) 60%, rgba(11,18,32,.55) 100%)}
+.pc-hero-inner{position:relative;display:flex;gap:14px;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;padding:22px}
+.pc-crumb{font-weight:900;opacity:.9}
+.pc-crumb span{opacity:.6;margin:0 6px}
+.pc-hero h1{margin:8px 0 6px;font-size:34px;line-height:1.05}
+.pc-hero p{margin:0;color:#a9b6cc;max-width:760px}
+.pc-controls{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+.pc-label{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:#a9b6cc;font-weight:900}
+.pc-select{background:#fff;color:#0b1220;border:1px solid rgba(148,163,184,.35);border-radius:14px;padding:10px 12px;min-width:260px;outline:none}
+.pc-tabs{display:flex;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);border-radius:14px;padding:6px}
+.tab{border:none;background:transparent;color:#e7eef9;padding:10px 12px;border-radius:12px;cursor:pointer;font-weight:900}
+.tab.active{background:rgba(200,162,74,.18);border:1px solid rgba(200,162,74,.35)}
+.pc-body{margin-top:14px}
+
+.pc-grid{display:grid;grid-template-columns:320px 1fr 360px;gap:12px;align-items:start}
+.pc-card{background:#0f1b2d;border:1px solid rgba(148,163,184,.16);border-radius:18px;box-shadow:0 14px 30px rgba(0,0,0,.22)}
+.pc-card-top{display:flex;gap:10px;align-items:center;justify-content:space-between;padding:14px}
+.pc-card-title{font-weight:900}
+.pc-help{color:#a9b6cc;font-size:12px;margin-top:4px}
+.pc-kpi-num{font-size:34px;font-weight:900;color:#e0be63;line-height:1}
+.pc-kpi-sub{color:#a9b6cc;font-size:12px;margin-top:4px}
+.pc-mini{display:flex;gap:10px;align-items:center;flex-wrap:wrap;color:#a9b6cc;font-size:12px}
+.dot{width:10px;height:10px;border-radius:999px;display:inline-block}
+.dot.ok{background:#22c55e}
+.dot.warn{background:#c8a24a}
+.dot.bad{background:#ef4444}
+.dot.muted{background:#64748b}
+
+.pc-list{padding:14px}
+.pc-section-list{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.sec{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(148,163,184,.16);background:#111c2e;cursor:pointer}
+.sec:hover{background:#14233a}
+.sec.active{border-color:rgba(200,162,74,.38);box-shadow:0 0 0 2px rgba(200,162,74,.12) inset}
+.sec .name{font-weight:900}
+
+.badge{display:inline-flex;align-items:center;gap:8px;border-radius:999px;padding:6px 10px;font-weight:900;font-size:12px;border:1px solid rgba(148,163,184,.18);color:#e7eef9;white-space:nowrap}
+.badge.ok{border-color:rgba(34,197,94,.25);background:rgba(34,197,94,.10)}
+.badge.warn{border-color:rgba(200,162,74,.35);background:rgba(200,162,74,.12)}
+.badge.bad{border-color:rgba(239,68,68,.30);background:rgba(239,68,68,.10)}
+.badge.muted{border-color:rgba(100,116,139,.28);background:rgba(100,116,139,.10)}
+
+/* Center (Premium panel) */
+.pc-center-card{overflow:hidden}
+.pc-chip{display:inline-flex;align-items:center;justify-content:center;padding:8px 10px;border-radius:999px;border:1px solid rgba(148,163,184,.18);background:#111c2e;color:#e7eef9;font-weight:900;font-size:12px;max-width:420px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.pc-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:14px}
+.pc-tile{border:none;text-align:left;background:#111c2e;border:1px solid rgba(148,163,184,.16);border-radius:18px;padding:14px;cursor:pointer;color:#e7eef9;box-shadow:0 10px 22px rgba(0,0,0,.16);transition:transform .12s ease, border-color .12s ease, background .12s ease}
+.pc-tile:hover{transform:translateY(-1px);border-color:rgba(200,162,74,.38);background:#14233a}
+.pc-tile.active{border-color:rgba(200,162,74,.52);box-shadow:0 0 0 2px rgba(200,162,74,.14) inset, 0 10px 22px rgba(0,0,0,.18)}
+.pc-tile-top{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:start}
+.pc-ico{width:42px;height:42px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;background:#0f1b2d;border:1px solid rgba(148,163,184,.16)}
+.pc-ico.ok{border-color:rgba(34,197,94,.25);box-shadow:0 0 0 2px rgba(34,197,94,.10) inset}
+.pc-ico.warn{border-color:rgba(200,162,74,.35);box-shadow:0 0 0 2px rgba(200,162,74,.12) inset}
+.pc-ico.bad{border-color:rgba(239,68,68,.30);box-shadow:0 0 0 2px rgba(239,68,68,.10) inset}
+.pc-ico.muted{border-color:rgba(100,116,139,.28)}
+.pc-name{font-weight:900}
+.pc-sub{color:#a9b6cc;font-size:12px;margin-top:4px}
+.pc-status{display:flex;align-items:flex-start;justify-content:flex-end}
+.pc-tile-foot{margin-top:10px;display:flex;gap:10px;align-items:center;color:#a9b6cc;font-size:12px}
+.pc-pill{width:10px;height:10px;border-radius:999px;background:#64748b}
+.pc-pill.ok{background:#22c55e}
+.pc-pill.warn{background:#c8a24a}
+.pc-pill.bad{background:#ef4444}
+.pc-pill.muted{background:#64748b}
+
+.pc-side{padding:14px}
+.pc-side-body{margin-top:10px}
+.pc-side-title{font-size:16px;font-weight:900}
+.pc-side-sub{color:#a9b6cc;font-size:12px;margin-top:4px}
+.pc-status-row{display:grid;grid-template-columns:120px minmax(0,1fr) 160px;gap:10px;align-items:center;margin-top:12px}
+#saveStatus{width:160px;justify-self:end;white-space:nowrap}
+.pc-badge{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:14px;border:1px solid rgba(148,163,184,.18);background:#111c2e;font-weight:900}
+
+/* Inputs: white for readability on dark theme */
+.pc-input{background:#fff;color:#0b1220;border:1px solid rgba(148,163,184,.35);border-radius:14px;padding:10px 12px;outline:none}
+.pc-input::placeholder{color:rgba(15,23,42,.55)}
+
+.pc-btn{background:#c8a24a;color:#0b1220;border:none;border-radius:14px;padding:10px 12px;font-weight:900;cursor:pointer}
+.pc-btn:hover{background:#e0be63}
+
+.pc-upload{margin-top:14px;border-top:1px solid rgba(148,163,184,.16);padding-top:12px}
+.pc-upload-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.pc-file{display:inline-flex;align-items:center;gap:10px;background:#111c2e;border:1px solid rgba(148,163,184,.18);border-radius:14px;padding:10px 12px;font-weight:900;cursor:pointer}
+.pc-file:hover{border-color:rgba(200,162,74,.38)}
+.pc-file input{display:none}
+.pc-files{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.file{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(148,163,184,.16);background:#111c2e}
+.file a{color:#e7eef9;text-decoration:none;font-weight:900}
+.file a:hover{text-decoration:underline}
+.file .meta{color:#a9b6cc;font-size:12px}
+
+.pc-norms{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin-top:12px;padding:14px}
+.norm{background:#111c2e;border:1px solid rgba(148,163,184,.16);border-radius:18px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.norm h3{margin:0;font-size:14px}
+.norm .meta{color:#a9b6cc;font-size:12px}
+.norm .actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:auto}
+.norm .dl{display:inline-flex;align-items:center;justify-content:center;padding:10px 12px;border-radius:14px;border:1px solid rgba(148,163,184,.18);background:#0f1b2d;color:#e7eef9;text-decoration:none;font-weight:900}
+.norm .dl:hover{background:#14233a}
+.norm label{display:inline-flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;background:#c8a24a;color:#0b1220;font-weight:900;cursor:pointer}
+.norm input{display:none}
+
+@media (max-width: 1100px){
+  .pc-grid{grid-template-columns:1fr;gap:12px}
+  .pc-select{min-width:220px}
+  .pc-status-row{grid-template-columns:1fr;gap:10px}
+  .pc-cards{grid-template-columns:1fr}
+  .pc-norms{grid-template-columns:1fr}
+}
+
+.pc-select{appearance:none;background-image:linear-gradient(45deg, transparent 50%, #0b1220 50%),linear-gradient(135deg, #0b1220 50%, transparent 50%);background-position:calc(100% - 18px) 18px,calc(100% - 13px) 18px;background-size:5px 5px,5px 5px;background-repeat:no-repeat;padding-right:34px}
+
+@media (max-width: 1400px){
+  .pc-grid{grid-template-columns:320px 1fr;}
+  .pc-right{grid-column:1 / -1;}
+}
+
+
+/* === Normas por gasolina (solo) === */
+.pc-inline{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap}
+.pc-norms{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;margin-top:14px}
+.pc-norm-card{background:rgba(17,28,46,.75);border:1px solid var(--border, #22314A);border-radius:16px;padding:14px 14px;box-shadow:0 10px 30px rgba(0,0,0,.25);backdrop-filter:blur(10px)}
+.pc-norm-card.loading{opacity:.75;filter:saturate(.9)}
+.pc-norm-head{display:flex;gap:12px;align-items:flex-start;justify-content:space-between}
+.pc-norm-title{font-weight:800;letter-spacing:.2px}
+.pc-norm-meta{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px}
+.pc-pill{display:inline-flex;align-items:center;justify-content:center;padding:3px 10px;border-radius:999px;border:1px solid rgba(200,162,74,.35);color:#E7EEF9;background:rgba(200,162,74,.10);font-size:12px}
+.pc-meta{color:var(--text-muted,#A9B6CC);font-size:12px}
+.pc-norm-actions{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.pc-norm-foot{display:flex;gap:12px;align-items:center;justify-content:space-between;margin-top:12px;border-top:1px solid rgba(34,49,74,.55);padding-top:12px;flex-wrap:wrap}
+.pc-file{color:var(--text-muted,#A9B6CC);font-size:12px;max-width:520px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-foot-actions{display:flex;gap:10px;align-items:center}
+.pc-file-input{display:none}
+.pc-empty{padding:18px;border:1px dashed rgba(200,162,74,.35);border-radius:16px;background:rgba(17,28,46,.45)}
+.pc-empty-title{font-weight:800;margin-bottom:6px}
+.pc-muted{color:var(--text-muted,#A9B6CC);font-size:12px}
+
+/* buttons alignment for dark theme */
+.pc-norm-card .btn{height:36px}

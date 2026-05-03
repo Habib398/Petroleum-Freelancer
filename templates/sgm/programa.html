@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>Programa • SGM</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/theme-hme.css"/>
+  <link rel="stylesheet" href="/static/css/modules.css"/>
+</head>
+<body class="module brand-{{ session.get('brand','consulting') }}">
+  <div class="hub-topbar">
+    <div class="hub-brand">
+      {% set _brand = session.get('brand','consulting') %}
+      {% if _brand == 'petroleum' %}
+        <img src="/static/img/petroleum-logo.png" alt="PETROLEUM"/>
+      {% else %}
+        <img src="/static/img/logo.png" alt="CONSULTING"/>
+      {% endif %}
+      <div>
+        <div class="kicker">SGM</div>
+        <div class="title">Programa</div>
+      </div>
+    </div>
+    <div class="hub-actions">
+      <a class="btn ghost" href="/admin/sgm">← Volver</a>
+      <a class="btn" href="/admin/sgm">Menú SGM</a>
+      <a class="btn primary" href="/logout">Salir</a>
+    </div>
+  </div>
+
+  <div class="hub-shell">
+    <div class="hub-header">
+      <div>
+        <h1>Programa</h1>
+        <div class="sub">Planeación y seguimiento del programa SGM por estación.</div>
+      </div>
+    </div>
+
+    <div class="hub-split">
+      <div class="panel">
+        <div class="hd"><h2>Acciones rápidas</h2></div>
+        <div class="bd">
+          <div class="toolbar" style="margin:0">
+            <div class="tool-left">
+              <a class="btn primary" href="javascript:void(0)">Subir / Crear</a>
+              <a class="btn" href="javascript:void(0)">Descargar plantilla</a>
+            </div>
+            <div class="tool-right">
+              <a class="btn" href="javascript:void(0)">Imprimir</a>
+            </div>
+          </div>
+          <div style="height:12px"></div>
+          <div class="empty">
+            <div class="t">Listo para operar</div>
+            <div class="d">Este rediseño organiza mejor el flujo. Aquí podrás conectar (o ajustar) la lógica de carga, versionado e impresión según tu proceso.</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="hd"><h2>Registros</h2></div>
+        <div class="bd">
+          <table class="table">
+            <thead><tr><th>Fecha</th><th>Estación</th><th>Tipo</th><th>Estatus</th></tr></thead>
+            <tbody>
+              <tr><td>—</td><td>—</td><td>—</td><td><span class="badge">Sin datos</span></td></tr>
+            </tbody>
+          </table>
+          <div style="height:12px"></div>
+          <div class="empty">
+            <div class="t">Tip</div>
+            <div class="d">Cuando conectes tu backend, esta tabla mostrará el histórico por empresa/estación con filtro y búsqueda.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

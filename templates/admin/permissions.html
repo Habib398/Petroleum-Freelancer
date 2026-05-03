@@ -1,0 +1,24 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Permisos</h1>
+    <div class="sub">Referencia rápida de roles y accesos (lectura/edición).</div>
+  </div>
+</div>
+
+<div class="card">
+  <div style="font-weight:900;">Roles</div>
+  <div class="help" style="margin-top:10px;line-height:1.6;">
+    <b>Administrador</b>: acceso total, crea estaciones y usuarios, revisa y descarga todo.<br/>
+    <b>Jefe de estación</b>: ve su estación, entrega {{ "agenda" if session.get('brand','consulting') == 'petroleum' else "actividades" }} y evidencias; descarga anual requiere FIEL.<br/>
+    <b>Operador</b>: entrega evidencias y registra operaciones de su estación.<br/>
+    <b>Contador</b>: revisa pagos, adjunta factura, notifica a estación.<br/>
+    <b>Auditor</b>: solo lectura global (para supervisión).<br/>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+
+{% endblock %}

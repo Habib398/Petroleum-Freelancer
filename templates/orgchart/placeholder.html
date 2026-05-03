@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Organigrama</title>
+  <link rel="stylesheet" href="/static/css/orgchart.css">
+</head>
+<body class="org-body brand-{{ brand }}{% if request.args.get('embed') %} is-embed{% endif %}">
+  <div class="org-shell">
+    {% if not request.args.get('embed') %}
+    <header class="org-topbar">
+      <a class="back-link" href="{{ '/admin/menu' if can_edit else '/staff/menu' }}">← Volver</a>
+      {% if can_edit %}<a class="pill-btn" href="/admin/organigrama">Abrir administración</a>{% endif %}
+    </header>
+    {% endif %}
+    <section class="empty-state glass-panel">
+      <div class="eyebrow">{{ 'Petroleum' if brand=='petroleum' else 'Consulting' }}</div>
+      <h1>Organigrama no configurado todavía</h1>
+      <p>{% if can_edit %}Dejé lista la opción para crearlo en Petroleum. Cuando quieras, entra al administrador y captura puestos, fotos, teléfono, correo y profesión.{% else %}Aún no hay un organigrama publicado para esta empresa.{% endif %}</p>
+      {% if can_edit %}<a class="primary-link" href="/admin/organigrama">Crear o editar organigrama</a>{% endif %}
+    </section>
+  </div>
+</body>
+</html>

@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+{% block head %}
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+{% endblock %}
+{% block content %}
+  <div class="pagehead">
+    <div>
+      <h1 class="h1">Calendario operativo</h1>
+      <div class="sub">Agenda, documentos, vencimientos y cumplimiento en una sola vista.</div>
+    </div>
+    <div class="page-actions">
+      <input id="dFrom" class="input" type="date" />
+      <input id="dTo" class="input" type="date" />
+      <button id="btnReload" class="btn ghost" type="button">Actualizar</button>
+    </div>
+  </div>
+  <div class="card" style="margin-top:14px;">
+    <div id="calendar"></div>
+  </div>
+  <div class="card" style="margin-top:14px;">
+    <div style="font-weight:900;">Eventos del rango</div>
+    <div id="list" class="help" style="margin-top:10px;">Cargando…</div>
+  </div>
+{% endblock %}
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
+<script src="/static/js/operational_calendar.js"></script>
+{% endblock %}

@@ -1,0 +1,18 @@
+{% extends "layout.html" %}
+{% block head %}
+<style>
+.cardx{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,.05)}
+.muted{color:#64748b}.btnx{display:inline-flex;padding:10px 14px;border-radius:12px;background:#0f766e;color:#fff;text-decoration:none;font-weight:800}.btnx.alt{background:#0f172a}
+</style>
+{% endblock %}
+{% block content %}
+<div class="card">
+  <h1 style="margin:0 0 6px">SASISOPA documental</h1>
+  <div class="muted">Las estaciones ya no capturan documentos desde aquí. Ahora consultan documentos recibidos y solo editan las partes que administración libere.</div>
+</div>
+
+<div class="cardx" style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+  <a class="btnx" href="/staff/sasisopa/docs/records">Ir a documentos recibidos</a>
+  <a class="btnx alt" href="/staff/menu">Volver al menú</a>
+</div>
+{% endblock %}

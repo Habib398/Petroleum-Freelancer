@@ -1,0 +1,36 @@
+REVISIÓN TÉCNICA - LISTO PARA PRUEBAS
+Fecha: 2026-04-08
+
+Ajustes realizados:
+- Limpieza de carpetas duplicadas: work_org y src/work_org.
+- Eliminación de __pycache__, .pyc, logs temporales y backup automático generado durante revisión.
+- Mejora responsive en portada pública:
+  - mejor ajuste del botón flotante de WhatsApp en móvil
+  - CTA de contacto a ancho completo en pantallas pequeñas
+  - correos, dirección y enlaces con mejor ajuste de salto de línea
+  - formato consistente del teléfono secundario
+- Corrección backend en creación de usuarios:
+  - allowed_brands ahora acepta lista o texto sin provocar error 500
+- Corrección backend en creación/edición de estaciones:
+  - ya permite crear estaciones sin coordenadas obligatorias
+  - si se capturan coordenadas inválidas, sigue validando correctamente
+
+Validaciones ejecutadas:
+- verificar_proyecto.py: OK
+- Compilación Python: OK
+- Login admin: OK
+- Barrido de rutas GET sin parámetros: 188 revisadas, 0 errores 500
+- CRUD básico:
+  - crear estación: OK
+  - crear usuario: OK
+  - listar estaciones/usuarios: OK
+  - eliminar usuario: OK
+  - eliminar estación: OK
+- Exportaciones:
+  - consolidated.pdf: OK
+  - admin inbox export.xlsx: OK
+  - executive export.pdf: OK
+
+Estado recomendado:
+- Listo para pruebas locales y revisión interna.
+- Recomendado hacer prueba manual visual en tu PC y en celular para validar tus textos, colores y flujo exacto de uso.

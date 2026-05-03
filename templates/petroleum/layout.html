@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="csrf-token" content="{{ csrf_token }}"/>
+  <title>{% block title %}PETROLEUM • Sistema{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/theme-hme.css"/>
+  <style>
+    body{margin:0;min-height:100vh;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;background:#07111f;color:#e5e7eb;}
+    .topbar{position:sticky;top:0;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px;background:rgba(7,17,31,.72);backdrop-filter: blur(10px);border-bottom:1px solid rgba(255,255,255,.08);}
+    .brand{display:flex;align-items:center;gap:12px;min-width:0}
+    .brand img{width:34px;height:34px;border-radius:12px;object-fit:contain;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.10);padding:6px}
+    .brand .t1{font-weight:1000;letter-spacing:.06em;color:#d4af37;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .brand .t2{font-size:12px;color:rgba(229,231,235,.78);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .actions{display:flex;align-items:center;gap:10px}
+    .btn{display:inline-flex;align-items:center;gap:10px;padding:10px 12px;border-radius:14px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.06);color:#e5e7eb;text-decoration:none;font-weight:900}
+    .wrap{max-width:1200px;margin:0 auto;padding:18px 16px 46px;}
+  </style>
+  {% block head %}{% endblock %}
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <img src="/static/img/petroleum-logo.png" alt="PETROLEUM"/>
+      <div style="min-width:0">
+        <div class="t1">PETROLEUM</div>
+        <div class="t2">Oil &amp; Gas Inspection Unit</div>
+      </div>
+    </div>
+    <div class="actions">
+      <a class="btn" href="/mod/notifications" aria-label="Notificaciones">🔔 <span id="notifDot" style="display:none" aria-hidden="true">●</span> Notificaciones</a>
+      <a class="btn" href="/logout" aria-label="Cerrar sesión">Salir</a>
+    </div>
+  </header>
+
+  <main class="wrap">
+    {% block body %}{% endblock %}
+  </main>
+
+  
+  <script src="/static/js/common.js"></script>
+  {% block scripts %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Administrar organigrama</title>
+  <link rel="stylesheet" href="/static/css/orgchart.css">
+</head>
+<body class="org-body brand-{{ brand }}">
+  <div class="org-shell admin-shell">
+    <header class="org-topbar">
+      <a class="back-link" href="/admin/menu">← Volver al menú admin</a>
+      <div class="top-actions">
+        <a class="pill-btn" href="/mod/organigrama">Abrir vista final</a>
+        {% if chart %}
+        <a class="pill-btn" href="/mod/organigrama/export/png">Descargar PNG</a>
+        <a class="pill-btn" href="/mod/organigrama/export/pdf">Descargar PDF</a>
+        {% endif %}
+      </div>
+    </header>
+
+    <section class="org-hero glass-panel compact-hero">
+      <div class="hero-glow hero-glow-a"></div>
+      <div class="hero-glow hero-glow-b"></div>
+      <div class="brand-lockup">
+        <img class="brand-logo" src="{{ '/static/img/consulting-logo-full.png' if brand=='consulting' else '/static/img/petroleum-logo-full.png' }}" alt="Logo {{ brand }}">
+      </div>
+      <div class="hero-copy">
+        <div class="eyebrow">Administrador · {{ 'Consulting' if brand=='consulting' else 'Petroleum' }}</div>
+        <h1>Organigrama editable</h1>
+        <p>{% if brand=='consulting' %}Vista premium con exportación a PNG/PDF, edición completa y reordenado rápido. Los operadores y jefes de Consulting solo lo ven.{% else %}Petroleum ya trae una base inspirada en su anexo oficial para que aquí captures fotos, correos, teléfonos y ajustes finales.{% endif %}</p>
+      </div>
+    </section>
+
+    <div class="admin-layout">
+      <div class="admin-sidebar">
+        {% if request.args.get('saved') or request.args.get('created') or request.args.get('deleted') or request.args.get('sorted') %}
+        <div class="notice">Cambios guardados correctamente.</div>
+        {% endif %}
+
+        {% if can_create %}
+        <section class="form-panel empty-admin">
+          <h2>Crear base del organigrama</h2>
+          <p class="hint">Petroleum todavía no tiene estructura capturada. Presiona el botón y quedará listo el módulo para empezar a llenarlo más adelante.</p>
+          <form method="post" action="/admin/organigrama/create-base">
+            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+            <button class="btn-save" type="submit">Crear organigrama Petroleum</button>
+          </form>
+        </section>
+        {% else %}
+
+        <section class="form-panel">
+          <h2>Acciones rápidas</h2>
+          <p class="hint">Atajos para ver, presentar y exportar la estructura publicada.</p>
+          <div class="sticky-tools">
+            <a class="btn-outline" href="/mod/organigrama">Vista final</a>
+            <a class="btn-outline" href="/mod/organigrama?presentation=1">Modo presentación</a>
+            <a class="btn-outline" href="/mod/organigrama/export/png">Exportar PNG</a>
+            <a class="btn-outline" href="/mod/organigrama/export/pdf">Exportar PDF</a>
+          </div>
+        </section>
+
+        <section class="form-panel">
+          <h2>Datos generales</h2>
+          <p class="section-caption">Identidad del organigrama</p>
+          <form method="post" action="/admin/organigrama/meta">
+            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+            <div class="field">
+              <label>Título</label>
+              <input name="title" value="{{ chart.title if chart else '' }}" placeholder="Ej. Organigrama corporativo">
+            </div>
+            <div class="field">
+              <label>Subtítulo</label>
+              <input name="subtitle" value="{{ chart.subtitle if chart else '' }}" placeholder="Razón social o unidad de negocio">
+            </div>
+            <div class="field">
+              <label>Diseño</label>
+              <select name="style_name">
+                <option value="glass" selected>Premium</option>
+              </select>
+            </div>
+            <div class="btn-row">
+              <button class="btn-save" type="submit">Guardar encabezado</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="form-panel">
+          <h3>Agregar nuevo elemento</h3>
+          <p class="section-caption">Crea áreas o personas</p>
+          <form method="post" action="/admin/organigrama/node/save" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+            <div class="field-row">
+              <div class="field">
+                <label>Tipo</label>
+                <select name="node_type">
+                  <option value="department">Área / departamento</option>
+                  <option value="person">Persona</option>
+                </select>
+              </div>
+              <div class="field">
+                <label>Depende de</label>
+                <select name="parent_id">
+                  <option value="">Nivel principal</option>
+                  {% for node in nodes %}<option value="{{ node.id }}">{{ node.name }}</option>{% endfor %}
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label>Nombre</label>
+              <input name="name" placeholder="Nombre de la persona o área">
+            </div>
+            <div class="field">
+              <label>Cargo</label>
+              <input name="title" placeholder="Cargo visible">
+            </div>
+            <div class="field">
+              <label>Profesión</label>
+              <input name="profession" placeholder="Formación o especialidad">
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Correo</label>
+                <input name="email" placeholder="correo@empresa.com">
+              </div>
+              <div class="field">
+                <label>Teléfono</label>
+                <input name="phone" placeholder="Número de contacto">
+              </div>
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>Color</label>
+                <input name="accent_color" type="color" value="{{ '#5b8def' if brand=='consulting' else '#d7a24c' }}">
+              </div>
+              <div class="field">
+                <label>Orden</label>
+                <input name="sort_order" type="number" value="0">
+              </div>
+            </div>
+            <div class="field">
+              <label>Foto</label>
+              <input name="photo" type="file" accept=".png,.jpg,.jpeg,.webp">
+            </div>
+            <div class="field">
+              <label><input name="is_visible" type="checkbox" value="1" checked> Visible</label>
+            </div>
+            <div class="btn-row">
+              <button class="btn-save" type="submit">Agregar elemento</button>
+            </div>
+          </form>
+        </section>
+
+        <section class="form-panel">
+          <h3>Editar y ordenar</h3>
+          <p class="section-caption">Usa las flechas para subir o bajar cada elemento dentro de su mismo nivel</p>
+          <div class="node-list">
+            {% for node in nodes %}
+            <article class="node-card">
+              <div class="node-head">
+                <div>
+                  <b>{{ node.name }}</b>
+                  <span>{{ 'Área' if node.node_type=='department' else 'Persona' }}{% if node.parent_id %} · depende de otro nodo{% else %} · nivel principal{% endif %}</span>
+                  <div class="node-meta">
+                    <span class="mini-chip">Orden {{ node.sort_order or 0 }}</span>
+                    {% if node.title %}<span class="mini-chip">{{ node.title }}</span>{% endif %}
+                  </div>
+                </div>
+                <div class="btn-row" style="margin-top:0">
+                  <form method="post" action="/admin/organigrama/node/{{ node.id }}/move/up">
+                    <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                    <button class="btn-sort" type="submit" title="Subir">↑</button>
+                  </form>
+                  <form method="post" action="/admin/organigrama/node/{{ node.id }}/move/down">
+                    <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                    <button class="btn-sort" type="submit" title="Bajar">↓</button>
+                  </form>
+                </div>
+              </div>
+              <form method="post" action="/admin/organigrama/node/save" enctype="multipart/form-data">
+                <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                <input type="hidden" name="node_id" value="{{ node.id }}">
+                <div class="field-row">
+                  <div class="field">
+                    <label>Tipo</label>
+                    <select name="node_type">
+                      <option value="department" {% if node.node_type=='department' %}selected{% endif %}>Área</option>
+                      <option value="person" {% if node.node_type=='person' %}selected{% endif %}>Persona</option>
+                    </select>
+                  </div>
+                  <div class="field">
+                    <label>Depende de</label>
+                    <select name="parent_id">
+                      <option value="">Nivel principal</option>
+                      {% for parent in nodes if parent.id != node.id %}
+                      <option value="{{ parent.id }}" {% if node.parent_id==parent.id %}selected{% endif %}>{{ parent.name }}</option>
+                      {% endfor %}
+                    </select>
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Nombre</label>
+                  <input name="name" value="{{ node.name }}">
+                </div>
+                <div class="field">
+                  <label>Cargo</label>
+                  <input name="title" value="{{ node.title or '' }}">
+                </div>
+                <div class="field">
+                  <label>Profesión</label>
+                  <input name="profession" value="{{ node.profession or '' }}">
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label>Correo</label>
+                    <input name="email" value="{{ node.email or '' }}">
+                  </div>
+                  <div class="field">
+                    <label>Teléfono</label>
+                    <input name="phone" value="{{ node.phone or '' }}">
+                  </div>
+                </div>
+                <div class="field-row">
+                  <div class="field">
+                    <label>Color</label>
+                    <input name="accent_color" type="color" value="{{ node.accent_color or ('#5b8def' if brand=='consulting' else '#d7a24c') }}">
+                  </div>
+                  <div class="field">
+                    <label>Orden</label>
+                    <input name="sort_order" type="number" value="{{ node.sort_order or 0 }}">
+                  </div>
+                </div>
+                <div class="field">
+                  <label>Reemplazar foto</label>
+                  <input name="photo" type="file" accept=".png,.jpg,.jpeg,.webp">
+                </div>
+                <div class="field">
+                  <label><input name="is_visible" type="checkbox" value="1" {% if node.is_visible %}checked{% endif %}> Visible</label>
+                </div>
+                <div class="btn-row">
+                  <button class="btn-save" type="submit">Guardar cambios</button>
+                </div>
+              </form>
+              <form method="post" action="/admin/organigrama/node/{{ node.id }}/delete" onsubmit="return confirm('¿Eliminar este elemento?')">
+                <input type="hidden" name="csrf_token" value="{{ g.csrf_token }}">
+                <div class="btn-row">
+                  <button class="btn-danger" type="submit">Eliminar</button>
+                </div>
+              </form>
+            </article>
+            {% endfor %}
+          </div>
+        </section>
+        {% endif %}
+      </div>
+
+      <div class="admin-preview">
+        <section class="form-panel preview-frame">
+          <iframe src="/mod/organigrama?embed=1" title="Vista previa del organigrama"></iframe>
+        </section>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+[Unit]
+Description=Work Log Docker Compose
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/worklog
+ExecStart=/usr/bin/docker compose -f docker-compose.production.yml up -d
+ExecStop=/usr/bin/docker compose -f docker-compose.production.yml down
+RemainAfterExit=yes
+TimeoutStartSec=0
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,47 @@
+{% extends "layout.html" %}
+{% block content %}
+  <div class="pagehead">
+    <div>
+      <h1 class="h1">Evidencias fotográficas</h1>
+      <div class="sub">Sube varias fotos y relaciónalas con actividades, documentos o cumplimiento.</div>
+    </div>
+  </div>
+  <div class="card">
+    <form id="photoForm">
+      <div class="grid cols-3">
+        <div><div class="help">Entidad</div><input class="input" name="entity" placeholder="submission, compliance, general" value="general"></div>
+        <div><div class="help">ID entidad</div><input class="input" name="entity_id" placeholder="123"></div>
+        <div><div class="help">Estación (opcional)</div><input class="input" name="station_id" placeholder="1"></div>
+      </div>
+      <div style="margin-top:10px;"><div class="help">Descripción</div><input class="input" name="caption" placeholder="Evidencia del día"></div>
+      <div style="margin-top:10px;"><input type="file" name="files" id="files" accept="image/*" multiple></div>
+      <div style="margin-top:12px;"><button class="btn" type="submit">Subir fotos</button></div>
+    </form>
+  </div>
+  <div class="card" style="margin-top:14px;">
+    <div style="font-weight:900;">Últimas fotos</div>
+    <div id="gallery" class="help" style="margin-top:10px;">Cargando…</div>
+  </div>
+{% endblock %}
+{% block scripts %}
+<script>
+(async()=>{
+  async function load(){
+    const data = await api('/api/evidence/photos');
+    const items = data.items||[];
+    qs('#gallery').innerHTML = items.length ? items.map(it=>`<div style="display:inline-block;margin:8px;vertical-align:top"><a href="/uploads/${encodeURIComponent(it.file_path).replace(/%2F/g,'/')}?inline=1" target="_blank"><img src="/uploads/${encodeURIComponent(it.file_path).replace(/%2F/g,'/')}?inline=1" style="width:180px;height:140px;object-fit:cover;border-radius:14px;border:1px solid rgba(2,6,23,.1)"></a><div class="help" style="max-width:180px">${_esc(it.entity)} #${_esc(it.entity_id)}<br>${_esc(it.caption||'')}</div></div>`).join('') : 'Sin fotos todavía.';
+  }
+  qs('#photoForm').addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const fd = new FormData(e.target);
+    const inp = qs('#files');
+    for (const f of inp.files) fd.append('files', f);
+    await api('/api/evidence/photos', { method:'POST', body:fd, headers:{} });
+    toast('Fotos subidas');
+    e.target.reset();
+    await load();
+  });
+  await load();
+})();
+</script>
+{% endblock %}

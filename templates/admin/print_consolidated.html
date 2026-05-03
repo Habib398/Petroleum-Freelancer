@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Reporte consolidado</title>
+  <style>
+    body{font-family:Inter,Arial,sans-serif;margin:28px;color:#0f172a}
+    h1,h2{margin:0}
+    .muted{color:#64748b}
+    .top{display:flex;justify-content:space-between;align-items:flex-start;gap:16px;margin-bottom:20px}
+    .brand{font-size:13px;text-transform:uppercase;letter-spacing:.12em;color:#475569}
+    table{width:100%;border-collapse:collapse;margin-top:16px}
+    th,td{border:1px solid #cbd5e1;padding:9px 10px;font-size:13px;text-align:left}
+    th{background:#e2e8f0}
+    .sign{margin-top:36px;display:grid;grid-template-columns:1fr 1fr;gap:24px}
+    .line{border-top:1px solid #0f172a;padding-top:8px;font-size:12px}
+    @media print{.noprint{display:none}}
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div>
+      <div class="brand">{{ 'Petroleum' if brand=='petroleum' else 'Consulting' }} • Work Log</div>
+      <h1>Reporte consolidado profesional</h1>
+      <div class="muted">Generado: {{ generated_at }}</div>
+    </div>
+    <button class="noprint" onclick="window.print()">Imprimir</button>
+  </div>
+  <table>
+    <thead>
+      <tr>
+        <th>Estación</th>
+        <th>Alertas abiertas</th>
+        <th>Mantenimientos</th>
+        <th>Pagos pendientes</th>
+        <th>Docs pendientes</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for row in rows %}
+      <tr>
+        <td>{{ row.code }} - {{ row.name }}</td>
+        <td>{{ row.alerts_open }}</td>
+        <td>{{ row.maintenance_count }}</td>
+        <td>{{ row.payments_pending }}</td>
+        <td>{{ row.docs_pending }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <div class="sign">
+    <div class="line">Elaboró</div>
+    <div class="line">Revisó / Aprobó</div>
+  </div>
+</body>
+</html>

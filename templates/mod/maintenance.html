@@ -1,0 +1,88 @@
+{% extends "layout.html" %}
+{% block head %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Mantenimiento</h1>
+    <div class="sub">Mantenimientos preventivos/correctivos/calibraciones por bomba.</div>
+  </div>
+</div>
+<div class="card" data-export-bar style="margin-top:12px;" data-admin-auditor-only hidden>
+  <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;">
+    <div><b>Exportación</b> <span class="help">Descarga de datos para auditoría/analítica.</span></div>
+    <div style="display:flex;gap:10px;">
+      <a class="btn" href="/api/export/maintenance.csv">CSV</a>
+      <a class="btn" href="/api/export/maintenance.xlsx">Excel</a>
+    </div>
+  </div>
+</div>
+
+
+<div class="grid cols-2">
+  <div class="card" id="maintStationCard" hidden style="grid-column:1 / -1;">
+    <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;">
+      <div>
+        <div style="font-weight:900;">Estación</div>
+        <div class="help">Selecciona la estación para gestionar bombas y mantenimientos.</div>
+      </div>
+      <div style="min-width:320px;">
+        <select id="maintStation" style="width:100%;"></select>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-weight:900;">Bombas</div>
+    <div class="help">Crea bombas por estación para asociar mantenimientos.</div>
+    <div style="display:grid;gap:10px;margin-top:10px;">
+      <div class="formrow">
+        <div><div class="help">Código de bomba</div><input id="pumpCode" class="input" placeholder="B-01"></div>
+        <div><div class="help">Ubicación</div><input id="pumpLoc" class="input" placeholder="Isla 1"></div>
+      </div>
+      <div class="formactions"><button id="pumpAdd" class="btn primary">Agregar bomba</button></div>
+      <div id="pumpErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+    </div>
+    <div class="tablewrap" style="margin-top:12px;">
+      <table><thead><tr><th>Bomba</th><th>Ubicación</th><th>Status</th></tr></thead><tbody id="pumpT"></tbody></table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;">Nuevo mantenimiento</div>
+    <form id="mForm" style="display:grid;gap:10px;margin-top:10px;">
+      <div class="formrow">
+        <div>
+          <div class="help">Tipo</div>
+          <select name="kind">
+            <option value="preventivo">Preventivo</option>
+            <option value="correctivo">Correctivo</option>
+            <option value="calibracion">Calibración</option>
+          </select>
+        </div>
+        <div>
+          <div class="help">Bomba (opcional)</div>
+          <select name="pump_id" id="pumpSel"></select>
+        </div>
+      </div>
+      <div class="formrow">
+        <div><div class="help">Técnico</div><input class="input" name="technician"></div>
+        <div><div class="help">Notas</div><input class="input" name="notes"></div>
+      </div>
+      <div class="formrow">
+        <div><div class="help">Evidencia antes</div><input class="input" type="file" name="before"></div>
+        <div><div class="help">Evidencia después</div><input class="input" type="file" name="after"></div>
+      </div>
+      <div class="formactions"><button class="btn primary" type="submit">Guardar</button></div>
+      <div id="mErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+    </form>
+
+    <div style="margin-top:12px;font-weight:900;">Historial</div>
+    <div class="tablewrap" style="margin-top:10px;">
+      <table><thead><tr><th>Fecha</th><th>Estación</th><th>Tipo</th><th>Bomba</th><th>Evidencias</th></tr></thead><tbody id="mT"></tbody></table>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/maintenance.js"></script>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Centro documental</h1>
+    <div class="sub">Vista unificada de biblioteca documental, registros guardados y envíos pendientes.</div>
+  </div>
+  <div class="page-actions">
+    <input id="q" class="input" placeholder="Buscar título, sección, estación o usuario" />
+    <select id="module" class="input">
+      <option value="">Todos los módulos</option>
+      <option value="sasisopa">SASISOPA</option>
+      <option value="sgm">SGM</option>
+      <option value="calibraciones">Calibraciones</option>
+      <option value="general">General</option>
+    </select>
+    <button id="btnLoad" class="btn" type="button">Actualizar</button>
+  </div>
+</div>
+
+<div id="summary" class="grid cols-4" style="margin-top:14px;"></div>
+
+<div class="card" style="margin-top:14px;">
+  <div style="font-weight:900;">Biblioteca documental</div>
+  <div id="docsBox" class="help" style="margin-top:10px;">Cargando…</div>
+</div>
+
+<div class="card" style="margin-top:14px;">
+  <div style="font-weight:900;">Envíos y revisiones</div>
+  <div id="subsBox" class="help" style="margin-top:10px;">Cargando…</div>
+</div>
+
+<script>
+async function api(url, opts={}){
+  const r = await fetch(url, Object.assign({headers:{'Accept':'application/json'}}, opts));
+  const j = await r.json().catch(()=>({ok:false,error:'invalid_json'}));
+  if(!r.ok) throw new Error(j.error || ('HTTP '+r.status));
+  return j;
+}
+function esc(s){ return String(s ?? '').replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+function card(label, value){ return `<div class="card"><div class="help">${esc(label)}</div><div style="font-size:28px;font-weight:900;margin-top:6px;">${esc(value)}</div></div>`; }
+function table(rows, cols){
+  if(!rows.length) return '<div class="help">Sin resultados.</div>';
+  const head = `<tr>${cols.map(c=>`<th style="text-align:left;padding:8px;border-bottom:1px solid rgba(148,163,184,.2)">${esc(c.label)}</th>`).join('')}</tr>`;
+  const body = rows.map(r => `<tr>${cols.map(c=>`<td style="padding:8px;border-bottom:1px solid rgba(148,163,184,.12)">${esc(c.render?c.render(r):r[c.key])}</td>`).join('')}</tr>`).join('');
+  return `<div style="overflow:auto;"><table style="width:100%;border-collapse:collapse;">${head}${body}</table></div>`;
+}
+async function loadCenter(){
+  const q = encodeURIComponent(document.getElementById('q').value || '');
+  const module = encodeURIComponent(document.getElementById('module').value || '');
+  const data = await api(`/api/admin/document-center?q=${q}&module=${module}`);
+  document.getElementById('summary').innerHTML = [
+    card('Documentos', data.summary.docs_total),
+    card('Vigentes', data.summary.docs_current),
+    card('Pendientes revisión', data.summary.submissions_pending),
+    card('Rechazados / incorrectos', data.summary.submissions_wrong)
+  ].join('');
+  document.getElementById('docsBox').innerHTML = table(data.docs, [
+    {label:'Módulo', key:'module'}, {label:'Sección', key:'section'}, {label:'Título', key:'title'},
+    {label:'Estación', render:r => r.station_name ? `${r.station_code || ''} ${r.station_name}`.trim() : 'Global'},
+    {label:'Versión', key:'version_no'}, {label:'Estatus', key:'status'}, {label:'Expira', key:'expires_at'}
+  ]);
+  document.getElementById('subsBox').innerHTML = table(data.submissions, [
+    {label:'Módulo', key:'module'}, {label:'Documento / requerimiento', key:'requirement_title'}, {label:'Estación', key:'station_name'},
+    {label:'Operador', key:'operator_name'}, {label:'Enviado', key:'submitted_at'}, {label:'Revisión', key:'review_status'}
+  ]);
+}
+document.getElementById('btnLoad').addEventListener('click', loadCenter);
+document.getElementById('q').addEventListener('keydown', (e)=>{ if(e.key==='Enter') loadCenter(); });
+loadCenter();
+</script>
+{% endblock %}

@@ -1,0 +1,37 @@
+{% extends "layout.html" %}
+{% block head %}{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Reportes</h1>
+    <div class="sub">Descargas mensuales y anuales (con FIEL para anual según rol).</div>
+  </div>
+</div>
+
+<div class="grid cols-2">
+  <div class="card">
+    <div style="font-weight:900;">Reporte mensual</div>
+    <div class="formrow" style="margin-top:10px;">
+      <div><div class="help">Año</div><input id="rmYear" class="input" value="2026"></div>
+      <div><div class="help">Mes</div><input id="rmMonth" class="input" value="02"></div>
+    </div>
+    <div class="formactions">
+      <button id="rmBtn" class="btn primary">Descargar PDF</button>
+    </div>
+    <div class="help">Admin puede pasar station_id en la URL si lo necesita.</div>
+  </div>
+
+  <div class="card">
+    <div style="font-weight:900;">Reporte anual</div>
+    <div style="display:grid;gap:10px;margin-top:10px;">
+      <div><div class="help">Año</div><input id="raYear" class="input" value="2026"></div>
+      <div class="formactions"><button id="raBtn" class="btn primary">Descargar PDF</button></div>
+      <div class="help">Jefe de estación requiere perfil fiscal + FIEL actualizada para descargar anual.</div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/reports.js"></script>
+{% endblock %}

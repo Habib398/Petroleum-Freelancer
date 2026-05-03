@@ -1,0 +1,169 @@
+{% extends "layout.html" %}
+{% block head %}
+<style>
+  .task-stack{display:grid;gap:10px}
+  .task-item{display:flex;gap:12px;align-items:flex-start;padding:12px 14px;border-radius:14px;border:1px solid rgba(148,163,184,.16);background:rgba(248,250,252,.95)}
+  .task-item b{display:grid;place-items:center;min-width:28px;height:28px;border-radius:999px;background:rgba(134,184,33,.14);color:var(--hme-green-dark);font-size:13px}
+  .task-item .title{font-weight:900;margin-bottom:3px}
+  .task-item .desc{font-size:13px;color:var(--hme-text-soft);line-height:1.35}
+  .summary-card{display:flex;flex-direction:column;gap:6px;min-height:120px}
+  .summary-card .eyebrow{font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--hme-text-soft)}
+  .summary-card .value{font-size:28px;font-weight:900;letter-spacing:-.03em}
+  .summary-card .meta{font-size:13px;color:var(--hme-text-soft)}
+  .summary-card .footer{margin-top:auto;font-size:12px;color:var(--hme-text-soft)}
+  .doc-progress{display:grid;gap:12px}
+  .doc-progress .bar{height:14px;border-radius:999px;background:rgba(148,163,184,.16);overflow:hidden}
+  .doc-progress .bar > span{display:block;height:100%;background:linear-gradient(90deg,#22c55e,#16a34a);width:0;transition:width .35s ease}
+  .doc-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .doc-mini{padding:12px;border-radius:14px;border:1px solid rgba(148,163,184,.16);background:rgba(248,250,252,.95)}
+  .doc-mini b{display:block;font-size:22px;margin-bottom:4px}
+  .empty-inline{padding:12px;border-radius:14px;background:rgba(248,250,252,.95);border:1px dashed rgba(148,163,184,.25);color:var(--hme-text-soft)}
+  @media (max-width: 900px){ .doc-grid{grid-template-columns:1fr;} }
+  body.brand-petroleum .task-item, body.brand-petroleum .doc-mini, body.brand-petroleum .empty-inline{background:linear-gradient(180deg,rgba(17,28,46,.96),rgba(13,22,37,.94));border-color:rgba(49,67,96,.88);box-shadow:0 16px 34px rgba(0,0,0,.20)}
+  body.brand-petroleum .task-item .title, body.brand-petroleum .doc-mini b{color:#E7EEF9}
+  body.brand-petroleum .task-item .desc, body.brand-petroleum .empty-inline{color:#B8C7DA}
+  body.brand-petroleum .task-item b{background:rgba(200,162,74,.18);color:#F1D287}
+  body.brand-petroleum .summary-card{background:linear-gradient(180deg,rgba(17,28,46,.96),rgba(12,21,35,.94));border:1px solid rgba(49,67,96,.84);border-radius:18px;padding:16px;box-shadow:0 18px 34px rgba(0,0,0,.18)}
+  body.brand-petroleum .summary-card .eyebrow, body.brand-petroleum .summary-card .meta, body.brand-petroleum .summary-card .footer{color:#B8C7DA}
+  body.brand-petroleum .summary-card .value{color:#F7FAFF}
+  body.brand-petroleum .doc-progress .bar{background:rgba(148,163,184,.12);border:1px solid rgba(49,67,96,.54)}
+  body.brand-petroleum #quick, body.brand-petroleum #stationBox{color:#C5D1E3}
+</style>
+{% endblock %}
+
+{% block content %}
+  <div class="pagehead">
+    <div>
+      <h1 class="h1" id="pageTitle">Dashboard</h1>
+      <div class="sub" id="pageSub">Resumen operativo y accesos rápidos.</div>
+    </div>
+    <div class="page-actions">
+      <a class="btn ghost" href="/mapa" data-map-privileged hidden>Ver mapa México</a>
+      <a class="btn primary" href="/mod/activities">{{ "Ir a agenda" if session.get('brand','consulting') == 'petroleum' else "Ir a actividades" }}</a>
+    </div>
+  </div>
+
+  <section class="page-intro">
+    <article class="info-card">
+      <h3 id="guideTitle">Qué hacer primero</h3>
+      <p id="guideText">Cargando guía rápida según tu rol…</p>
+      <div id="guideSteps" class="step-grid"></div>
+    </article>
+    <article class="info-card">
+      <h3 id="moduleMapTitle">Mapa de módulos</h3>
+      <div id="moduleMap" class="soft-list"></div>
+    </article>
+  </section>
+
+  <div id="quickActions" class="action-grid"></div>
+
+  <div id="kpis" class="grid cols-3"></div>
+
+  <div id="executive" class="grid cols-2" style="margin-top:14px;" data-admin-only hidden>
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <div>
+          <div style="font-weight:900;">Panel ejecutivo</div>
+          <div class="help">Cumplimiento del mes y riesgo por estación.</div>
+        </div>
+        <div class="tag" id="execRange"></div>
+      </div>
+      <div id="execCompliance" style="margin-top:10px;"></div>
+    </div>
+    <div class="card">
+      <div style="font-weight:900;">Riesgo por estación</div>
+      <div class="help">Vencidas + rechazadas (30 días).</div>
+      <div id="execRisk" style="margin-top:10px;"></div>
+    </div>
+  </div>
+
+  <div class="card" id="stationFocus" style="margin-top:14px;" hidden>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div>
+        <div style="font-weight:900;">Vista rápida por estación</div>
+        <div class="help">Selecciona una estación para ver progreso y vencidas sin entrar a otros módulos.</div>
+      </div>
+      <div class="page-actions">
+        <label class="help" style="margin:0;">Estación</label>
+        <select id="stationSelect" class="input"></select>
+        <span class="tag warn" id="stationOverdue" style="display:none;"></span>
+      </div>
+    </div>
+    <div id="stationFocusBody" style="margin-top:12px;"></div>
+  </div>
+  <div class="grid cols-2" id="legacyOps" style="margin-top:14px;">
+    <div class="card">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+        <div>
+          <div style="font-weight:900;">Bandeja rápida</div>
+          <div class="help">Pendientes (entregas, pagos, alertas).</div>
+        </div>
+        <a class="btn ghost small" href="/admin/inbox" data-admin-only hidden>Ver inbox</a>
+      </div>
+      <div id="quick" class="help" style="margin-top:10px;">Cargando…</div>
+    </div>
+
+    <div class="card">
+      <div style="font-weight:900;">Estado de mi estación</div>
+      <div id="stationBox" class="help" style="margin-top:10px;">Cargando…</div>
+    </div>
+  </div>
+
+  <section id="staffSimple" hidden style="margin-top:14px;">
+    <div class="grid cols-3" id="staffSummary"></div>
+    <div class="grid cols-2" style="margin-top:14px;">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900;">Tus 3 tareas de hoy</div>
+            <div class="help">Sigue este orden para no perderte.</div>
+          </div>
+          <a class="btn ghost small" id="primaryModuleBtn" href="/staff/menu">Abrir módulo principal</a>
+        </div>
+        <div id="todayTasks" class="task-stack" style="margin-top:12px;"></div>
+      </div>
+      <div class="card">
+        <div style="font-weight:900;">Documentos de tu estación</div>
+        <div class="help">Tu porcentaje, faltantes y accesos para subir o renovar.</div>
+        <div id="docBoard" style="margin-top:12px;"></div>
+      </div>
+    </div>
+    <div class="grid cols-2" style="margin-top:14px;">
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900;">Próximos vencimientos</div>
+            <div class="help">Lo que debes revisar o renovar pronto.</div>
+          </div>
+          <a class="btn ghost small" href="/mod/document-renewals-calendar">Ver calendario</a>
+        </div>
+        <div id="renewalList" class="soft-list" style="margin-top:12px;"></div>
+      </div>
+      <div class="card">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <div>
+            <div style="font-weight:900;">Tus avisos recientes</div>
+            <div class="help">Mensajes, tareas y recordatorios del sistema.</div>
+          </div>
+          <a class="btn ghost small" href="/mod/notifications">Ver todas</a>
+        </div>
+        <div id="notificationList" class="soft-list" style="margin-top:12px;"></div>
+      </div>
+    </div>
+  </section>
+
+  <div class="card" id="activityProgress" style="margin-top:14px;" hidden>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div>
+        <div style="font-weight:900;">{{ "Resumen de agenda" if session.get('brand','consulting') == 'petroleum' else "Resumen de actividades" }}</div>
+        <div class="help">Progreso por periodo (se marca al subir evidencias).</div>
+      </div>
+      <a class="btn ghost small" href="/mod/activities">Ver calendario</a>
+    </div>
+    <div id="activityProgressBody" style="margin-top:12px;"></div>
+  </div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/dashboard.js"></script>
+{% endblock %}

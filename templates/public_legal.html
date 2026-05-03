@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>{{ legal_title }} • Sistema Corporativo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/public_legal.css"/>
+</head>
+<body>
+  <div class="top">
+    <div class="container">
+      <a class="back" href="/">← Volver al inicio</a>
+    </div>
+  </div>
+  <main class="hero">
+    <div class="container hero-box">
+      <h1>{{ legal_title }}</h1>
+      <p class="intro">{{ legal_intro }}</p>
+    </div>
+  </main>
+  <section class="content">
+    <div class="container card">
+      <div class="meta">
+        <span class="pill">Sistema Corporativo</span>
+        <span class="pill">Consulting Oil &amp; Gas &amp; Petroleum IU</span>
+        <span class="pill">Última revisión: {{ updated_at }}</span>
+      </div>
+      <div class="sections">
+        {% for item in sections %}
+        <article class="section">
+          <h2>{{ item.title }}</h2>
+          <p>{{ item.body }}</p>
+        </article>
+        {% endfor %}
+      </div>
+      <div class="foot">
+        Para dudas sobre este aviso, puedes comunicarte al correo principal <a href="mailto:usiel54@hotmail.com">usiel54@hotmail.com</a> o al secundario <a href="mailto:misaelsainz9@gmail.com">misaelsainz9@gmail.com</a>.
+      </div>
+    </div>
+  </section>
+</body>
+</html>

@@ -1,0 +1,142 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Inbox (Revisión)</h1>
+    <div class="sub">Entregas, pagos y alertas para revisión del administrador.</div>
+  </div>
+</div>
+
+<div class="card" id="inboxFilters" style="margin-top:12px;">
+  <div class="grid cols-7">
+    <div><div class="help">Estación</div><select id="fStation" class="input"></select></div>
+    <div><div class="help">Desde</div><input id="fFrom" type="date" class="input"/></div>
+    <div><div class="help">Hasta</div><input id="fTo" type="date" class="input"/></div>
+    <div>
+      <div class="help">Severidad</div>
+      <select id="fSev" class="input">
+        <option value="">Todas</option>
+        <option value="green">Verde</option>
+        <option value="yellow">Amarilla</option>
+        <option value="red">Roja</option>
+      </select>
+    </div>
+    <div>
+      <div class="help">Estado alerta</div>
+      <select id="fAlertStatus" class="input">
+        <option value="">Todas</option>
+        <option value="open">Abiertas</option>
+        <option value="closed">Cerradas</option>
+      </select>
+    </div>
+    <div>
+      <div class="help">Estado entregas</div>
+      <select id="fSubStatus" class="input">
+        <option value="">Pendientes (en revisión)</option>
+        <option value="all">Todas</option>
+        <option value="submitted">Enviadas</option>
+        <option value="approved">Aprobadas</option>
+        <option value="rejected">Rechazadas</option>
+        <option value="reviewed">Requiere corrección</option>
+      </select>
+    </div>
+    <div><div class="help">Buscar</div><input id="fQ" class="input" placeholder="{{ "Agenda / estación / usuario…" if session.get('brand','consulting') == 'petroleum' else "Actividad / estación / usuario…" }}"></div>
+  </div>
+
+  <div class="formactions" style="margin-top:12px;">
+    <button id="fApply" class="btn primary">Aplicar filtros</button>
+    <button id="fClear" class="btn">Limpiar</button>
+  </div>
+</div>
+</div>
+
+<div class="grid cols-3" id="inboxKpis"></div>
+
+<div class="card" style="margin-top:14px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+    <div>
+      <div style="font-weight:900;">{{ "Agenda (resumen por estación)" if session.get('brand','consulting') == 'petroleum' else "Actividades (resumen por estación)" }}</div>
+      <div class="help">Completadas / pendientes / rechazadas en el rango seleccionado.</div>
+    </div>
+    <a class="btn ghost small" href="/mod/activities">{{ "Ver agenda" if session.get('brand','consulting') == 'petroleum' else "Ver calendario" }}</a>
+  </div>
+  <div class="tablewrap" style="margin-top:10px;">
+    <table>
+      <thead><tr><th>Estación</th><th>Total</th><th>Completadas</th><th>Pendientes</th><th>Rechazadas</th></tr></thead>
+      <tbody id="actSummaryT"></tbody>
+    </table>
+  </div>
+  <div style="margin-top:12px;font-weight:900;">Pendientes / Rechazadas (detalle)</div>
+  <div class="tablewrap" style="margin-top:10px;">
+    <table>
+      <thead><tr><th>Fecha</th><th>Estación</th><th>{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividad" }}</th><th>Frecuencia</th><th>Status</th></tr></thead>
+      <tbody id="actMissingT"></tbody>
+    </table>
+  </div>
+</div>
+
+
+<div class="grid cols-2" style="margin-top:14px;">
+  <div class="card">
+    <div style="font-weight:900;">Entregas pendientes</div>
+    <div class="tablewrap" style="margin-top:10px;">
+      <table><thead><tr><th>ID</th><th>Fecha</th><th>Estación</th><th>{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividad" }}</th><th>Usuario</th><th>Status</th><th>Archivo</th><th></th></tr></thead><tbody id="subT"></tbody></table>
+    </div>
+  </div>
+  <div class="card">
+    <div style="font-weight:900;">Pagos pendientes</div>
+    <div class="tablewrap" style="margin-top:10px;">
+      <table><thead><tr><th>ID</th><th>Estación</th><th>Comprobante</th><th></th></tr></thead><tbody id="payT"></tbody></table>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px;">
+  <div style="font-weight:900;">Alertas recientes</div>
+  <div class="tablewrap" style="margin-top:10px;">
+    <table><thead><tr><th>ID</th><th>Estación</th><th>Severidad</th><th>Título</th><th>Status</th></tr></thead><tbody id="alertT"></tbody></table>
+  </div>
+</div>
+
+
+<!-- Review dialog (admin) -->
+<dialog id="dlgReview">
+  <form method="dialog" class="dlgform">
+    <h3 style="margin:0 0 10px 0;">Revisión de entrega</h3>
+    <input type="hidden" id="rvId">
+    <div style="display:grid;gap:10px;">
+      <div>
+        <div class="help">Acción</div>
+        <select id="rvStatus" class="input">
+          <option value="approved">Aprobar</option>
+          <option value="reviewed">Requiere corrección</option>
+          <option value="rejected">Rechazar</option>
+        </select>
+      </div>
+      <div>
+        <div class="help">Comentario / Motivo (visible para el operador)</div>
+        <textarea id="rvNotes" class="input" rows="4" placeholder="Ej. Falta firma, documento incompleto, subir PDF legible…"></textarea>
+      </div>
+      <div class="grid cols-2" style="gap:10px;">
+        <div>
+          <div class="help">Score (opcional)</div>
+          <input id="rvScore" type="number" class="input" min="0" max="100" step="1" placeholder="0-100">
+        </div>
+        <div>
+          <div class="help">Acceso rápido</div>
+          <div class="help">Tip: “Corrección” mantiene la entrega visible como pendiente.</div>
+        </div>
+      </div>
+    </div>
+    <div class="formactions" style="margin-top:12px;">
+      <button class="btn" value="cancel">Cancelar</button>
+      <button id="rvSave" class="btn primary" value="ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
+
+
+{% endblock %}
+{% block scripts %}
+<script src="/static/js/admin_inbox.js"></script>
+{% endblock %}

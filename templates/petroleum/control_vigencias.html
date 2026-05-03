@@ -1,0 +1,184 @@
+{% extends "layout.html" %}
+
+{% block head %}
+<link rel="stylesheet" href="/static/css/petroleum_control_vigencias.css"/>
+{% endblock %}
+
+{% block content %}
+<div class="pcv-page">
+  <section class="pcv-hero">
+    <div>
+      <div class="pcv-kicker">Petroleum · Administrador</div>
+      <h1>Control de vigencias y responsables</h1>
+      <p>Tablero exclusivo para administración. Controla responsables, fechas de inicio, renovaciones, pagos y pendientes por estación. Jefes de estación y operadores solo verán sus normas y anexos correspondientes.</p>
+    </div>
+    <div class="pcv-hero-actions">
+      <a class="pcv-btn ghost" href="/petroleum/normativas">Abrir módulo simple</a>
+      <a class="pcv-btn ghost" href="/admin/stations">Estaciones</a>
+    </div>
+  </section>
+
+  <section class="pcv-summary" id="pcvSummaryCards">
+    <article class="pcv-sum"><span>Total</span><strong id="sumTotal">0</strong></article>
+    <article class="pcv-sum ok"><span>Vigentes</span><strong id="sumVigentes">0</strong></article>
+    <article class="pcv-sum warn"><span>Por vencer</span><strong id="sumPorVencer">0</strong></article>
+    <article class="pcv-sum danger"><span>Vencidos</span><strong id="sumVencidos">0</strong></article>
+    <article class="pcv-sum gold"><span>Pagos pendientes</span><strong id="sumPagos">0</strong></article>
+    <article class="pcv-sum dark"><span>Docs pendientes</span><strong id="sumDocs">0</strong></article>
+  </section>
+
+  <section class="pcv-grid-two">
+    <article class="pcv-card">
+      <div class="pcv-card-head">
+        <div>
+          <h2>Responsables / dueños</h2>
+          <p>Catálogo dinámico para que en el futuro agregues más responsables sin tocar el código.</p>
+        </div>
+      </div>
+      <form id="ownerForm" class="pcv-form-grid">
+        <div><label>Nombre</label><input id="ownerName" class="pcv-input" required></div>
+        <div><label>Clave corta</label><input id="ownerCode" class="pcv-input" maxlength="8" placeholder="MS"></div>
+        <div><label>Color</label><input id="ownerColor" class="pcv-input pcv-color" type="color" value="#d4af37"></div>
+        <div><label>Teléfono</label><input id="ownerPhone" class="pcv-input"></div>
+        <div><label>Correo</label><input id="ownerEmail" class="pcv-input" type="email"></div>
+        <div class="span-2"><label>Notas</label><input id="ownerNotes" class="pcv-input"></div>
+        <div class="span-2 form-actions"><button class="pcv-btn" type="submit">Guardar responsable</button></div>
+      </form>
+      <div id="ownerList" class="pcv-owner-list"></div>
+    </article>
+
+    <article class="pcv-card">
+      <div class="pcv-card-head">
+        <div>
+          <h2>Asignación por estación</h2>
+          <p>Relaciona cada estación con su responsable. La tabla usará la clave corta y el color de ese dueño.</p>
+        </div>
+      </div>
+      <div class="pcv-station-table-wrap">
+        <table class="pcv-table compact">
+          <thead>
+            <tr><th>Estación</th><th>Responsable</th></tr>
+          </thead>
+          <tbody id="stationOwnerTable"></tbody>
+        </table>
+      </div>
+    </article>
+  </section>
+
+  <section class="pcv-grid-two">
+    <article class="pcv-card">
+      <div class="pcv-card-head">
+        <div>
+          <h2>Nuevo documento de control</h2>
+          <p>Además de {{ norm_titles_line('petroleum') }}, puedes agregar nuevos tipos en el futuro.</p>
+        </div>
+      </div>
+      <form id="docTypeForm" class="pcv-form-grid small">
+        <div><label>Código</label><input id="docCode" class="pcv-input" placeholder="permiso_cre"></div>
+        <div><label>Título</label><input id="docTitle" class="pcv-input" placeholder="Permiso CRE"></div>
+        <div><label>Color</label><input id="docColor" class="pcv-input pcv-color" type="color" value="#d4af37"></div>
+        <div><label>Orden</label><input id="docSort" class="pcv-input" type="number" value="100"></div>
+        <div class="span-2 form-actions"><button class="pcv-btn ghost" type="submit">Agregar documento</button></div>
+      </form>
+      <div id="docTypeList" class="pcv-chip-list"></div>
+    </article>
+
+    <article class="pcv-card">
+      <div class="pcv-card-head">
+        <div>
+          <h2>Captura / actualización de control</h2>
+          <p>Crea o actualiza el registro de una estación. El sistema calcula automáticamente si está vigente, por vencer o vencido según la fecha de renovación.</p>
+        </div>
+      </div>
+      <form id="entryForm" class="pcv-form-grid">
+        <input type="hidden" id="entryId">
+        <div><label>Estación</label><select id="entryStation" class="pcv-input"></select></div>
+        <div><label>Documento</label><select id="entryDocType" class="pcv-input"></select></div>
+        <div><label>Fecha de inicio</label><input id="entryStartDate" class="pcv-input" type="date"></div>
+        <div><label>Fecha de renovación</label><input id="entryRenewalDate" class="pcv-input" type="date"></div>
+        <div><label>Estatus documental</label>
+          <select id="entryDocStatus" class="pcv-input">
+            <option value="vigente">Vigente</option>
+            <option value="debe_documento">Debe documento</option>
+            <option value="en_revision">En revisión</option>
+            <option value="vencido">Vencido</option>
+            <option value="no_aplica">No aplica</option>
+          </select>
+        </div>
+        <div><label>Estatus de pago</label>
+          <select id="entryPaymentStatus" class="pcv-input">
+            <option value="pagado">Pagado</option>
+            <option value="pendiente">Pendiente</option>
+            <option value="vencido">Vencido</option>
+            <option value="no_aplica">No aplica</option>
+          </select>
+        </div>
+        <div><label>Último pago</label><input id="entryLastPaymentDate" class="pcv-input" type="date"></div>
+        <div><label>Monto adeudado</label><input id="entryAmountDue" class="pcv-input" type="number" step="0.01" min="0"></div>
+        <div class="span-2"><label>Notas</label><textarea id="entryNotes" class="pcv-input" rows="3"></textarea></div>
+        <div class="span-2 form-actions">
+          <button class="pcv-btn" type="submit">Guardar control</button>
+          <button class="pcv-btn ghost" type="button" id="entryResetBtn">Limpiar</button>
+        </div>
+      </form>
+    </article>
+  </section>
+
+  <section class="pcv-card">
+    <div class="pcv-card-head">
+      <div>
+        <h2>Tabla general</h2>
+        <p>Filtra por responsable, estación, documento, renovación y pago. Cada fila te muestra documento, pago y renovación con semáforos rápidos.</p>
+      </div>
+    </div>
+
+    <div class="pcv-filter-row">
+      <div><label>Responsable</label><select id="fltOwner" class="pcv-input"></select></div>
+      <div><label>Estación</label><select id="fltStation" class="pcv-input"></select></div>
+      <div><label>Documento</label><select id="fltDocType" class="pcv-input"></select></div>
+      <div><label>Renovación</label>
+        <select id="fltRenewal" class="pcv-input">
+          <option value="">Todas</option>
+          <option value="vigente">Vigente</option>
+          <option value="proximo">Por vencer</option>
+          <option value="vencido">Vencido</option>
+          <option value="sin_fecha">Sin fecha</option>
+        </select>
+      </div>
+      <div><label>Pago</label>
+        <select id="fltPayment" class="pcv-input">
+          <option value="">Todos</option>
+          <option value="pagado">Pagado</option>
+          <option value="pendiente">Pendiente</option>
+          <option value="vencido">Vencido</option>
+          <option value="no_aplica">No aplica</option>
+        </select>
+      </div>
+      <div class="pcv-filter-actions"><button id="btnRefreshTable" class="pcv-btn ghost" type="button">Actualizar tabla</button></div>
+    </div>
+
+    <div class="pcv-table-wrap">
+      <table class="pcv-table">
+        <thead>
+          <tr>
+            <th>Responsable</th>
+            <th>Estación</th>
+            <th>Documento</th>
+            <th>Inicio</th>
+            <th>Renovación</th>
+            <th>Documento</th>
+            <th>Pago</th>
+            <th>Renovación</th>
+            <th>Notas</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="controlTable"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div id="pcvToast" class="pcv-toast" hidden></div>
+</div>
+<script src="/static/js/petroleum_control_vigencias.js"></script>
+{% endblock %}

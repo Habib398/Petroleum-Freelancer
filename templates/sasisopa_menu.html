@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>SASISOPA • Menú</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/theme-hme.css"/>
+  <link rel="stylesheet" href="/static/css/modules.css"/>
+</head>
+<body class="module brand-{{ session.get('brand','consulting') }}">
+
+  <div class="hub-topbar">
+    <div class="hub-brand">
+      {% set _brand = session.get('brand','consulting') %}
+      {% if _brand == 'petroleum' %}
+        <img src="/static/img/petroleum-logo.png" alt="PETROLEUM"/>
+        <div>
+          <div class="kicker">Seguridad Operativa</div>
+          <div class="title">SASISOPA</div>
+        </div>
+      {% else %}
+        <img src="/static/img/logo.png" alt="CONSULTING"/>
+        <div>
+          <div class="kicker">Seguridad Operativa</div>
+          <div class="title">SASISOPA</div>
+        </div>
+      {% endif %}
+    </div>
+    <div class="hub-actions">
+      <a class="btn ghost" href="{{ back_url }}">← Regresar</a>
+      <a class="btn" href="/select-system">Cambiar empresa</a>
+      <a class="btn primary" href="/logout">Salir</a>
+    </div>
+  </div>
+
+  <div class="hub-shell">
+    <div class="hub-header">
+      <div>
+        <h1>SASISOPA</h1>
+        <div class="sub">Módulo administrativo con acceso rápido a evidencia, programa, manual, implementación y complementos (estudios, planos e histórico).</div>
+      </div>
+      <div class="hub-meta">
+        <span class="badge">Admin</span>
+        <span class="badge">Cumplimiento</span>
+      </div>
+    </div>
+
+    <div class="hub-grid">
+      <div class="hub-card">
+        <a href="{{ base_url }}/sasisopa/evidencia">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8"/><path d="M8 17h5"/></svg>
+          </div>
+          <div>
+            <h3>Evidencias</h3>
+            <p>Repositorio por estación y periodo con control documental.</p>
+            <div class="hub-meta"><span class="badge">Carga</span><span class="badge">Validación</span></div>
+          </div>
+        </a>
+      </div>
+
+      <div class="hub-card">
+        <a href="{{ base_url }}/sasisopa/programa">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 7h18"/><path d="M7 3v18"/><path d="M8 11h12"/><path d="M8 15h12"/><path d="M8 19h12"/></svg>
+          </div>
+          <div>
+            <h3>Programa</h3>
+            <p>Planeación y seguimiento del programa SASISOPA por estación.</p>
+            <div class="hub-meta"><span class="badge">Seguimiento</span><span class="badge">Control</span></div>
+          </div>
+        </a>
+      </div>
+
+      <div class="hub-card">
+        <a href="{{ base_url }}/sasisopa/manual">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19a2 2 0 0 0 2 2h14"/><path d="M6 17V5a2 2 0 0 1 2-2h12v18H8a2 2 0 0 1-2-2z"/><path d="M10 7h8"/><path d="M10 11h8"/></svg>
+          </div>
+          <div>
+            <h3>Manual</h3>
+            <p>Guías, procedimientos y lineamientos internos.</p>
+            <div class="hub-meta"><span class="badge">Lectura</span><span class="badge">Referencia</span></div>
+          </div>
+        </a>
+      </div>
+
+      <div class="hub-card">
+        <a href="{{ base_url }}/sasisopa/implementacion">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2v6"/><path d="M12 16v6"/><path d="M4.93 4.93l4.24 4.24"/><path d="M14.83 14.83l4.24 4.24"/><path d="M2 12h6"/><path d="M16 12h6"/><path d="M4.93 19.07l4.24-4.24"/><path d="M14.83 9.17l4.24-4.24"/></svg>
+          </div>
+          <div>
+            <h3>Implementación</h3>
+            <p>Checklist, avances y evidencias de implementación.</p>
+            <div class="hub-meta"><span class="badge">Avance</span><span class="badge">Checklist</span></div>
+          </div>
+        </a>
+      </div>
+
+      <div class="hub-card">
+        <a href="{{ base_url }}/sasisopa/estudios">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 19h18"/><path d="M6 16V8"/><path d="M10 16V4"/><path d="M14 16v-6"/><path d="M18 16V10"/></svg>
+          </div>
+          <div>
+            <h3>Estudios</h3>
+            <p>Gestión de estudios técnicos, informes y soporte.</p>
+            <div class="hub-meta"><span class="badge">Documentos</span><span class="badge">Técnico</span></div>
+          </div>
+        </a>
+      </div>
+
+      <div class="hub-card">
+        <a href="{{ base_url }}/sasisopa/planos">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V5l6-2 6 2 4-2v14l-4 2-6-2-6 2z"/><path d="M10 3v16"/><path d="M16 5v16"/></svg>
+          </div>
+          <div>
+            <h3>Planos</h3>
+            <p>Plano maestro, actualizaciones y versiones por estación.</p>
+            <div class="hub-meta"><span class="badge">Versionado</span><span class="badge">Archivo</span></div>
+          </div>
+        </a>
+      </div>
+
+      <div class="hub-card">
+        <a href="{{ base_url }}/sasisopa/historico">
+          <div class="hub-ico">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 3v6h6"/><path d="M12 7v5l3 3"/></svg>
+          </div>
+          <div>
+            <h3>Histórico</h3>
+            <p>Registro consolidado e impresión de historial.</p>
+            <div class="hub-meta"><span class="badge">Historial</span><span class="badge">Imprimir</span></div>
+          </div>
+        </a>
+      </div>
+
+      <div class="hub-card">
+        <a href="/admin/menu">
+          <div class="hub-ico"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18l6-6-6-6"/></svg></div>
+          <div>
+            <h3>Volver al panel</h3>
+            <p>Regresa al menú principal de administración.</p>
+            <div class="hub-meta"><span class="badge">Admin</span></div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

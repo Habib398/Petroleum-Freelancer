@@ -1,0 +1,12 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead"><div><h1 class="h1">Centro de ayuda</h1><div class="sub">Guías rápidas, preguntas frecuentes y ayuda por módulo.</div></div></div>
+<div class="card" style="margin-top:14px;"><input id="q" class="input" placeholder="Buscar ayuda..."></div>
+<div id="items" class="grid cols-2" style="margin-top:14px;"></div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function load(){const q=document.getElementById('q').value||''; const r=await api('/api/help-center?q='+encodeURIComponent(q)); const box=document.getElementById('items'); const items=r.items||[]; box.innerHTML = items.map(it=>`<article class="card"><div class="help">${_esc(it.category||'General')}</div><h3 style="margin:6px 0 10px;">${_esc(it.title||'')}</h3><div style="white-space:pre-wrap;line-height:1.55;">${_esc(it.body||'')}</div></article>`).join('') || '<div class="card">Sin resultados.</div>'; }
+document.getElementById('q').addEventListener('input', ()=>load().catch(()=>{})); load();
+</script>
+{% endblock %}

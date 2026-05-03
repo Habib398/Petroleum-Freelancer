@@ -1,0 +1,96 @@
+{% extends "layout.html" %}
+{% block head %}
+<style>
+@media print{
+  .sidebar,.header,.pagehead,.no-print{ display:none !important; }
+  body{ background:#fff !important; }
+  .main{ padding:0 !important; }
+}
+.print-header{ display:flex; justify-content:space-between; align-items:flex-end; gap:12px; margin-bottom:12px; }
+.print-title{ font-size:20px; font-weight:900; }
+.small{ color:var(--hme-text-soft); font-size:12px; }
+.badge{ display:inline-block; padding:3px 8px; border-radius:999px; border:1px solid var(--hme-border); font-size:12px; }
+.print-legend{ display:flex; flex-wrap:wrap; gap:10px 14px; margin-top:8px; }
+.print-legend.filters .badge{ background:#fff; }
+.print-legend.swatches{ margin-top:10px; }
+.legend-item{ display:flex; align-items:center; gap:8px; font-size:12px; }
+.swatch{ width:14px; height:14px; border-radius:4px; border:1px solid #000; }
+.swatch.daily{ background:#1f6feb; }
+.swatch.weekly{ background:#2ea043; }
+.swatch.monthly{ background:#ffd43b; }
+.swatch.once{ background:#6b7280; }
+@media print{
+  table{ font-size:12px !important; }
+  th,td{ border:1px solid #000 !important; }
+  th{ font-weight:900 !important; }
+  .card{ box-shadow:none !important; border:0 !important; }
+}
+</style>
+{% endblock %}
+{% block content %}
+<div class="pagehead no-print">
+  <div>
+    <h1 class="h1">Exportar / Imprimir</h1>
+    <div class="sub">{{ "Lista filtrada de agenda para imprimir o guardar como PDF." if session.get('brand','consulting') == 'petroleum' else "Lista filtrada de actividades para imprimir o guardar como PDF." }}</div>
+  </div>
+  <div style="display:flex;gap:8px;">
+    <button class="btn btn-primary" onclick="window.print()">Imprimir</button>
+    <a class="btn" href="/mod/activities">Volver</a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="print-header">
+    <div>
+      <div class="print-title">{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividades" }} ({{ start }} → {{ end }})</div>
+      
+      <div class="small">
+        Usuario: {{ me.username }} • Rol: {{ me.role }}
+        {% if station_id %} • Estación: {{ station_id }}{% endif %}
+      </div>
+      <div class="print-legend filters">
+        {% if freq %}<span class="badge">Filtro frecuencia: {{ freq }}</span>{% endif %}
+        {% if q %}<span class="badge">Búsqueda: {{ q }}</span>{% endif %}
+      </div>
+
+    </div>
+
+<div class="print-legend swatches">
+  <div class="legend-item"><span class="swatch daily"></span> Azul = Tarea diaria</div>
+  <div class="legend-item"><span class="swatch weekly"></span> Verde = Tarea semanal</div>
+  <div class="legend-item"><span class="swatch monthly"></span> Amarillo = Tarea mensual</div>
+  <div class="legend-item"><span class="swatch once"></span> Gris = Única / no recurrente</div>
+</div>
+  </div>
+
+  {% if items|length == 0 %}
+    <div class="help">{{ "No hay elementos en agenda en este mes." if session.get('brand','consulting') == 'petroleum' else "No hay actividades en este mes." }}</div>
+  {% else %}
+  <table>
+    <thead>
+      <tr>
+        <th>Fecha</th>
+        <th>Estación</th>
+        <th>Actividad</th>
+        <th>Frecuencia</th>
+        <th>Instrucciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for it in items %}
+      <tr>
+        <td style="white-space:nowrap">{{ it.start_date }}</td>
+        <td style="white-space:nowrap">{{ (it.station_code or "—") }}</td>
+        <td>{{ it.title }}</td>
+        <td>
+          {% set rk = it.repeat_kind or "once" %}
+          <span class="badge">{{ rk }}</span>
+        </td>
+        <td style="min-width:280px">{{ it.description or "" }}</td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  {% endif %}
+</div>
+{% endblock %}

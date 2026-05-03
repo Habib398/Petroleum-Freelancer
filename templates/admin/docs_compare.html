@@ -1,0 +1,16 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead"><div><h1 class="h1">Comparador documental</h1><div class="sub">Compara metadatos y texto extraído de dos versiones del mismo grupo documental.</div></div></div>
+<div class="card" style="margin-top:14px;display:grid;gap:10px;">
+  <input id="group_key" class="input" placeholder="group_key del documento">
+  <div class="grid cols-2"><input id="left" class="input" placeholder="Versión izquierda"><input id="right" class="input" placeholder="Versión derecha"></div>
+  <div><button class="btn primary" id="btnCompare">Comparar</button> <span id="msg" class="help"></span></div>
+</div>
+<div id="result" class="grid cols-2" style="margin-top:14px;"></div>
+<div class="card" style="margin-top:14px;"><div class="help">Diff rápido</div><pre id="diff" style="white-space:pre-wrap;overflow:auto;margin:10px 0 0;"></pre></div>
+{% endblock %}
+{% block scripts %}
+<script>
+btnCompare.onclick=async()=>{try{const r=await api('/api/docs/compare?group_key='+encodeURIComponent(group_key.value)+'&left='+encodeURIComponent(left.value)+'&right='+encodeURIComponent(right.value)); result.innerHTML=`<div class="card"><div class="help">Versión ${r.left.version_no}</div><h3>${_esc(r.left.title||'')}</h3><div class="help">Páginas ${r.left.pages||0} · Tamaño ${r.left.size||0} · Estado ${_esc(r.left.status||'')}</div></div><div class="card"><div class="help">Versión ${r.right.version_no}</div><h3>${_esc(r.right.title||'')}</h3><div class="help">Páginas ${r.right.pages||0} · Tamaño ${r.right.size||0} · Estado ${_esc(r.right.status||'')}</div></div><div class="card" style="grid-column:1/-1;"><div class="help">Resumen</div><div>Similitud textual: <b>${r.summary.text_similarity}</b> · Cambio de título: <b>${r.summary.title_changed}</b> · Cambio de estado: <b>${r.summary.status_changed}</b> · Cambio de vigencia: <b>${r.summary.expires_changed}</b></div></div>`; diff.textContent=r.diff_preview||'Sin diff textual.'; msg.textContent='Comparación lista.';}catch(e){msg.textContent='No se pudo comparar.';}};
+</script>
+{% endblock %}

@@ -1,0 +1,24 @@
+CONFIGURACION RECOMENDADA PARA COTIZACIONES AUTOMATICAS
+
+La mejor opcion para este proyecto en AWS es Amazon SES.
+
+VENTAJAS
+- no depende de Gmail, Outlook ni del correo del visitante
+- no necesitas guardar una contraseña SMTP dentro de la app para el flujo normal
+- en AWS puede funcionar con rol de IAM del servidor
+- queda listo para cotizaciones y notificaciones futuras
+
+RECOMENDADO EN PRODUCCION
+1) Verifica en Amazon SES un remitente o dominio propio
+2) Configura estas variables en el servidor:
+   MAIL_PROVIDER=ses
+   SES_REGION=tu-region
+   SES_FROM_EMAIL=tu-correo-verificado
+   PUBLIC_QUOTE_RECIPIENTS=usiel54@hotmail.com,misaelsainz9@gmail.com
+3) Da permisos SES al rol de IAM o usa credenciales AWS del servidor
+4) Reinicia la app
+
+NOTAS
+- Si SES sigue en sandbox, solo enviara a correos verificados
+- SMTP queda disponible solo como respaldo
+- El formulario de cotizacion sigue siendo publico; el visitante no necesita iniciar sesion

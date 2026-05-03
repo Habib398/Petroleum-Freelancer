@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <meta name="csrf-token" content="{{ csrf_token }}"/>
+  <title>Iniciar sesión • Sistema Corporativo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/css/login.css"/>
+</head>
+<body>
+  <div class="shell">
+    <a href="/" class="back-link" aria-label="Volver al inicio">
+      <span>&larr;</span>
+      <span>Volver al inicio</span>
+    </a>
+
+    <div class="card">
+      <div class="brand">
+        <div class="brand-logo">
+          <img src="/static/img/logo.png" alt="Consulting Oil &amp; Gas"/>
+        </div>
+        <div class="brand-title">
+          <h1>Acceso al sistema</h1>
+          <p>Panel corporativo</p>
+        </div>
+      </div>
+
+      <form class="form" id="loginForm" autocomplete="on">
+        <div class="field">
+          <label for="u">Usuario</label>
+          <div class="field-wrap">
+            <input id="u" class="input" type="text" placeholder="Ingresa tu usuario" autocomplete="username" required/>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="p">Contraseña</label>
+          <div class="field-wrap">
+            <input id="p" class="input" type="password" placeholder="Ingresa tu contraseña" autocomplete="current-password" required style="padding-right:90px;"/>
+            <button type="button" class="toggle-password" id="togglePw" aria-label="Mostrar u ocultar contraseña">Mostrar</button>
+          </div>
+        </div>
+
+        <button id="btn" type="submit" class="submit-btn">
+          <span>Entrar al panel</span>
+          <span class="arrow">&rarr;</span>
+        </button>
+
+        <div id="err" class="error-box" role="alert"></div>
+
+        <div class="meta-row">
+          <span><span class="dot"></span>Conexión segura</span>
+          <span>Acceso por rol y estación</span>
+        </div>
+      </form>
+    </div>
+
+    <div class="footer-note">
+      Sistema Corporativo <strong>v5.0 Corporate</strong> &middot; Consulting &amp; Petroleum
+    </div>
+  </div>
+
+  <div id="toast" class="toast"><div class="t"></div><div class="b"></div></div>
+
+  <script src="/static/js/login.js" defer></script>
+</body>
+</html>
