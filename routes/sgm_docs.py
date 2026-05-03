@@ -1,5 +1,6 @@
-from routes.documental_docs import register_module
+﻿# routes/sgm_docs.py
+# SHIM DE COMPATIBILIDAD -- el codigo real vive en modules.compliance.sgm_docs
+from modules.compliance.sgm_docs import register
 
+__all__ = ["register"]
 
-def register(app):
-    register_module(app, module_key='sgm', module_label='SGM', template_folder='documental_docs', route_segment='sgm')

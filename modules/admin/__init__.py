@@ -3,12 +3,12 @@
 # Incluye: panel de admin, avanzados, reportes, exportaciones analíticas,
 #          panel ejecutivo y organigrama.
 
-from routes.admin import register as register_admin
-from routes.advanced import register as register_advanced
-from routes.reports import register as register_reports
-from routes.analytics_exports import register as register_analytics
-from routes.executive import register as register_executive
-from routes.orgchart import register as register_orgchart
+from modules.admin.admin import register as register_admin
+from modules.admin.advanced import register as register_advanced
+from modules.admin.reports import register as register_reports
+from modules.admin.analytics_exports import register as register_analytics
+from modules.admin.executive import register as register_executive
+from modules.admin.orgchart import register as register_orgchart
 
 
 def register(app):

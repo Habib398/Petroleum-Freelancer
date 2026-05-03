@@ -1,15 +1,16 @@
 # modules/compliance/__init__.py
 # Dominio: Gestión documental y normativa (ISO, SASISOPA, SGM, CAPA, Auditorías).
-# Incluye: documentos generales, documental avanzado, compliance, SASISOPA,
-#          SGM, trámites/normativas y CAPA (no conformidades).
+# Incluye: documentos generales, compliance, SASISOPA, SGM,
+#          trámites/normativas, CAPA (no conformidades) y auditorías.
+# Nota: documental_docs.py es una fábrica interna usada por sasisopa y sgm.
 
-from routes.docs import register as register_docs
-from routes.compliance import register as register_compliance
-from routes.sasisopa_docs import register as register_sasisopa  # usa documental_docs internamente
-from routes.sgm_docs import register as register_sgm            # usa documental_docs internamente
-from routes.tramites_normativas import register as register_tramites
-from routes.capa import register as register_capa
-from routes.audit import register as register_audit
+from modules.compliance.docs import register as register_docs
+from modules.compliance.compliance import register as register_compliance
+from modules.compliance.sasisopa_docs import register as register_sasisopa  # usa documental_docs internamente
+from modules.compliance.sgm_docs import register as register_sgm            # usa documental_docs internamente
+from modules.compliance.tramites_normativas import register as register_tramites
+from modules.compliance.capa import register as register_capa
+from modules.compliance.audit import register as register_audit
 
 
 def register(app):

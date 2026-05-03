@@ -3,13 +3,13 @@
 # Incluye: actividades/agenda, pipas, mantenimiento, alertas,
 #          pagos, calibraciones y bitácoras.
 
-from routes.activities import register as register_activities
-from routes.pipas import register as register_pipas
-from routes.maintenance import register as register_maintenance
-from routes.alerts import register as register_alerts
-from routes.payments import register as register_payments
-from routes.calibraciones import register as register_calibraciones
-from routes.bitacoras import register as register_bitacoras
+from modules.operations.activities import register as register_activities
+from modules.operations.pipas import register as register_pipas
+from modules.operations.maintenance import register as register_maintenance
+from modules.operations.alerts import register as register_alerts
+from modules.operations.payments import register as register_payments
+from modules.operations.calibraciones import register as register_calibraciones
+from modules.operations.bitacoras import register as register_bitacoras
 
 
 def register(app):

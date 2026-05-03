@@ -4,3 +4,5 @@ __pycache__/
 .venv/
 logs/*.log
 backups/*.zip
+.env
+.claude

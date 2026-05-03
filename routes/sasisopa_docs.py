@@ -1,5 +1,6 @@
-from routes.documental_docs import register_module
+﻿# routes/sasisopa_docs.py
+# SHIM DE COMPATIBILIDAD -- el codigo real vive en modules.compliance.sasisopa_docs
+from modules.compliance.sasisopa_docs import register
 
+__all__ = ["register"]
 
-def register(app):
-    register_module(app, module_key='sasisopa', module_label='SASISOPA', template_folder='documental_docs', route_segment='sasisopa')
