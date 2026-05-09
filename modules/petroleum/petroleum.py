@@ -1,6 +1,6 @@
 from flask import redirect, session
 
-from routes.auth import login_required, role_required
+from modules.auth.auth import login_required, role_required
 
 
 def register(app):

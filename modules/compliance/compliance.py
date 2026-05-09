@@ -10,7 +10,7 @@ from werkzeug.utils import secure_filename
 
 from db import get_conn, get_user
 from services.branding import NORMATIVE_DEFAULTS, get_normative_config, get_normative_items
-from routes.auth import login_required, role_required
+from modules.auth.auth import login_required, role_required
 
 
 ALLOWED_EXTS = {".pdf", ".png", ".jpg", ".jpeg"}

@@ -217,26 +217,51 @@ if (dlgMoveEvent){
 const actsCard = qs("[data-activity-manage-card]") || null;
 const btnRefreshActs = qs("#btnRefreshActs");
 const aT = qs("#aT");
+const tplSearch = qs("#tplSearch");
+const tplStatus = qs("#tplStatus");
+const tplEmpty = qs("#tplEmpty");
+const tplCount = qs("#tplCount");
 const dlgActEdit = qs("#dlgActEdit");
 const aeId = qs("#aeId"), aeTitle=qs("#aeTitle"), aeDesc=qs("#aeDesc"), aeEvidence=qs("#aeEvidence"), aeActive=qs("#aeActive");
 let actCache = [];
 
-async function refreshActs(){
+function renderTplRows(){
   if (!aT) return;
-  const resp = await api("/api/activities");
-  actCache = resp.activities || [];
-  aT.innerHTML = actCache.map(a=>`
-    <tr>
-      <td>${a.id}</td>
-      <td><b>${_esc(a.title)}</b><div class="muted">${_esc((a.description||"").slice(0,80))}</div></td>
-      <td>${a.evidence_required? "Sí":"No"}</td>
-      <td>${a.is_active? "Sí":"No"}</td>
-      <td style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="btn ghost small" data-aedit="${a.id}" type="button">Editar</button>
-        <button class="btn danger small" data-adel="${a.id}" type="button">Borrar</button>
-      </td>
-    </tr>
-  `).join("");
+  const term = (tplSearch?.value || "").trim().toLowerCase();
+  const status = tplStatus?.value || "";
+  const filtered = actCache.filter(a => {
+    if (status === "active" && !a.is_active) return false;
+    if (status === "inactive" && a.is_active) return false;
+    if (term){
+      const hay = `${a.title||""} ${a.description||""}`.toLowerCase();
+      if (!hay.includes(term)) return false;
+    }
+    return true;
+  });
+  aT.innerHTML = filtered.map(a=>{
+    const desc = (a.description||"").slice(0,140);
+    const activeChip = a.is_active
+      ? `<span class="tpl-chip on">Activa</span>`
+      : `<span class="tpl-chip off">Inactiva</span>`;
+    const evChip = a.evidence_required
+      ? `<span class="tpl-chip on">Pide evidencia</span>`
+      : `<span class="tpl-chip off">Sin evidencia</span>`;
+    return `
+      <tr>
+        <td>
+          <div class="tpl-title">${_esc(a.title)}</div>
+          ${desc ? `<div class="tpl-desc">${_esc(desc)}${(a.description||"").length>140?"…":""}</div>` : ""}
+        </td>
+        <td>${activeChip}${evChip}</td>
+        <td style="text-align:right;white-space:nowrap;">
+          <button class="btn ghost small" data-aedit="${a.id}" type="button">Editar</button>
+          <button class="btn danger small" data-adel="${a.id}" type="button">Borrar</button>
+        </td>
+      </tr>
+    `;
+  }).join("");
+
+  if (tplEmpty) tplEmpty.hidden = filtered.length > 0;
 
   qsa("[data-aedit]").forEach(b=>b.addEventListener("click", ()=>{
     const id = Number(b.dataset.aedit);
@@ -259,8 +284,36 @@ async function refreshActs(){
   }));
 }
 
+async function refreshActs(){
+  if (!aT) return;
+  const resp = await api("/api/activities");
+  actCache = resp.activities || [];
+  if (tplCount) tplCount.textContent = String(actCache.length);
+  renderTplRows();
+}
+
+// -------- Tabs (Calendario / Plantillas) --------
+function setupTabs(){
+  const tabsEl = qs("#actTabs");
+  if (!tabsEl) return;
+  const buttons = qsa("#actTabs .tab-btn");
+  const panes = qsa("[data-tab-pane]");
+  buttons.forEach(btn => btn.addEventListener("click", ()=>{
+    const target = btn.dataset.tab;
+    buttons.forEach(b => b.classList.toggle("is-active", b === btn));
+    panes.forEach(p => { p.hidden = p.dataset.tabPane !== target; });
+    if (target === "calendar"){
+      // FullCalendar mide alturas al renderizar; al volver de pestaña oculta puede quedar mal.
+      try { calendar?.updateSize?.(); } catch(_e){}
+    }
+  }));
+}
+
 if (me?.role==="admin"){
+  setupTabs();
   if (btnRefreshActs) btnRefreshActs.addEventListener("click", refreshActs);
+  if (tplSearch) tplSearch.addEventListener("input", renderTplRows);
+  if (tplStatus) tplStatus.addEventListener("change", renderTplRows);
   if (dlgActEdit){
     dlgActEdit.addEventListener("close", async ()=>{
       // no-op

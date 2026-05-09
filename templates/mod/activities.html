@@ -22,6 +22,13 @@
     </div>
   </div>
 
+  <nav class="tab-switch" id="actTabs" data-admin-only hidden>
+    <button class="tab-btn is-active" type="button" data-tab="calendar">Calendario</button>
+    <button class="tab-btn" type="button" data-tab="templates">{{ "Plantillas de agenda" if session.get('brand','consulting') == 'petroleum' else "Plantillas" }} <span class="count" id="tplCount">0</span></button>
+  </nav>
+
+  <section data-tab-pane="calendar">
+
 <div class="card" data-export-bar style="margin-top:12px;" data-admin-auditor-only hidden>
   <div style="display:flex;gap:10px;align-items:center;justify-content:space-between;">
     <div><b>Exportación</b> <span class="help">Descarga de datos para auditoría/analítica.</span></div>
@@ -38,24 +45,6 @@
 
   <div id="calendar"></div>
 
-  <dialog id="dlgImport">
-    <form id="formImport" class="dlgform" enctype="multipart/form-data">
-      <h3 style="margin:0 0 8px 0;">{{ "Importar agenda (Excel/CSV)" if session.get('brand','consulting') == 'petroleum' else "Importar actividades (Excel/CSV)" }}</h3>
-      <div class="help">Sube un archivo <b>.xlsx</b> o <b>.csv</b> con las columnas: <code>title</code>, <code>start_date</code>, <code>repeat</code>, <code>until</code> (opcional), <code>station_id</code>/<code>station_code</code> (opcional), <code>description</code> (opcional).</div>
-      <div style="display:grid;gap:10px;margin-top:10px;">
-        <div>
-          <div class="help">Archivo</div>
-          <input class="input" type="file" name="file" id="impFile" accept=".csv,.xlsx" required>
-        </div>
-        <div class="help">Plantilla rápida: <a class="link" href="/static/templates/activities_template.csv" download>Descargar CSV</a></div>
-        <div id="impErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
-      </div>
-      <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
-        <button class="btn ghost" type="button" id="impCancel">Cancelar</button>
-        <button class="btn primary" type="submit">Importar</button>
-      </div>
-    </form>
-  </dialog>
   <details class="card" style="margin:12px 0;" >
     <summary style="cursor:pointer;font-weight:900;">Filtros y reportes</summary>
     <div style="margin-top:10px;">
@@ -97,21 +86,59 @@
       </div>
     </div>
   </details>
-<div class="card" data-admin-only data-activity-manage-card hidden style="margin-top:14px;">
-  <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;">
-    <div>
-      <b>{{ "Gestión de agenda" if session.get('brand','consulting') == 'petroleum' else "Gestión de actividades" }}</b>
-      <div class="help">{{ "Editar, desactivar o borrar registros de agenda creados." if session.get('brand','consulting') == 'petroleum' else "Editar, desactivar o borrar actividades creadas." }}</div>
+  </section>
+
+  <section data-tab-pane="templates" hidden>
+    <div class="card" data-admin-only data-activity-manage-card hidden style="margin-top:6px;">
+      <div style="display:flex;justify-content:space-between;align-items:end;gap:12px;flex-wrap:wrap;">
+        <div>
+          <b>{{ "Plantillas de agenda" if session.get('brand','consulting') == 'petroleum' else "Plantillas de actividad" }}</b>
+          <div class="help">{{ "Editar, desactivar o borrar plantillas. El calendario refleja los cambios automáticamente." if session.get('brand','consulting') == 'petroleum' else "Editar, desactivar o borrar plantillas. El calendario refleja los cambios automáticamente." }}</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:end;flex-wrap:wrap;">
+          <div>
+            <div class="help">Buscar</div>
+            <input id="tplSearch" class="input" placeholder="Filtrar por título o descripción…" style="min-width:260px;">
+          </div>
+          <div>
+            <div class="help">Estado</div>
+            <select id="tplStatus" class="input" style="min-width:160px;">
+              <option value="">Todas</option>
+              <option value="active">Activas</option>
+              <option value="inactive">Inactivas</option>
+            </select>
+          </div>
+          <button class="btn" id="btnRefreshActs" type="button">Actualizar</button>
+        </div>
+      </div>
+      <div style="overflow:auto;margin-top:14px;">
+        <table class="table tpl-table">
+          <thead><tr><th>Plantilla</th><th>Estado</th><th style="text-align:right;">Acciones</th></tr></thead>
+          <tbody id="aT"></tbody>
+        </table>
+        <div id="tplEmpty" class="empty-inline" hidden style="margin-top:12px;">No hay plantillas que coincidan con los filtros.</div>
+      </div>
     </div>
-    <button class="btn" id="btnRefreshActs" type="button">Actualizar</button>
-  </div>
-  <div style="overflow:auto;margin-top:10px;">
-    <table class="table">
-      <thead><tr><th>ID</th><th>Título</th><th>Requiere evidencia</th><th>Activa</th><th>Acciones</th></tr></thead>
-      <tbody id="aT"></tbody>
-    </table>
-  </div>
-</div>
+  </section>
+
+<dialog id="dlgImport">
+  <form id="formImport" class="dlgform" enctype="multipart/form-data">
+    <h3 style="margin:0 0 8px 0;">{{ "Importar agenda (Excel/CSV)" if session.get('brand','consulting') == 'petroleum' else "Importar actividades (Excel/CSV)" }}</h3>
+    <div class="help">Sube un archivo <b>.xlsx</b> o <b>.csv</b> con las columnas: <code>title</code>, <code>start_date</code>, <code>repeat</code>, <code>until</code> (opcional), <code>station_id</code>/<code>station_code</code> (opcional), <code>description</code> (opcional).</div>
+    <div style="display:grid;gap:10px;margin-top:10px;">
+      <div>
+        <div class="help">Archivo</div>
+        <input class="input" type="file" name="file" id="impFile" accept=".csv,.xlsx" required>
+      </div>
+      <div class="help">Plantilla rápida: <a class="link" href="/static/templates/activities_template.csv" download>Descargar CSV</a></div>
+      <div id="impErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+      <button class="btn ghost" type="button" id="impCancel">Cancelar</button>
+      <button class="btn primary" type="submit">Importar</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="dlgActEdit">
   <form method="dialog" class="dlgform">

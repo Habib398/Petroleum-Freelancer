@@ -978,6 +978,63 @@ body.brand-petroleum .step b{
 @media (max-width:1100px){.action-grid{grid-template-columns:repeat(2,minmax(0,1fr));}.page-intro{grid-template-columns:1fr;}}
 @media (max-width:640px){.action-grid{grid-template-columns:1fr;}}
 
+/* Mini-stepper compacto (reemplaza tarjetas guía redundantes) */
+.mini-steps{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin:14px 0 18px;font-size:13px;color:var(--hme-text-soft)}
+.mini-steps .label{font-weight:900;color:var(--hme-text);margin-right:4px;letter-spacing:.01em}
+.mini-steps .step-chip{display:inline-flex;align-items:center;gap:7px;padding:6px 12px;border-radius:999px;background:rgba(255,255,255,.96);border:1px solid var(--hme-border);font-weight:700;color:var(--hme-text);text-decoration:none;transition:transform .15s ease,border-color .15s ease}
+.mini-steps .step-chip:hover{transform:translateY(-1px);border-color:rgba(134,184,33,.32)}
+.mini-steps .step-chip b{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:999px;background:rgba(134,184,33,.18);color:var(--hme-green-dark);font-size:11px;font-weight:900}
+.mini-steps .arr{color:var(--hme-text-soft);font-weight:900;opacity:.7}
+
+/* Tira KPI compacta (reemplaza grids de tarjetas en cero) */
+.kpi-strip{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:14px 18px;border-radius:16px;border:1px solid var(--hme-border);background:rgba(255,255,255,.96);box-shadow:var(--shadow);margin:6px 0 4px}
+.kpi-strip .kpi-status{display:inline-flex;align-items:center;gap:8px;font-weight:900;color:var(--hme-green-dark);padding:6px 12px;border-radius:999px;background:rgba(134,184,33,.14);font-size:13px}
+.kpi-strip .kpi-pill{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--hme-text-soft);text-decoration:none}
+.kpi-strip .kpi-pill b{font-weight:900;color:var(--hme-text)}
+.kpi-strip .kpi-pill.alert{background:rgba(220,38,38,.10);color:#b91c1c;padding:6px 12px;border-radius:999px;font-weight:900}
+.kpi-strip .kpi-pill.alert b{color:#b91c1c}
+.kpi-strip .kpi-pill.warn{background:rgba(245,158,11,.14);color:#b45309;padding:6px 12px;border-radius:999px;font-weight:900}
+.kpi-strip .kpi-pill.warn b{color:#b45309}
+.kpi-strip .sep{width:1px;height:18px;background:rgba(148,163,184,.22)}
+
+body.brand-petroleum .mini-steps .step-chip{background:linear-gradient(180deg,rgba(17,28,46,.96),rgba(13,22,37,.94));border-color:rgba(49,67,96,.84);color:#E7EEF9}
+body.brand-petroleum .mini-steps .step-chip b{background:rgba(200,162,74,.20);color:#F1D287}
+body.brand-petroleum .mini-steps .label{color:#F7FAFF}
+body.brand-petroleum .mini-steps .arr{color:#8FA3BD}
+body.brand-petroleum .kpi-strip{background:linear-gradient(180deg,rgba(17,28,46,.96),rgba(12,21,35,.94));border:1px solid rgba(49,67,96,.84);box-shadow:0 18px 34px rgba(0,0,0,.18)}
+body.brand-petroleum .kpi-strip .kpi-status{background:rgba(200,162,74,.18);color:#F1D287}
+body.brand-petroleum .kpi-strip .kpi-pill{color:#B8C7DA}
+body.brand-petroleum .kpi-strip .kpi-pill b{color:#F7FAFF}
+body.brand-petroleum .kpi-strip .sep{background:rgba(148,163,184,.18)}
+
+/* Tab switch (segmented control para vistas internas) */
+.tab-switch{display:inline-flex;gap:4px;padding:4px;border-radius:14px;background:rgba(148,163,184,.12);border:1px solid var(--hme-border);margin:14px 0}
+.tab-switch .tab-btn{appearance:none;border:0;background:transparent;font-family:inherit;font-size:13px;font-weight:800;color:var(--hme-text-soft);padding:8px 16px;border-radius:10px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .15s ease,color .15s ease}
+.tab-switch .tab-btn:hover{color:var(--hme-text)}
+.tab-switch .tab-btn.is-active{background:rgba(255,255,255,.96);color:var(--hme-text);box-shadow:0 4px 12px rgba(2,6,23,.06)}
+.tab-switch .tab-btn .count{display:inline-grid;place-items:center;min-width:20px;height:20px;padding:0 6px;border-radius:999px;background:rgba(148,163,184,.18);color:var(--hme-text-soft);font-size:11px;font-weight:900}
+.tab-switch .tab-btn.is-active .count{background:rgba(134,184,33,.18);color:var(--hme-green-dark)}
+
+.tpl-table td{vertical-align:middle}
+.tpl-table .tpl-title{font-weight:900;font-size:14px}
+.tpl-table .tpl-desc{font-size:12px;color:var(--hme-text-soft);margin-top:2px;line-height:1.4}
+.tpl-chip{display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:700;padding:3px 9px;border-radius:999px;border:1px solid transparent;margin-right:4px}
+.tpl-chip.on{background:rgba(134,184,33,.14);color:var(--hme-green-dark);border-color:rgba(134,184,33,.22)}
+.tpl-chip.off{background:rgba(148,163,184,.12);color:var(--hme-text-soft);border-color:rgba(148,163,184,.22)}
+
+.empty-inline{padding:12px;border-radius:14px;background:rgba(248,250,252,.95);border:1px dashed rgba(148,163,184,.25);color:var(--hme-text-soft)}
+body.brand-petroleum .empty-inline{background:linear-gradient(180deg,rgba(17,28,46,.96),rgba(13,22,37,.94));border-color:rgba(49,67,96,.88);color:#B8C7DA}
+
+body.brand-petroleum .tab-switch{background:rgba(17,28,46,.50);border-color:rgba(49,67,96,.84)}
+body.brand-petroleum .tab-switch .tab-btn{color:#B8C7DA}
+body.brand-petroleum .tab-switch .tab-btn:hover{color:#F7FAFF}
+body.brand-petroleum .tab-switch .tab-btn.is-active{background:linear-gradient(180deg,rgba(28,42,66,.96),rgba(20,32,52,.94));color:#F7FAFF;box-shadow:0 6px 16px rgba(0,0,0,.30)}
+body.brand-petroleum .tab-switch .tab-btn .count{background:rgba(148,163,184,.18);color:#8FA3BD}
+body.brand-petroleum .tab-switch .tab-btn.is-active .count{background:rgba(200,162,74,.20);color:#F1D287}
+body.brand-petroleum .tpl-table .tpl-desc{color:#B8C7DA}
+body.brand-petroleum .tpl-chip.on{background:rgba(200,162,74,.18);color:#F1D287;border-color:rgba(200,162,74,.30)}
+body.brand-petroleum .tpl-chip.off{background:rgba(49,67,96,.36);color:#B8C7DA;border-color:rgba(49,67,96,.60)}
+
 
 /* ===== Petroleum premium polish v2 ===== */
 body.brand-petroleum .pagehead{

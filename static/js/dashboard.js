@@ -2,17 +2,13 @@
   let me = null;
   try { me = (await api("/api/me")).me; } catch(e){ return; }
 
-  const kpisEl = qs("#kpis");
+  const kpiStripEl = qs("#kpiStrip");
+  const miniStepsEl = qs("#miniSteps");
   const quickEl = qs("#quick");
   const stBox = qs("#stationBox");
   const isPetroleum = document.body.classList.contains("brand-petroleum");
   const activityLabel = isPetroleum ? "Agenda" : "Actividades";
-  const guideTitle = qs("#guideTitle");
-  const guideText = qs("#guideText");
-  const guideSteps = qs("#guideSteps");
   const quickActionsEl = qs("#quickActions");
-  const moduleMapEl = qs("#moduleMap");
-  const moduleMapTitle = qs("#moduleMapTitle");
   const pageTitle = qs("#pageTitle");
   const pageSub = qs("#pageSub");
   const staffSimple = qs("#staffSimple");
@@ -45,44 +41,47 @@
     const pct = Math.max(0, Math.min(100, Number(cfg?.pct || 0)));
     return `<div class="doc-progress"><div><div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;"><div style="font-weight:900;font-size:24px;">${pct}%</div><span class="tag ${pct>=95?"ok":pct>=60?"warn":"bad"}">${pct>=95?"Completo":pct>=60?"En proceso":"Pendiente"}</span></div><div class="bar" style="margin-top:8px;"><span style="width:${pct}%;"></span></div><div class="helper-note" style="margin-top:8px;">${_esc(cfg?.hint || "Sube primero lo faltante y luego revisa vencimientos.")}</div></div><div class="doc-grid"><div class="doc-mini"><b>${_esc(String(cfg?.missing ?? 0))}</b><span>Faltantes obligatorios</span></div><div class="doc-mini"><b>${_esc(String(cfg?.soon ?? 0))}</b><span>Próximos a vencer</span></div><div class="doc-mini"><b>${_esc(String(cfg?.bad ?? 0))}</b><span>Vencidos</span></div></div><div style="display:flex;gap:10px;flex-wrap:wrap;"><a class="btn primary" href="${_esc(cfg?.primaryHref || "/staff/menu")}">${_esc(cfg?.primaryLabel || "Abrir módulo")}</a><a class="btn ghost" href="/mod/document-renewals-calendar">Ver vencimientos</a></div></div>`;
   }
+  function stepChip(num, label, href){
+    return `<a class="step-chip" href="${href}"><b>${num}</b><span>${_esc(label)}</span></a>`;
+  }
+  function renderMiniSteps(chips){
+    if (!miniStepsEl) return;
+    if (!chips || !chips.length){ miniStepsEl.hidden = true; miniStepsEl.innerHTML = ""; return; }
+    miniStepsEl.hidden = false;
+    const inner = chips.map((c, i)=>{
+      const arrow = i < chips.length - 1 ? `<span class="arr">→</span>` : "";
+      return stepChip(c[0], c[1], c[2]) + arrow;
+    }).join("");
+    miniStepsEl.innerHTML = `<span class="label">Empieza por:</span>${inner}`;
+  }
   function renderGuide(){
     const brand = isPetroleum ? "petroleum" : "consulting";
-    let steps = [];
     let actions = [];
-    let moduleMap = [];
+    let chips = null;
     if (me.role === "admin"){
       if (pageTitle) pageTitle.textContent = brand === "petroleum" ? "Panel de control Petroleum" : "Panel de control Consulting";
       if (pageSub) pageSub.textContent = "Resumen operativo y accesos rápidos para supervisión.";
-      guideTitle.textContent = brand === "petroleum" ? "Empieza por supervisión Petroleum" : "Empieza por supervisión Consulting";
-      guideText.textContent = "Usa este orden para revisar primero lo urgente y luego lo administrativo.";
-      steps = brand === "petroleum"
-        ? ["Revisa Normativas para ver registros activos y faltantes.", "Abre Expediente normativo para revisar la carpeta completa por estación.", "Entra a Vencimientos o al Control maestro para ver qué debe renovarse pronto."]
-        : ["Revisa SASISOPA para documentos controlados por estación.", "Abre SGM para seguimiento documental y operativo.", "Usa Inbox admin y Centro documental para revisar lo cargado por estación."];
       actions = brand === "petroleum"
         ? [actionTile('/petroleum/normativas','Principal','Normativas','Captura y sigue requisitos técnicos por estación.'), actionTile('/petroleum/expedientes','Carpeta','Expediente normativo','Revisa documentos faltantes y vigencias.'), actionTile('/mod/document-renewals-calendar','Agenda','Vencimientos','Consulta renovaciones próximas en calendario.'), actionTile('/admin/document-deadlines','Admin','Control maestro','Vista global de documentos por vencer o renovar.')]
         : [actionTile('/admin/sasisopa','Principal','SASISOPA','Revisa documentos y programación por estación.'), actionTile('/admin/sgm','Carpeta','SGM','Da seguimiento documental y operativo.'), actionTile('/admin/inbox','Revisión','Inbox admin','Atiende pendientes y envíos por revisar.'), actionTile('/admin/document-center','Admin','Centro documental','Consulta documentos cargados por estación y versión vigente.')];
-      moduleMap = brand === "petroleum" ? ['Normativas = tabla de control técnico.', 'Expediente normativo = carpeta por estación.', 'Vencimientos = calendario de renovaciones.', 'Control maestro = tablero admin global.'] : ['SASISOPA = documentos programados por estación.', 'SGM = seguimiento documental y operativo.', 'Inbox admin = revisión de pendientes.', 'Centro documental = consulta de archivos vigentes por estación.'];
+      chips = brand === "petroleum"
+        ? [["1","Normativas","/petroleum/normativas"],["2","Expediente","/petroleum/expedientes"],["3","Vencimientos","/mod/document-renewals-calendar"]]
+        : [["1","SASISOPA","/admin/sasisopa"],["2","SGM","/admin/sgm"],["3","Inbox / Centro documental","/admin/inbox"]];
     } else if (["jefe_estacion","operador"].includes(me.role)){
-      if (pageTitle) pageTitle.textContent = brand === "petroleum" ? "Inicio de hoy" : "Inicio de hoy";
+      if (pageTitle) pageTitle.textContent = "Inicio de hoy";
       if (pageSub) pageSub.textContent = brand === "petroleum" ? "Haz primero tus capturas, revisa faltantes y atiende vencimientos de tu estación." : "Consulta tus avisos y entra solo al módulo documental que el administrador haya asignado a tu estación.";
-      guideTitle.textContent = brand === "petroleum" ? "Tu flujo diario en Petroleum" : "Tu flujo diario en Consulting";
-      guideText.textContent = brand === "petroleum" ? "Primero sube o actualiza documentos, luego revisa faltantes y por último verifica vencimientos." : "Primero revisa tus avisos, luego entra al módulo documental asignado y por último verifica pendientes del día.";
-      steps = brand === "petroleum" ? ["Entra a Normativas para capturar o actualizar registros de tu estación.", "Revisa el Expediente normativo para ver faltantes y porcentaje.", "Abre Vencimientos para detectar renovaciones cercanas."] : ["Revisa tus notificaciones para saber qué te pidió el administrador.", "Entra a SASISOPA o SGM según el documento asignado.", "Consulta Dashboard para ver pendientes y avance del día."];
-      actions = brand === "petroleum" ? [actionTile('/petroleum/normativas','Hoy','Normativas','Sube, corrige o revisa documentos de tu estación.'), actionTile('/petroleum/expedientes','Carpeta','Expediente normativo','Mira faltantes y porcentaje de cumplimiento.'), actionTile('/mod/document-renewals-calendar','Avisos','Vencimientos','Consulta qué documentos debes renovar pronto.'), actionTile('/mod/notifications','Seguimiento','Notificaciones','Revisa avisos y tareas pendientes.')] : [actionTile('/staff/sasisopa','Hoy','SASISOPA','Consulta los documentos recibidos de tu estación.'), actionTile('/staff/sgm','Seguimiento','SGM','Revisa el seguimiento documental de tu estación.'), actionTile('/mod/notifications','Avisos','Notificaciones','Consulta avisos del administrador.'), actionTile('/mod/activities','Operación','Bitácora','Revisa actividades y pendientes del día.')];
-      moduleMap = brand === "petroleum" ? ['Normativas = donde capturas y actualizas.', 'Expediente normativo = donde ves faltantes.', 'Vencimientos = lo próximo a renovar.', 'Notificaciones = avisos y recordatorios.'] : ['SASISOPA = documentos recibidos por estación.', 'SGM = documentos y seguimiento documental de tu estación.', 'Notificaciones = avisos y recordatorios.', 'Bitácora = actividades del día.'];
+      actions = brand === "petroleum"
+        ? [actionTile('/petroleum/normativas','Hoy','Normativas','Sube, corrige o revisa documentos de tu estación.'), actionTile('/petroleum/expedientes','Carpeta','Expediente normativo','Mira faltantes y porcentaje de cumplimiento.'), actionTile('/mod/document-renewals-calendar','Avisos','Vencimientos','Consulta qué documentos debes renovar pronto.'), actionTile('/mod/notifications','Seguimiento','Notificaciones','Revisa avisos y tareas pendientes.')]
+        : [actionTile('/staff/sasisopa','Hoy','SASISOPA','Consulta los documentos recibidos de tu estación.'), actionTile('/staff/sgm','Seguimiento','SGM','Revisa el seguimiento documental de tu estación.'), actionTile('/mod/notifications','Avisos','Notificaciones','Consulta avisos del administrador.'), actionTile('/mod/activities','Operación','Bitácora','Revisa actividades y pendientes del día.')];
+      chips = null;
     } else {
       if (pageTitle) pageTitle.textContent = "Dashboard";
       if (pageSub) pageSub.textContent = "Resumen operativo y accesos rápidos.";
-      guideTitle.textContent = "Resumen operativo";
-      guideText.textContent = "Usa el dashboard para ubicar pendientes y luego entra al módulo principal según tu tarea.";
-      steps = ["Revisa los indicadores del día.", "Abre el calendario operativo si buscas fechas o actividades.", "Usa notificaciones para atender pendientes."];
       actions = [actionTile('/mod/operational-calendar','Agenda','Calendario operativo','Revisa actividades, vencimientos y próximos eventos.'), actionTile('/mod/notifications','Avisos','Notificaciones','Consulta mensajes y recordatorios.'), actionTile('/mod/reports','Consulta','Reportes','Genera reportes y revisa información resumida.'), actionTile('/mod/profile','Cuenta','Perfil','Actualiza tus datos y firma.')];
-      moduleMap = ['Dashboard = resumen general.', 'Calendario operativo = agenda y fechas.', 'Notificaciones = avisos del sistema.', 'Perfil = tus datos y firma.'];
+      chips = [["1","Calendario operativo","/mod/operational-calendar"],["2","Notificaciones","/mod/notifications"],["3","Reportes","/mod/reports"]];
     }
-    guideSteps.innerHTML = steps.map((s, i)=>`<div class="step"><b>${i+1}</b><span>${_esc(s)}</span></div>`).join('');
     quickActionsEl.innerHTML = actions.join('');
-    moduleMapTitle.textContent = "Qué hace cada módulo";
-    moduleMapEl.innerHTML = moduleMap.map(item=>`<div class="soft-item">${_esc(item)}</div>`).join('');
+    renderMiniSteps(chips);
   }
 
   async function renderStaffHome(stations){
@@ -187,53 +186,58 @@
     `;
   }
 
-  // ---------------- KPIs ----------------
+  // ---------------- KPIs (tira compacta) ----------------
   const cards = [];
   if (["jefe_estacion","operador"].includes(me.role)) {
-    if (kpisEl) kpisEl.hidden = true;
+    if (kpiStripEl) kpiStripEl.hidden = true;
   } else if (me.role === "admin") {
     const inbox = await api("/api/admin/inbox");
     const k = inbox.kpis;
-    cards.push({l:"Entregas pendientes", v:k.submissions_pending, tag:(k.submissions_pending? "warn":"ok")});
-    cards.push({l:"Pagos pendientes", v:k.payments_pending, tag:(k.payments_pending? "warn":"ok")});
-    cards.push({l:"Alertas rojas abiertas", v:k.red_alerts, tag:(k.red_alerts? "bad":"ok")});
-    cards.push({l:"SASISOPA por revisar", v:(k.sasisopa_pending||0), tag:((k.sasisopa_pending||0)? "warn":"ok")});
-    cards.push({l:"SGM por revisar", v:(k.sgm_pending||0), tag:((k.sgm_pending||0)? "warn":"ok")});
-    cards.push({l:"Calibraciones incompletas", v:(k.calibraciones_incompletas||0), tag:((k.calibraciones_incompletas||0)? "warn":"ok")});
+    cards.push({l:"Entregas pendientes", v:k.submissions_pending, tag:(k.submissions_pending? "warn":"ok"), href:"/admin/inbox"});
+    cards.push({l:"Pagos pendientes", v:k.payments_pending, tag:(k.payments_pending? "warn":"ok"), href:"/admin/inbox"});
+    cards.push({l:"Alertas rojas", v:k.red_alerts, tag:(k.red_alerts? "bad":"ok"), href:"/mod/alerts"});
+    cards.push({l:"SASISOPA por revisar", v:(k.sasisopa_pending||0), tag:((k.sasisopa_pending||0)? "warn":"ok"), href:"/admin/sasisopa"});
+    cards.push({l:"SGM por revisar", v:(k.sgm_pending||0), tag:((k.sgm_pending||0)? "warn":"ok"), href:"/admin/sgm"});
+    cards.push({l:"Calibraciones incompletas", v:(k.calibraciones_incompletas||0), tag:((k.calibraciones_incompletas||0)? "warn":"ok"), href:"/admin/calibraciones"});
   } else {
-    // Operador: no mostrar mensualidad en dashboard
     if (me.role !== "operador") {
       cards.push({l:"Mensualidad", v:(me.monthly_status || "active"), tag:(me.monthly_status==="active"?"ok":"warn")});
     }
     cards.push({l:"Estaciones", v:(stations.length || 0), tag:"ok"});
     cards.push({l:"Rol", v:me.role, tag:"ok"});
   }
-  kpisEl.innerHTML = cards.map(c=>`
-    <div class="card kpi">
-      <div>
-        <div class="l">${c.l}</div>
-        <div class="v">${c.v}</div>
-      </div>
-      <div class="tag ${c.tag}">${c.tag==="bad"?"Crítico":c.tag==="warn"?"Atención":"OK"}</div>
-    </div>
-  `).join("");
+
+  if (kpiStripEl && cards.length){
+    const numericTotal = cards.filter(c => Number.isFinite(Number(c.v))).reduce((a,c)=>a+Number(c.v||0),0);
+    const alerts = cards.filter(c => c.tag !== "ok");
+    const okOnes = cards.filter(c => c.tag === "ok");
+    const okPill = (c) => `<span class="kpi-pill"><b>${_esc(String(c.v))}</b> ${_esc(c.l.toLowerCase())}</span>`;
+    const alertPill = (c) => `<a class="kpi-pill ${c.tag==="bad"?"alert":"warn"}" href="${_esc(c.href||"#")}"><b>${_esc(String(c.v))}</b> ${_esc(c.l)}</a>`;
+    let html = "";
+    if (!alerts.length){
+      const statusLabel = numericTotal === 0 && me.role === "admin" ? "Todo en orden hoy" : "Sin alertas";
+      html = `<span class="kpi-status">✓ ${statusLabel}</span>` + okOnes.map(okPill).join(`<span class="sep"></span>`);
+    } else {
+      const okPart = okOnes.length ? `<span class="sep"></span>` + okOnes.map(okPill).join(`<span class="sep"></span>`) : "";
+      html = alerts.map(alertPill).join("") + okPart;
+    }
+    kpiStripEl.hidden = false;
+    kpiStripEl.innerHTML = html;
+  }
+
+  // La "Bandeja rápida" del bloque legacyOps repetía exactamente estos KPIs para admin → se oculta.
+  if (me.role === "admin") {
+    const legacyOps = qs("#legacyOps");
+    if (legacyOps) legacyOps.hidden = true;
+  }
 
   // ---------------- Quick ----------------
   if (["jefe_estacion","operador"].includes(me.role)) {
     const legacyOps = qs("#legacyOps");
     if (legacyOps) legacyOps.hidden = true;
   } else if (me.role === "admin") {
-    const inbox = await api("/api/admin/inbox");
-    quickEl.innerHTML = `
-      <div>Entregas pendientes: <b>${inbox.kpis.submissions_pending}</b></div>
-      <div>Pagos pendientes: <b>${inbox.kpis.payments_pending}</b></div>
-      <div>Alertas rojas abiertas: <b>${inbox.kpis.red_alerts}</b></div>
-      <div>SASISOPA por revisar: <b>${inbox.kpis.sasisopa_pending||0}</b></div>
-      <div>SGM por revisar: <b>${inbox.kpis.sgm_pending||0}</b></div>
-      <div>Calibraciones incompletas: <b>${inbox.kpis.calibraciones_incompletas||0}</b></div>
-      <div class="help" style="margin-top:8px;">Tip: entra a <b>Inbox</b> para revisar y aprobar.</div>
-    `;
-  } else {
+    // Admin: la tira KPI y el inbox ya cubren esta info. legacyOps queda oculto arriba.
+  } else if (quickEl) {
     quickEl.innerHTML = `
       <div>Gestiona tu operación desde <b>${activityLabel}</b> y sube evidencias completas.</div>
       <div class="help" style="margin-top:8px;">Tip: si una evidencia es rechazada, vuelve a subirla para que se marque tu avance.</div>

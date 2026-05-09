@@ -18,7 +18,7 @@ from db import get_conn
 from services.brand import get_brand
 
 # Decoradores de autenticación compartidos (desacoplados de ctx)
-from routes.auth import login_required, role_required
+from modules.auth.auth import login_required, role_required
 
 # ─── Blueprint ────────────────────────────────────────────────────────────────
 bp = Blueprint("stations", __name__)

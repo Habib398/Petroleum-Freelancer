@@ -7,7 +7,7 @@ from io import BytesIO
 from flask import request, jsonify, session, redirect, render_template, send_from_directory, abort, current_app, send_file
 from werkzeug.security import generate_password_hash
 from db import get_conn, verify_user, get_user
-from routes.auth import login_required, role_required
+from modules.auth.auth import login_required, role_required
 from services.outbound import send_email_delivery
 from itsdangerous import BadSignature, URLSafeSerializer
 
