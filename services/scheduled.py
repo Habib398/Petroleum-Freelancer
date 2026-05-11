@@ -340,7 +340,11 @@ def run_due_tick(ctx, logger=None, min_interval_minutes: int = 15) -> None:
                         do_backup = True
                 if do_backup:
                     base_dir = Path(ctx.upload_dir).resolve().parent
-                    create_backup(base_dir, Path(DB_PATH), Path(ctx.upload_dir), include_uploads=True, retention=7)
+                    create_backup(
+                        base_dir, Path(DB_PATH), Path(ctx.upload_dir),
+                        include_uploads=True, retention=7,
+                        kind="scheduled", notes="daily auto backup",
+                    )
                     _set_state(conn, "backup_last", now.isoformat(timespec="seconds"))
                     conn.commit()
                     if logger:

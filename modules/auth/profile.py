@@ -64,6 +64,21 @@ def register(app):
         limit_fiel = min(limit, 10)
         cer_rel = ctx.save_upload_checked(cer, f"stations/{station_id}/fiel", allowed_ext={".cer"}, limit_mb=limit_fiel) if cer else None
         key_rel = ctx.save_upload_checked(key, f"stations/{station_id}/fiel", allowed_ext={".key"}, limit_mb=limit_fiel) if key else None
+
+        # Station private data fields (autofill source for templates)
+        private_fields = (
+            "rfc", "domicilio", "permiso_cre", "representante_legal",
+            "responsable_operativo", "responsable_sasisopa", "responsable_sgm",
+            "correo", "telefono",
+        )
+        private_values = {f: (request.form.get(f) or None) for f in private_fields if f in request.form}
+
+        # Logos (image uploads). Stored under stations/<id>/branding/.
+        logo_emp = request.files.get("logo_empresa")
+        logo_est = request.files.get("logo_estacion")
+        logo_emp_rel = ctx.save_upload_checked(logo_emp, f"stations/{station_id}/branding", allowed_ext={".png", ".jpg", ".jpeg"}, limit_mb=min(limit, 5)) if logo_emp else None
+        logo_est_rel = ctx.save_upload_checked(logo_est, f"stations/{station_id}/branding", allowed_ext={".png", ".jpg", ".jpeg"}, limit_mb=min(limit, 5)) if logo_est else None
+
         conn=get_conn(); cur=conn.cursor()
         cur.execute("SELECT station_id FROM station_profiles WHERE station_id=?", (station_id,))
         exists=cur.fetchone()
@@ -71,17 +86,33 @@ def register(app):
         if exists:
             cur.execute(
                 "UPDATE station_profiles SET permit_number=COALESCE(?,permit_number), legal_name=COALESCE(?,legal_name), "
-                "fiel_cer_path=COALESCE(?,fiel_cer_path), fiel_key_path=COALESCE(?,fiel_key_path), fiel_updated_at=? "
+                "fiel_cer_path=COALESCE(?,fiel_cer_path), fiel_key_path=COALESCE(?,fiel_key_path), fiel_updated_at=?, "
+                "logo_empresa_path=COALESCE(?,logo_empresa_path), logo_estacion_path=COALESCE(?,logo_estacion_path), "
+                "updated_at=? "
                 "WHERE station_id=?",
-                (permit or None, legal or None, cer_rel, key_rel, upd, station_id),
+                (permit or None, legal or None, cer_rel, key_rel, upd, logo_emp_rel, logo_est_rel, upd, station_id),
             )
+            # Update only the private fields the form actually sent (preserves existing values otherwise).
+            for col, val in private_values.items():
+                cur.execute(f"UPDATE station_profiles SET {col}=? WHERE station_id=?", (val, station_id))
         else:
             cur.execute(
-                "INSERT INTO station_profiles (station_id, permit_number, legal_name, fiel_cer_path, fiel_key_path, fiel_updated_at) VALUES (?,?,?,?,?,?)",
-                (station_id, permit or None, legal or None, cer_rel or "", key_rel or "", upd),
+                "INSERT INTO station_profiles (station_id, permit_number, legal_name, fiel_cer_path, fiel_key_path, fiel_updated_at, "
+                "logo_empresa_path, logo_estacion_path, rfc, domicilio, permiso_cre, representante_legal, "
+                "responsable_operativo, responsable_sasisopa, responsable_sgm, correo, telefono, updated_at) "
+                "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                (
+                    station_id, permit or None, legal or None, cer_rel or "", key_rel or "", upd,
+                    logo_emp_rel, logo_est_rel,
+                    private_values.get("rfc"), private_values.get("domicilio"), private_values.get("permiso_cre"),
+                    private_values.get("representante_legal"), private_values.get("responsable_operativo"),
+                    private_values.get("responsable_sasisopa"), private_values.get("responsable_sgm"),
+                    private_values.get("correo"), private_values.get("telefono"),
+                    upd,
+                ),
             )
         conn.commit(); conn.close()
-        ctx.log_action(me,"update_station_profile","station_profiles",str(station_id))
+        ctx.log_action(me,"update_station_profile","station_profiles",str(station_id),{"fields_set": sorted(list(private_values.keys()))})
         return jsonify({"ok":True})
 
     # ---------------- operator dashboard summary ----------------

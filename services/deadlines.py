@@ -4,7 +4,7 @@ import json
 import datetime as _dt
 from typing import Iterable
 
-DEFAULT_REMINDER_DAYS = (30, 15, 7, 3, 1, 0)
+DEFAULT_REMINDER_DAYS = (60, 30, 15, 7, 3, 1, 0)
 
 URL_MAP = {
     'normativas': '/petroleum/normativas',
@@ -111,7 +111,7 @@ def sync_document_deadlines(conn, brand: str | None = None) -> int:
             cur.execute(
                 "SELECT n.id, n.station_id, n.norma_title AS title, n.folio, n.compliance_date AS issue_date, n.next_due_date AS due_date, "
                 "COALESCE(n.renewable,1) AS renewable, COALESCE(n.periodicity,'mensual') AS periodicity, n.responsible_user_id, n.status, n.observations AS notes, n.evidence_path AS file_path, "
-                "COALESCE(n.reminder_days,'30,15,7,3,1,0') AS reminder_days, s.code AS station_code, s.name AS station_name "
+                "COALESCE(n.reminder_days,'60,30,15,7,3,1,0') AS reminder_days, s.code AS station_code, s.name AS station_name "
                 "FROM normativas n LEFT JOIN stations s ON s.id=n.station_id WHERE n.brand='petroleum' AND n.next_due_date IS NOT NULL AND TRIM(COALESCE(n.next_due_date,''))<>'' AND COALESCE(n.status,'')<>'no_aplica'"
             )
             for r in cur.fetchall():
@@ -123,7 +123,7 @@ def sync_document_deadlines(conn, brand: str | None = None) -> int:
                     'renewable': int(row.get('renewable') or 1), 'periodicity': row.get('periodicity') or 'mensual',
                     'responsible_user_id': row.get('responsible_user_id'), 'status': row.get('status') or 'en_proceso', 'notes': row.get('notes') or '',
                     'file_path': row.get('file_path'), 'version_count': 1 if row.get('file_path') else 0,
-                    'reminder_days': row.get('reminder_days') or '30,15,7,3,1,0',
+                    'reminder_days': row.get('reminder_days') or '60,30,15,7,3,1,0',
                     'scope_label': scope_label(row.get('station_code'), row.get('station_name')),
                     'meta_json': json.dumps({'station_code': row.get('station_code'), 'station_name': row.get('station_name')}, ensure_ascii=False),
                 })
@@ -131,7 +131,7 @@ def sync_document_deadlines(conn, brand: str | None = None) -> int:
 
             cur.execute(
                 "SELECT er.id, er.station_id, er.title, er.folio, er.issue_date, er.expiry_date AS due_date, COALESCE(er.renewable,1) AS renewable, COALESCE(er.periodicity,'anual') AS periodicity, "
-                "COALESCE(er.responsible_user_id,NULL) AS responsible_user_id, er.status, er.notes, er.current_file_path AS file_path, COALESCE(er.version_count,0) AS version_count, COALESCE(er.reminder_days,'30,15,7,3,1,0') AS reminder_days, s.code AS station_code, s.name AS station_name "
+                "COALESCE(er.responsible_user_id,NULL) AS responsible_user_id, er.status, er.notes, er.current_file_path AS file_path, COALESCE(er.version_count,0) AS version_count, COALESCE(er.reminder_days,'60,30,15,7,3,1,0') AS reminder_days, s.code AS station_code, s.name AS station_name "
                 "FROM expediente_records er LEFT JOIN stations s ON s.id=er.station_id WHERE er.brand='petroleum' AND er.area='normativas' AND er.expiry_date IS NOT NULL AND TRIM(COALESCE(er.expiry_date,''))<>'' AND COALESCE(er.status,'')<>'no_aplica'"
             )
             for r in cur.fetchall():
@@ -143,7 +143,7 @@ def sync_document_deadlines(conn, brand: str | None = None) -> int:
                     'renewable': int(row.get('renewable') or 1), 'periodicity': row.get('periodicity') or 'anual',
                     'responsible_user_id': row.get('responsible_user_id'), 'status': row.get('status') or 'faltante', 'notes': row.get('notes') or '',
                     'file_path': row.get('file_path'), 'version_count': int(row.get('version_count') or 0),
-                    'reminder_days': row.get('reminder_days') or '30,15,7,3,1,0',
+                    'reminder_days': row.get('reminder_days') or '60,30,15,7,3,1,0',
                     'scope_label': scope_label(row.get('station_code'), row.get('station_name')),
                     'meta_json': json.dumps({'station_code': row.get('station_code'), 'station_name': row.get('station_name')}, ensure_ascii=False),
                 })

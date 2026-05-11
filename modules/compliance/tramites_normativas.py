@@ -810,7 +810,7 @@ def register(app):
         status = (data.get('status') or 'en_proceso').strip().lower()
         observations = (data.get('observations') or '').strip()
         renewable = 0 if str(data.get('renewable', '1')).lower() in {'0','false','no'} else 1
-        reminder_days = (data.get('reminder_days') or '30,15,7,3,1,0').strip()
+        reminder_days = (data.get('reminder_days') or '60,30,15,7,3,1,0').strip()
         if status not in NORMATIVA_STATUSES:
             status = 'en_proceso'
         if periodicity not in NORMATIVA_PERIODICITIES:
@@ -1047,7 +1047,7 @@ def register(app):
         expiry_date = (data.get('expiry_date') or '').strip() or None
         notes = (data.get('notes') or '').strip()
         renewable = 0 if str(data.get('renewable', '1')).lower() in {'0','false','no'} else 1
-        reminder_days = (data.get('reminder_days') or '30,15,7,3,1,0').strip()
+        reminder_days = (data.get('reminder_days') or '60,30,15,7,3,1,0').strip()
         periodicity = (data.get('periodicity') or 'anual').strip().lower() or 'anual'
         validity = int((tpl['default_validity_days'] if tpl and tpl['default_validity_days'] else 0) or 0)
         if issue_date and not expiry_date and validity:

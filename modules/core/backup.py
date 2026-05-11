@@ -32,8 +32,13 @@ def register(app):
     @role_required("admin")
     def api_backups_create():
         base_dir = Path(current_app.root_path).resolve()
-        out = create_backup(base_dir, Path(DB_PATH), Path(ctx.upload_dir), include_uploads=True, retention=7)
-        ctx.log_action(ctx.get_me(), "create_backup", "backup", out.name, {"path": str(out)})
+        me = ctx.get_me()
+        out = create_backup(
+            base_dir, Path(DB_PATH), Path(ctx.upload_dir),
+            include_uploads=True, retention=7,
+            kind="manual", triggered_by=int(me.get("id")) if me and me.get("id") else None,
+        )
+        ctx.log_action(me, "create_backup", "backup", out.name, {"path": str(out)})
         return jsonify({"ok": True, "name": out.name})
 
     @app.get("/api/admin/backups/download/<name>")

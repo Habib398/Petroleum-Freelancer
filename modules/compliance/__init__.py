@@ -11,6 +11,7 @@ from modules.compliance.sgm_docs import register as register_sgm            # us
 from modules.compliance.tramites_normativas import register as register_tramites
 from modules.compliance.capa import register as register_capa
 from modules.compliance.audit import register as register_audit
+from modules.compliance.docx_templates import register as register_docx_templates  # nuevo motor DOCX <<VAR>>
 
 
 def register(app):
@@ -21,3 +22,4 @@ def register(app):
     register_tramites(app)
     register_capa(app)
     register_audit(app)
+    register_docx_templates(app)

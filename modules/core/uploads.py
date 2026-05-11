@@ -38,6 +38,7 @@ def register(app):
             ("maintenance","evidence_before"),("maintenance","evidence_after"),
             ("bitacoras","evidence_path"),
             ("station_profiles","fiel_cer_path"),("station_profiles","fiel_key_path"),
+            ("station_profiles","logo_empresa_path"),("station_profiles","logo_estacion_path"),
             # Docs library
             ("documents","file_path"),
             ("document_versions","file_path"),

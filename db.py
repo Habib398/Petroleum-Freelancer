@@ -1062,6 +1062,27 @@ CREATE TABLE IF NOT EXISTS evidence_photos (
     ensure_column(conn, "stations", "group_name", "group_name TEXT")
     ensure_column(conn, "stations", "station_number", "station_number INTEGER")
 
+    # Station private data (used to autofill templates: SASISOPA, SGM, normativas, anexos)
+    # Only admins can edit these via the profile API. Logos are stored as upload paths.
+    for col, ddl in (
+        ("logo_empresa_path",      "logo_empresa_path TEXT"),
+        ("logo_estacion_path",     "logo_estacion_path TEXT"),
+        ("rfc",                    "rfc TEXT"),
+        ("domicilio",              "domicilio TEXT"),
+        ("permiso_cre",            "permiso_cre TEXT"),
+        ("representante_legal",    "representante_legal TEXT"),
+        ("responsable_operativo",  "responsable_operativo TEXT"),
+        ("responsable_sasisopa",   "responsable_sasisopa TEXT"),
+        ("responsable_sgm",        "responsable_sgm TEXT"),
+        ("correo",                 "correo TEXT"),
+        ("telefono",               "telefono TEXT"),
+        ("updated_at",             "updated_at TEXT"),
+    ):
+        try:
+            ensure_column(conn, "station_profiles", col, ddl)
+        except Exception:
+            pass
+
     # SASISOPA documental (Consulting)
     conn.executescript("""
     CREATE TABLE IF NOT EXISTS doc_templates (
@@ -1423,7 +1444,7 @@ CREATE TABLE IF NOT EXISTS evidence_photos (
         notes TEXT,
         file_path TEXT,
         version_count INTEGER NOT NULL DEFAULT 0,
-        reminder_days TEXT NOT NULL DEFAULT '30,15,7,3,1,0',
+        reminder_days TEXT NOT NULL DEFAULT '60,30,15,7,3,1,0',
         scope_label TEXT,
         meta_json TEXT,
         last_notice_at TEXT,
@@ -1464,6 +1485,108 @@ CREATE TABLE IF NOT EXISTS evidence_photos (
         FOREIGN KEY(deadline_id) REFERENCES document_deadlines(id) ON DELETE SET NULL,
         FOREIGN KEY(renewed_by) REFERENCES users(id) ON DELETE SET NULL
     );
+
+    CREATE TABLE IF NOT EXISTS backup_logs (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        file_path TEXT NOT NULL,
+        file_size_bytes INTEGER,
+        kind TEXT NOT NULL DEFAULT 'manual' CHECK(kind IN ('manual','auto','scheduled','pre_change')),
+        triggered_by INTEGER,
+        notes TEXT,
+        success INTEGER NOT NULL DEFAULT 1,
+        error_message TEXT,
+        FOREIGN KEY(triggered_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+    CREATE INDEX IF NOT EXISTS idx_backup_logs_created ON backup_logs(created_at DESC);
+
+    /* DOCX template engine (admin uploads .docx with <<VARIABLE>> placeholders).
+       Coexists with the legacy PDF+coordinates engine in doc_templates. */
+    CREATE TABLE IF NOT EXISTS docx_templates (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        brand TEXT NOT NULL DEFAULT 'consulting',
+        module TEXT NOT NULL,
+        code TEXT NOT NULL,
+        name TEXT NOT NULL,
+        description TEXT,
+        current_version_id INTEGER,
+        is_published INTEGER NOT NULL DEFAULT 0,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        created_by INTEGER,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT,
+        UNIQUE(brand, module, code),
+        FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS docx_template_versions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        template_id INTEGER NOT NULL,
+        version_label TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        original_filename TEXT,
+        file_size_bytes INTEGER,
+        notes TEXT,
+        is_current INTEGER NOT NULL DEFAULT 0,
+        uploaded_by INTEGER,
+        uploaded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(template_id) REFERENCES docx_templates(id) ON DELETE CASCADE,
+        FOREIGN KEY(uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
+        UNIQUE(template_id, version_label)
+    );
+
+    CREATE TABLE IF NOT EXISTS docx_template_fields (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        template_id INTEGER NOT NULL,
+        version_id INTEGER NOT NULL,
+        variable_name TEXT NOT NULL,
+        label TEXT,
+        field_kind TEXT NOT NULL DEFAULT 'manual'
+            CHECK(field_kind IN ('auto','manual','fixed','image','signature','date_today')),
+        auto_source TEXT,
+        fixed_value TEXT,
+        placeholder TEXT,
+        sort_order INTEGER NOT NULL DEFAULT 0,
+        is_required INTEGER NOT NULL DEFAULT 0,
+        field_type TEXT NOT NULL DEFAULT 'text'
+            CHECK(field_type IN ('text','textarea','date','number')),
+        FOREIGN KEY(template_id) REFERENCES docx_templates(id) ON DELETE CASCADE,
+        FOREIGN KEY(version_id) REFERENCES docx_template_versions(id) ON DELETE CASCADE,
+        UNIQUE(version_id, variable_name)
+    );
+
+    CREATE TABLE IF NOT EXISTS docx_generated_documents (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        brand TEXT NOT NULL DEFAULT 'consulting',
+        template_id INTEGER NOT NULL,
+        version_id INTEGER NOT NULL,
+        station_id INTEGER,
+        title TEXT,
+        docx_path TEXT,
+        pdf_path TEXT,
+        field_values_json TEXT NOT NULL DEFAULT '{}',
+        status TEXT NOT NULL DEFAULT 'borrador'
+            CHECK(status IN ('borrador','en_revision','aprobado','cancelado','enviado_correo','reemplazado')),
+        cancellation_reason TEXT,
+        approved_by INTEGER,
+        approved_at TEXT,
+        created_by INTEGER,
+        created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(template_id) REFERENCES docx_templates(id) ON DELETE CASCADE,
+        FOREIGN KEY(version_id) REFERENCES docx_template_versions(id) ON DELETE SET NULL,
+        FOREIGN KEY(station_id) REFERENCES stations(id) ON DELETE SET NULL,
+        FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY(approved_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_docx_templates_scope
+        ON docx_templates(brand, module, is_published, is_active);
+    CREATE INDEX IF NOT EXISTS idx_docx_template_versions_current
+        ON docx_template_versions(template_id, is_current, uploaded_at);
+    CREATE INDEX IF NOT EXISTS idx_docx_template_fields_lookup
+        ON docx_template_fields(version_id, variable_name);
+    CREATE INDEX IF NOT EXISTS idx_docx_generated_scope
+        ON docx_generated_documents(brand, station_id, template_id, status, created_at);
     """)
 
     for tbl, prefix in [
@@ -1501,7 +1624,7 @@ CREATE TABLE IF NOT EXISTS evidence_photos (
         except Exception:
             pass
         try:
-            ensure_column(conn, tbl, 'reminder_days', "reminder_days TEXT NOT NULL DEFAULT '30,15,7,3,1,0'")
+            ensure_column(conn, tbl, 'reminder_days', "reminder_days TEXT NOT NULL DEFAULT '60,30,15,7,3,1,0'")
         except Exception:
             pass
         try:
@@ -1512,6 +1635,27 @@ CREATE TABLE IF NOT EXISTS evidence_photos (
         ensure_column(conn, 'expediente_records', 'responsible_user_id', 'responsible_user_id INTEGER')
     except Exception:
         pass
+
+    # One-time bump: rows with the legacy default reminder_days get the 60-day notice added.
+    # Custom values set by users are preserved.
+    for tbl in ('tramites', 'normativas', 'expediente_records', 'document_deadlines'):
+        try:
+            conn.execute(
+                f"UPDATE {tbl} SET reminder_days='60,30,15,7,3,1,0' WHERE reminder_days='30,15,7,3,1,0'"
+            )
+        except Exception:
+            pass
+        # SQLite keeps the original column DEFAULT clause in the table DDL; we cannot change
+        # it without recreating the table. A trigger catches any future INSERT that lands
+        # on the legacy default and bumps it forward.
+        try:
+            conn.execute(
+                f"CREATE TRIGGER IF NOT EXISTS trg_{tbl}_reminder_days_bump "
+                f"AFTER INSERT ON {tbl} FOR EACH ROW WHEN NEW.reminder_days='30,15,7,3,1,0' "
+                f"BEGIN UPDATE {tbl} SET reminder_days='60,30,15,7,3,1,0' WHERE id=NEW.id; END;"
+            )
+        except Exception:
+            pass
 
     # SQLite triggers to assign folios automatically on insert
     trigger_map = {
