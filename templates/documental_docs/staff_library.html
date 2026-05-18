@@ -1,0 +1,105 @@
+{% extends "layout.html" %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/documental_docs.css"/>
+<style>
+.lib-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(280px,1fr));
+  gap:16px;
+  margin-top:16px;
+}
+.lib-card{
+  background:#fff;border:1px solid var(--hme-border);
+  border-radius:14px;padding:18px 18px 14px;
+  display:flex;flex-direction:column;gap:10px;
+  transition:box-shadow .16s,border-color .16s;
+  text-decoration:none;color:inherit;
+}
+.lib-card:hover{
+  box-shadow:0 6px 24px rgba(2,6,23,.10);
+  border-color:var(--hme-green);
+}
+.lib-card-header{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
+.lib-card-name{font-weight:800;font-size:15px;line-height:1.3}
+.lib-card-desc{font-size:13px;color:var(--hme-text-soft);line-height:1.45}
+.lib-card-meta{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px}
+.lib-card-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:auto;padding-top:10px;border-top:1px solid var(--hme-border)}
+.lib-card-actions a{
+  font-size:13px;font-weight:700;padding:5px 12px;border-radius:8px;
+  text-decoration:none;transition:background .14s;
+}
+.lib-card-actions .btn-primary{background:var(--hme-green);color:#fff}
+.lib-card-actions .btn-primary:hover{background:var(--hme-green-dark)}
+.lib-card-actions .btn-sec{background:#f1f5f9;color:var(--hme-text)}
+.lib-card-actions .btn-sec:hover{background:#e2e8f0}
+.pill-docx{background:rgba(37,99,235,.10);color:#1e3a8a;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px}
+.pill-pdf{background:rgba(220,38,38,.10);color:#991b1b;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px}
+.empty-state{text-align:center;padding:48px 16px;color:var(--hme-text-soft)}
+.empty-state svg{width:40px;height:40px;stroke:var(--hme-border);stroke-width:1.5;fill:none;margin-bottom:10px}
+.page-intro{margin-bottom:8px;color:var(--hme-text-soft);font-size:14px}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set subheader_back_url = '/staff/menu' %}{% set subheader_back_label = 'Volver al menú' %}
+{% include 'documental_docs/_subheader.html' %}
+
+<div class="card">
+  <div>
+    <div class="muted" style="text-transform:uppercase;font-weight:800;letter-spacing:.6px;font-size:11px">{{ module_label }} · Biblioteca</div>
+    <h1 style="margin:4px 0 6px">Plantillas disponibles</h1>
+    <p class="page-intro">Consulta y descarga las plantillas publicadas por administración para el módulo <b>{{ module_label }}</b>.</p>
+  </div>
+</div>
+
+{% if items %}
+<div class="lib-grid">
+  {% for tpl in items %}
+  {% set kind = (tpl.file_type or 'pdf')|lower %}
+  <article class="lib-card">
+    <div class="lib-card-header">
+      <div class="lib-card-name">{{ tpl.name }}</div>
+      {% if kind == 'docx' %}
+        <span class="pill-docx">DOCX</span>
+      {% else %}
+        <span class="pill-pdf">PDF</span>
+      {% endif %}
+    </div>
+
+    {% if tpl.description %}
+    <div class="lib-card-desc">{{ tpl.description }}</div>
+    {% endif %}
+
+    <div class="lib-card-meta">
+      {% if tpl.month_key %}
+        <span class="muted" style="font-size:12px">📅 {{ tpl.month_key }}</span>
+      {% endif %}
+      {% if tpl.current_version_label %}
+        <span class="muted" style="font-size:12px">🔖 {{ tpl.current_version_label }}</span>
+      {% endif %}
+    </div>
+
+    <div class="lib-card-actions">
+      {% if kind == 'pdf' %}
+        <a href="{{ staff_base }}/library/{{ tpl.id }}/file?inline=1" target="_blank" rel="noopener" class="btn-primary">Ver PDF</a>
+        <a href="{{ staff_base }}/library/{{ tpl.id }}" class="btn-sec">Detalles</a>
+      {% else %}
+        <a href="{{ staff_base }}/library/{{ tpl.id }}/file" class="btn-primary">Descargar</a>
+        <a href="{{ staff_base }}/library/{{ tpl.id }}" class="btn-sec">Detalles</a>
+      {% endif %}
+    </div>
+  </article>
+  {% endfor %}
+</div>
+
+{% else %}
+<div class="card">
+  <div class="empty-state">
+    <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+    <div style="font-weight:800;font-size:16px;margin-bottom:4px">Sin plantillas publicadas</div>
+    <div>Todavía no hay plantillas disponibles para <b>{{ module_label }}</b>. El administrador las publicará próximamente.</div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}

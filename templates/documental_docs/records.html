@@ -1,16 +1,10 @@
 {% extends "layout.html" %}
 {% block head %}
-<style>
-.cardx{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,.05)}
-.table{width:100%;border-collapse:collapse}
-.table th,.table td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px;vertical-align:top}
-.muted{color:#64748b}
-.btnx{display:inline-flex;padding:10px 14px;border-radius:12px;background:#0f766e;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
-.btnx.alt{background:#0f172a}
-.pill{display:inline-flex;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#f1f5f9}
-</style>
+<link rel="stylesheet" href="/static/css/documental_docs.css"/>
 {% endblock %}
 {% block content %}
+{% set subheader_back_url = '/admin/menu' %}{% set subheader_back_label = 'Volver a módulos' %}
+{% include 'documental_docs/_subheader.html' %}
 <div class="card">
   <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
     <div>

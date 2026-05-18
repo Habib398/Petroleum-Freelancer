@@ -171,6 +171,17 @@ def sync_document_deadlines(conn, brand: str | None = None) -> int:
                 )
             else:
                 cur.execute("DELETE FROM document_deadlines WHERE brand=? AND source_table=?", (active_brand, source_table))
+    # BUG-003 fix: commit aquí garantiza que los INSERT/UPDATE/DELETE de la
+    # sincronización persistan aunque el caller no haga commit explícito
+    # (caso típico: GET /api/document-deadlines abre conn, llama sync, lee
+    # rows, y cierra conn — sin este commit los cambios se perdían y la
+    # tabla document_deadlines quedaba desactualizada hasta el siguiente
+    # run_due_tick, que tiene throttle de 15 min). Es idempotente: callers
+    # que ya commiten después no se ven afectados.
+    try:
+        conn.commit()
+    except Exception:
+        pass
     return total
 
 

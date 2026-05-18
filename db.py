@@ -525,6 +525,174 @@ def _apply_versioned_migrations(conn):
         _mark_migration(conn, mid, "CAPA tables")
 
 
+    # M5: DOCX template engine — admite también PDF como archivo de plantilla
+    mid = "2026-05-12_01_docx_templates_pdf_support"
+    if not _migration_applied(conn, mid):
+        try:
+            ensure_column(conn, "docx_templates", "file_type",
+                          "file_type TEXT NOT NULL DEFAULT 'docx'")
+        except Exception:
+            pass
+        _mark_migration(conn, mid, "docx_templates.file_type (docx|pdf)")
+
+    # M6: Consolidación — el motor docx_templates se fusiona en doc_templates.
+    # Se agregan columnas para soportar DOCX, código corto, descripción, borradores
+    # (is_active) y un timestamp de actualización; además una tabla de versiones.
+    mid = "2026-05-12_02_doc_templates_unify_with_docx"
+    if not _migration_applied(conn, mid):
+        try:
+            ensure_column(conn, "doc_templates", "code", "code TEXT")
+            ensure_column(conn, "doc_templates", "description", "description TEXT")
+            ensure_column(conn, "doc_templates", "file_type",
+                          "file_type TEXT NOT NULL DEFAULT 'pdf'")
+            ensure_column(conn, "doc_templates", "is_active",
+                          "is_active INTEGER NOT NULL DEFAULT 1")
+            ensure_column(conn, "doc_templates", "updated_at", "updated_at TEXT")
+        except Exception:
+            pass
+        _safe_executescript(conn, '''
+        CREATE TABLE IF NOT EXISTS doc_template_versions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            template_id INTEGER NOT NULL,
+            version_label TEXT NOT NULL,
+            file_path TEXT NOT NULL,
+            original_filename TEXT,
+            file_size_bytes INTEGER,
+            notes TEXT,
+            is_current INTEGER NOT NULL DEFAULT 0,
+            uploaded_by INTEGER,
+            uploaded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+            FOREIGN KEY(template_id) REFERENCES doc_templates(id) ON DELETE CASCADE,
+            FOREIGN KEY(uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
+            UNIQUE(template_id, version_label)
+        );
+        CREATE INDEX IF NOT EXISTS idx_doc_template_versions_current
+            ON doc_template_versions(template_id, is_current, uploaded_at);
+        ''')
+
+        # Para plantillas que ya existían (sin versiones), creamos una v1.0
+        # apuntando al file_path actual para mantener historial homogéneo.
+        try:
+            for row in conn.execute(
+                "SELECT id, file_path, created_by, created_at FROM doc_templates "
+                "WHERE file_path IS NOT NULL "
+                "AND id NOT IN (SELECT DISTINCT template_id FROM doc_template_versions)"
+            ).fetchall():
+                conn.execute(
+                    "INSERT INTO doc_template_versions "
+                    "(template_id, version_label, file_path, is_current, uploaded_by, uploaded_at) "
+                    "VALUES (?,?,?,1,?,COALESCE(?, CURRENT_TIMESTAMP))",
+                    (int(row["id"]), "v1.0", row["file_path"],
+                     row["created_by"], row["created_at"]),
+                )
+            conn.commit()
+        except Exception:
+            pass
+
+        _mark_migration(conn, mid, "Unify docx_templates into doc_templates")
+
+    # M7: Migrar datos del motor docx_templates obsoleto → doc_templates.
+    # Solo copia filas cuyo (brand, module, code) todavía no exista en doc_templates.
+    # Es una migración nice-to-have: no falla si docx_templates ya no existe.
+    mid = "2026-05-12_03_migrate_docx_data_to_doc_templates"
+    if not _migration_applied(conn, mid):
+        try:
+            rows = conn.execute(
+                "SELECT id, brand, module, code, name, description, file_type, "
+                "is_published, is_active, created_by, created_at "
+                "FROM docx_templates"
+            ).fetchall()
+            for row in rows:
+                code = row["code"] if isinstance(row, dict) else row[2]
+                brand = row["brand"] if isinstance(row, dict) else row[1]
+                module = row["module"] if isinstance(row, dict) else row[2]
+                already = conn.execute(
+                    "SELECT 1 FROM doc_templates WHERE brand=? AND module=? AND code=?",
+                    (row["brand"], row["module"], row["code"]),
+                ).fetchone()
+                if already:
+                    continue
+                conn.execute(
+                    "INSERT INTO doc_templates "
+                    "(brand, module, name, code, description, file_path, month_key, "
+                    "file_type, field_schema_json, is_published, is_active, "
+                    "created_by, created_at) "
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+                    (
+                        row["brand"], row["module"], row["name"],
+                        row["code"], row["description"],
+                        None,   # file_path — se tomará de la versión
+                        None,   # month_key
+                        row["file_type"] or "docx",
+                        "[]",
+                        row["is_published"] or 0,
+                        row["is_active"] if row["is_active"] is not None else 1,
+                        row["created_by"], row["created_at"],
+                    ),
+                )
+                new_id = conn.execute(
+                    "SELECT last_insert_rowid() AS id"
+                ).fetchone()["id"]
+                # Copiar versiones
+                versions = conn.execute(
+                    "SELECT version_label, file_path, original_filename, "
+                    "file_size_bytes, notes, is_current, uploaded_by, uploaded_at "
+                    "FROM docx_template_versions WHERE template_id=?",
+                    (int(row["id"]),),
+                ).fetchall()
+                for v in versions:
+                    conn.execute(
+                        "INSERT INTO doc_template_versions "
+                        "(template_id, version_label, file_path, original_filename, "
+                        "file_size_bytes, notes, is_current, uploaded_by, uploaded_at) "
+                        "VALUES (?,?,?,?,?,?,?,?,?)",
+                        (
+                            int(new_id),
+                            v["version_label"], v["file_path"],
+                            v["original_filename"], v["file_size_bytes"],
+                            v["notes"], v["is_current"],
+                            v["uploaded_by"], v["uploaded_at"],
+                        ),
+                    )
+                # Actualizar file_path principal con el de la versión current
+                cur_ver = conn.execute(
+                    "SELECT file_path FROM doc_template_versions "
+                    "WHERE template_id=? AND is_current=1 LIMIT 1",
+                    (int(new_id),),
+                ).fetchone()
+                if cur_ver:
+                    conn.execute(
+                        "UPDATE doc_templates SET file_path=? WHERE id=?",
+                        (cur_ver["file_path"], int(new_id)),
+                    )
+            conn.commit()
+        except Exception:
+            pass  # docx_templates puede no existir en instalaciones nuevas
+        _mark_migration(conn, mid, "Migrate docx_templates data to doc_templates")
+
+    # M8: Eliminar tablas del motor docx_templates (ya obsoleto).
+    # Se ejecuta después de M7 para garantizar que los datos fueron copiados.
+    mid = "2026-05-12_04_drop_docx_tables"
+    if not _migration_applied(conn, mid):
+        _safe_executescript(conn, """
+        DROP TABLE IF EXISTS docx_template_fields;
+        DROP TABLE IF EXISTS docx_template_versions;
+        DROP TABLE IF EXISTS docx_generated_documents;
+        DROP TABLE IF EXISTS docx_templates;
+        """)
+        _mark_migration(conn, mid, "Drop obsolete docx_* tables")
+
+    # M9: Logo por plantilla — permite al admin subir un logo que se
+    # incrusta en la celda de encabezado del DOCX/PDF.
+    mid = "2026-05-13_01_doc_templates_logo_path"
+    if not _migration_applied(conn, mid):
+        try:
+            ensure_column(conn, "doc_templates", "logo_path", "logo_path TEXT")
+        except Exception:
+            pass
+        _mark_migration(conn, mid, "doc_templates.logo_path for header logo")
+
+
 def init_db():
     os.makedirs(os.path.join(BASE_DIR, "data"), exist_ok=True)
     conn = get_conn()
@@ -1089,13 +1257,34 @@ CREATE TABLE IF NOT EXISTS evidence_photos (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         brand TEXT NOT NULL DEFAULT 'consulting',
         name TEXT NOT NULL,
+        code TEXT,
+        description TEXT,
         file_path TEXT NOT NULL,
         month_key TEXT,
+        file_type TEXT NOT NULL DEFAULT 'pdf',
         field_schema_json TEXT NOT NULL DEFAULT '[]',
         is_published INTEGER NOT NULL DEFAULT 0,
+        is_active INTEGER NOT NULL DEFAULT 1,
         created_by INTEGER,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        updated_at TEXT,
         FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS doc_template_versions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        template_id INTEGER NOT NULL,
+        version_label TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        original_filename TEXT,
+        file_size_bytes INTEGER,
+        notes TEXT,
+        is_current INTEGER NOT NULL DEFAULT 0,
+        uploaded_by INTEGER,
+        uploaded_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY(template_id) REFERENCES doc_templates(id) ON DELETE CASCADE,
+        FOREIGN KEY(uploaded_by) REFERENCES users(id) ON DELETE SET NULL,
+        UNIQUE(template_id, version_label)
     );
 
     CREATE TABLE IF NOT EXISTS doc_requirements (
@@ -1509,6 +1698,7 @@ CREATE TABLE IF NOT EXISTS evidence_photos (
         code TEXT NOT NULL,
         name TEXT NOT NULL,
         description TEXT,
+        file_type TEXT NOT NULL DEFAULT 'docx',
         current_version_id INTEGER,
         is_published INTEGER NOT NULL DEFAULT 0,
         is_active INTEGER NOT NULL DEFAULT 1,

@@ -3,6 +3,8 @@
 # Incluye: documentos generales, compliance, SASISOPA, SGM,
 #          trámites/normativas, CAPA (no conformidades) y auditorías.
 # Nota: documental_docs.py es una fábrica interna usada por sasisopa y sgm.
+#       El motor DOCX con <<VARIABLES>> quedó consolidado dentro de documental_docs
+#       (columnas file_type/code/description en doc_templates + tabla doc_template_versions).
 
 from modules.compliance.docs import register as register_docs
 from modules.compliance.compliance import register as register_compliance
@@ -11,7 +13,6 @@ from modules.compliance.sgm_docs import register as register_sgm            # us
 from modules.compliance.tramites_normativas import register as register_tramites
 from modules.compliance.capa import register as register_capa
 from modules.compliance.audit import register as register_audit
-from modules.compliance.docx_templates import register as register_docx_templates  # nuevo motor DOCX <<VAR>>
 
 
 def register(app):
@@ -22,4 +23,3 @@ def register(app):
     register_tramites(app)
     register_capa(app)
     register_audit(app)
-    register_docx_templates(app)

@@ -1,20 +1,11 @@
 {% extends "layout.html" %}
 {% block head %}
-<style>
-.grid2{display:grid;grid-template-columns:.95fr 1.05fr;gap:16px}
-.cardx{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,.05)}
-.field{display:grid;gap:6px;margin-bottom:12px}
-.field input,.field select,.field textarea{padding:10px 12px;border-radius:12px;border:1px solid #cbd5e1}
-.field textarea{min-height:88px}
-.btnx{display:inline-flex;padding:10px 14px;border-radius:12px;background:#0f766e;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
-.btnx.alt{background:#0f172a}
-.preview{width:100%;border:1px solid #e5e7eb;border-radius:14px;display:block;margin-bottom:14px}
-.muted{color:#64748b}
-.pill{display:inline-flex;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#f1f5f9}
-@media (max-width: 980px){.grid2{grid-template-columns:1fr}}
-</style>
+<link rel="stylesheet" href="/static/css/documental_docs.css"/>
+<style>.grid2{grid-template-columns:.95fr 1.05fr}@media (max-width:980px){.grid2{grid-template-columns:1fr}}</style>
 {% endblock %}
 {% block content %}
+{% set subheader_back_url = '/admin/menu' %}{% set subheader_back_label = 'Volver a módulos' %}
+{% include 'documental_docs/_subheader.html' %}
 <div class="card">
   <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
     <div>

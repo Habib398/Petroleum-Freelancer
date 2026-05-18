@@ -1,50 +1,14 @@
 {% extends "layout.html" %}
 {% block head %}
-<style>
-  .grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
-  .grid.grid-mini{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:12px}
-  .cardx{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:16px;box-shadow:0 10px 30px rgba(2,6,23,.05)}
-  .muted{color:#64748b}
-  .stat{font-size:22px;font-weight:900}
-  .table{width:100%;border-collapse:collapse}
-  .table th,.table td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px;vertical-align:top}
-  .actions{display:flex;gap:8px;flex-wrap:wrap}
-  .btnx{display:inline-flex;align-items:center;justify-content:center;padding:8px 12px;border-radius:12px;background:#0f766e;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}
-  .btnx.alt{background:#0f172a}
-  .btnx.ghost{background:transparent;color:#0f172a;border:1px solid rgba(2,6,23,.14)}
-  .pill{display:inline-flex;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:900;border:1px solid transparent}
-  .pill.pending{background:rgba(245,158,11,.12);border-color:rgba(245,158,11,.25);color:#92400e}
-  .pill.submitted{background:rgba(59,130,246,.12);border-color:rgba(59,130,246,.25);color:#1e40af}
-  .pill.approved{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.25);color:#166534}
-  .pill.rejected{background:rgba(239,68,68,.12);border-color:rgba(239,68,68,.25);color:#991b1b}
-  .pill.none{background:rgba(148,163,184,.12);border-color:rgba(148,163,184,.22);color:#334155}
-  .pill.other{background:rgba(2,6,23,.06);border-color:rgba(2,6,23,.12);color:#0f172a}
-  .topbar{display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap}
-  .filters{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto auto;gap:10px;align-items:end}
-  .filters .field{display:grid;gap:6px}
-  .filters input,.filters select{padding:10px 12px;border-radius:12px;border:1px solid rgba(2,6,23,.18);min-width:0}
-  .substats{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
-  .substats .mini{padding:10px 12px;border-radius:14px;background:rgba(15,23,42,.03);border:1px solid rgba(15,23,42,.08);min-width:160px}
-  .quickdays{display:flex;gap:8px;flex-wrap:wrap}
-  @media (max-width: 1100px){
-    .filters{grid-template-columns:repeat(2,minmax(0,1fr));}
-  }
-  @media (max-width: 980px){
-    .grid{grid-template-columns:1fr 1fr}
-    .grid.grid-mini{grid-template-columns:1fr 1fr}
-    .actions{flex-direction:column;align-items:stretch}
-  }
-  @media (max-width: 700px){
-    .filters{grid-template-columns:1fr}
-    .grid,.grid.grid-mini{grid-template-columns:1fr}
-    .quickdays,.substats{flex-direction:column}
-  }
-</style>
+<link rel="stylesheet" href="/static/css/documental_docs.css"/>
+<style>.grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}</style>
 {% endblock %}
 
 {% block content %}
+{% set subheader_back_url = '/admin/menu' %}{% set subheader_back_label = 'Volver a módulos' %}
+{% include 'documental_docs/_subheader.html' %}
 <div class="card">
-  <div class="topbar">
+  <div class="topbar-internal">
     <div>
       <h1 style="margin:0 0 6px">{{ module_label }} • Tablero por estación</h1>
       <div class="muted">Estatus por estación para el día seleccionado: Pendiente (OPEN), Enviado (SUBMITTED), Aprobado, Rechazado.</div>

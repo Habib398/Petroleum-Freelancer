@@ -1,0 +1,124 @@
+{% extends "layout.html" %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/documental_docs.css"/>
+<style>
+.detail-card{background:#fff;border:1px solid var(--hme-border);border-radius:14px;padding:22px 20px;margin-top:16px}
+.detail-header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.detail-title{font-size:22px;font-weight:900;margin:0 0 4px}
+.detail-meta{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+.detail-meta span{font-size:13px;color:var(--hme-text-soft)}
+.detail-desc{font-size:14px;color:var(--hme-text-soft);line-height:1.55;margin:10px 0 16px}
+.detail-actions{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.detail-actions a{
+  font-size:14px;font-weight:700;padding:8px 18px;border-radius:10px;
+  text-decoration:none;transition:background .14s;
+}
+.btn-primary{background:var(--hme-green);color:#fff}
+.btn-primary:hover{background:var(--hme-green-dark)}
+.btn-sec{background:#f1f5f9;color:var(--hme-text);border:1px solid var(--hme-border)}
+.btn-sec:hover{background:#e2e8f0}
+
+.versions-table{width:100%;border-collapse:collapse;margin-top:6px}
+.versions-table th{text-align:left;font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;color:var(--hme-text-soft);padding:6px 10px;border-bottom:1px solid var(--hme-border)}
+.versions-table td{padding:9px 10px;border-bottom:1px solid #f1f5f9;font-size:14px}
+.versions-table tr:last-child td{border-bottom:none}
+.pill-current{background:rgba(34,197,94,.12);color:#166534;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px}
+.pill-docx{background:rgba(37,99,235,.10);color:#1e3a8a;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px}
+.pill-pdf{background:rgba(220,38,38,.10);color:#991b1b;font-size:11px;font-weight:800;padding:2px 8px;border-radius:99px}
+
+.inline-frame{
+  width:100%;height:680px;border:1px solid var(--hme-border);border-radius:12px;
+  margin-top:14px;background:#f8fafc;
+}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set subheader_back_url = staff_base + '/library' %}{% set subheader_back_label = 'Volver a biblioteca' %}
+{% include 'documental_docs/_subheader.html' %}
+
+{% set kind = (template.file_type or 'pdf')|lower %}
+
+<div class="detail-card">
+  <div class="detail-header">
+    <div>
+      <h1 class="detail-title">{{ template.name }}</h1>
+      <div class="detail-meta">
+        {% if kind == 'docx' %}
+          <span class="pill-docx">DOCX · Word</span>
+        {% else %}
+          <span class="pill-pdf">PDF</span>
+        {% endif %}
+        {% if template.month_key %}<span>📅 {{ template.month_key }}</span>{% endif %}
+        {% if template.updated_at %}<span>Actualizada {{ template.updated_at[:10] }}</span>{% endif %}
+      </div>
+    </div>
+    <a class="btn-sec" href="{{ staff_base }}/library" style="align-self:flex-start">← Regresar</a>
+  </div>
+
+  {% if template.description %}
+  <p class="detail-desc">{{ template.description }}</p>
+  {% endif %}
+
+  <div class="detail-actions">
+    {% if kind == 'pdf' %}
+      <a href="{{ staff_base }}/library/{{ template.id }}/file?inline=1" target="_blank" rel="noopener" class="btn-primary">
+        Ver PDF en navegador
+      </a>
+      <a href="{{ staff_base }}/library/{{ template.id }}/file" class="btn-sec">
+        Descargar PDF
+      </a>
+    {% else %}
+      <a href="{{ staff_base }}/library/{{ template.id }}/file" class="btn-primary">
+        Descargar .docx
+      </a>
+    {% endif %}
+  </div>
+
+  {% if kind == 'pdf' %}
+  <iframe
+    src="{{ staff_base }}/library/{{ template.id }}/file?inline=1"
+    class="inline-frame"
+    title="Vista previa: {{ template.name }}"
+  ></iframe>
+  {% endif %}
+</div>
+
+{% if versions %}
+<div class="detail-card">
+  <h3 style="margin:0 0 10px">Historial de versiones</h3>
+  <table class="versions-table">
+    <thead>
+      <tr>
+        <th>Versión</th>
+        <th>Archivo</th>
+        <th>Subida</th>
+        <th style="text-align:right">Descargar</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for v in versions %}
+      <tr>
+        <td>
+          {{ v.version_label or 'v1.0' }}
+          {% if v.is_current %}<span class="pill-current">Actual</span>{% endif %}
+        </td>
+        <td>{{ v.original_filename or '-' }}
+          {% if v.file_size_bytes %}
+            <span class="muted" style="font-size:12px"> · {{ (v.file_size_bytes / 1024)|int }} KB</span>
+          {% endif %}
+        </td>
+        <td class="muted">{{ (v.uploaded_at or '')[:10] }}</td>
+        <td style="text-align:right">
+          <a href="{{ staff_base }}/library/{{ template.id }}/file?version_id={{ v.id }}" class="btn-sec" style="font-size:12px;padding:4px 10px">
+            ↓ Descargar
+          </a>
+        </td>
+      </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

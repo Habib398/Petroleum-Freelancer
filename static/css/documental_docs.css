@@ -1,0 +1,481 @@
+/* documental_docs.css
+   Estilos compartidos por las pantallas internas de SASISOPA / SGM
+   (templates/documental_docs/*.html). Reemplaza los <style> inline que se
+   repetían en cada template y unifica la paleta con el sistema (HME).
+*/
+
+/* ── Contenedor de tarjeta interno ─────────────────────────────────────── */
+.cardx {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, .08);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .05);
+}
+
+/* ── Texto secundario / leyendas ───────────────────────────────────────── */
+.muted {
+  color: var(--hme-text-soft);
+}
+
+/* ── Cifra/KPI grande ──────────────────────────────────────────────────── */
+.stat {
+  font-size: 22px;
+  font-weight: 900;
+}
+
+.sasi-stat {
+  font-size: 28px;
+  font-weight: 900;
+}
+
+/* ── Botón primario y variantes ────────────────────────────────────────── */
+.btnx {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--hme-green);
+  color: #fff;
+  text-decoration: none;
+  font-weight: 800;
+  border: 0;
+  cursor: pointer;
+  transition: transform .16s ease, box-shadow .16s ease, background .16s ease;
+  box-shadow: 0 10px 22px rgba(97, 139, 46, .18);
+}
+
+.btnx:hover {
+  background: var(--hme-green-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 14px 28px rgba(97, 139, 46, .22);
+}
+
+.btnx:active {
+  transform: translateY(0);
+}
+
+.btnx.alt {
+  background: var(--hme-text);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(15, 23, 42, .14);
+}
+
+.btnx.alt:hover {
+  background: #111827;
+}
+
+.btnx.ghost {
+  background: transparent;
+  color: var(--hme-text);
+  border: 1px solid var(--hme-border);
+  box-shadow: none;
+}
+
+.btnx.ghost:hover {
+  background: rgba(15, 23, 42, .04);
+}
+
+.btnx.red {
+  background: var(--hme-danger);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(220, 38, 38, .18);
+}
+
+.btnx.red:hover {
+  background: #B91C1C;
+}
+
+/* Variante dorada para petroleum (consulting hereda verde por defecto) */
+body.brand-petroleum .btnx {
+  background: linear-gradient(180deg, #F4C84A 0%, #C59A1B 100%);
+  color: #1F2937;
+  box-shadow: 0 10px 22px rgba(197, 154, 27, .22);
+}
+
+body.brand-petroleum .btnx:hover {
+  background: linear-gradient(180deg, #F0BE2A 0%, #B0871A 100%);
+}
+
+/* ── Pills (estado / etiquetado) ───────────────────────────────────────── */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  background: var(--hme-green-soft);
+  color: var(--hme-green-dark);
+  border: 1px solid rgba(134, 184, 33, .22);
+  line-height: 1;
+}
+
+/* Pills semánticas (matiz comunicacional — se conserva intacto) */
+.pill.pending {
+  background: rgba(245, 158, 11, .12);
+  border-color: rgba(245, 158, 11, .25);
+  color: #92400e;
+}
+
+.pill.submitted {
+  background: rgba(59, 130, 246, .12);
+  border-color: rgba(59, 130, 246, .25);
+  color: #1e40af;
+}
+
+.pill.approved {
+  background: rgba(34, 197, 94, .12);
+  border-color: rgba(34, 197, 94, .25);
+  color: #166534;
+}
+
+.pill.rejected {
+  background: rgba(239, 68, 68, .12);
+  border-color: rgba(239, 68, 68, .25);
+  color: #991b1b;
+}
+
+.pill.none {
+  background: rgba(148, 163, 184, .12);
+  border-color: rgba(148, 163, 184, .22);
+  color: #334155;
+}
+
+.pill.other {
+  background: rgba(2, 6, 23, .06);
+  border-color: rgba(2, 6, 23, .12);
+  color: var(--hme-text);
+}
+
+.pill.off {
+  background: #fee2e2;
+  border-color: rgba(239, 68, 68, .25);
+  color: #991b1b;
+}
+
+/* ── Badge (usado en staff_records) ────────────────────────────────────── */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--hme-green-soft);
+  color: var(--hme-green-dark);
+  font-size: 12px;
+  font-weight: 800;
+  border: 1px solid rgba(134, 184, 33, .22);
+}
+
+/* ── Tabla compacta interna ────────────────────────────────────────────── */
+.table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.table th,
+.table td {
+  padding: 10px;
+  border-bottom: 1px solid var(--hme-border);
+  text-align: left;
+  font-size: 14px;
+  vertical-align: top;
+}
+
+.table th {
+  font-size: 12px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--hme-text-soft);
+  font-weight: 900;
+}
+
+/* ── Campos de formulario ──────────────────────────────────────────────── */
+.field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.field label {
+  font-weight: 800;
+  color: var(--hme-text);
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--hme-border);
+  background: #fff;
+  color: var(--hme-text);
+  font: inherit;
+}
+
+.field textarea {
+  min-height: 90px;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  outline: none;
+  border-color: rgba(134, 184, 33, .55);
+  box-shadow: 0 0 0 4px rgba(134, 184, 33, .14);
+}
+
+/* ── Layout: filas/grids reutilizados en los templates ─────────────────── */
+.actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.grid {
+  display: grid;
+  gap: 14px;
+}
+
+.grid.cols-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.grid.cols-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.grid.cols-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.grid.cols-5 {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.grid.grid-mini {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 12px;
+}
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.sasi-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.sasi-card {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, .08);
+  border-radius: 18px;
+  padding: 18px;
+  box-shadow: 0 10px 30px rgba(2, 6, 23, .05);
+}
+
+/* ── Cabecera/contenedor superior repetido en internas ─────────────────── */
+.topbar-internal {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+/* ── Filtros de admin_board ────────────────────────────────────────────── */
+.filters {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) auto auto;
+  gap: 10px;
+  align-items: end;
+}
+
+.filters .field {
+  display: grid;
+  gap: 6px;
+  margin-bottom: 0;
+}
+
+.filters input,
+.filters select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--hme-border);
+  min-width: 0;
+}
+
+.quickdays {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.substats {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.substats .mini {
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, .03);
+  border: 1px solid rgba(15, 23, 42, .08);
+  min-width: 160px;
+}
+
+/* ── Vista previa de imágenes (capture / record_capture) ───────────────── */
+.preview {
+  width: 100%;
+  border: 1px solid var(--hme-border);
+  border-radius: 14px;
+  display: block;
+  margin-bottom: 14px;
+}
+
+/* ── Sub-header brand-aware (kicker + breadcrumb del módulo) ───────────── */
+.doc-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .66);
+  border: 1px solid var(--hme-border);
+  backdrop-filter: blur(8px);
+}
+
+.doc-subheader__back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px 6px 10px;
+  border-radius: 999px;
+  color: var(--hme-green-dark);
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 13px;
+  border: 1px solid rgba(134, 184, 33, .28);
+  background: var(--hme-green-soft);
+  transition: transform .15s ease, background .15s ease;
+}
+
+.doc-subheader__back:hover {
+  background: rgba(134, 184, 33, .18);
+  transform: translateX(-1px);
+}
+
+.doc-subheader__back svg {
+  width: 14px;
+  height: 14px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.doc-subheader__meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.doc-subheader__kicker {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--hme-text-soft);
+}
+
+.doc-subheader__brand {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  background: var(--hme-green-soft);
+  color: var(--hme-green-dark);
+  border: 1px solid rgba(134, 184, 33, .25);
+}
+
+/* Petroleum: barra clara con acentos dorados (no oscura — coincide con topbar global) */
+body.brand-petroleum .doc-subheader__back,
+body.brand-petroleum .doc-subheader__brand {
+  background: rgba(200, 162, 74, .16);
+  color: #7C5A12;
+  border-color: rgba(200, 162, 74, .32);
+}
+
+body.brand-petroleum .doc-subheader__back:hover {
+  background: rgba(200, 162, 74, .26);
+}
+
+/* ── Responsividad ─────────────────────────────────────────────────────── */
+@media (max-width:1100px) {
+  .filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid.cols-3,
+  .grid.cols-4,
+  .grid.cols-5 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width:980px) {
+
+  .grid2,
+  .sasi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .grid.grid-mini {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .grid.cols-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width:700px) {
+  .filters {
+    grid-template-columns: 1fr;
+  }
+
+  .grid,
+  .grid.grid-mini,
+  .grid.cols-3,
+  .grid.cols-4,
+  .grid.cols-5 {
+    grid-template-columns: 1fr;
+  }
+
+  .quickdays,
+  .substats {
+    flex-direction: column;
+  }
+}

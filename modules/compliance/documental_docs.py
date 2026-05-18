@@ -3,6 +3,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import re
 from pathlib import Path
 from datetime import datetime, date, timedelta, timezone
 from calendar import monthrange
@@ -54,6 +55,33 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
 
     def _template_relpath(month_key: str, filename: str) -> str:
         return f"{module_key}_templates/{_brand()}/{month_key}/{filename}"
+
+    def _detect_kind(filename: str | None) -> str | None:
+        suffix = Path(secure_filename(filename or "") or "").suffix.lower()
+        if suffix == ".pdf":
+            return "pdf"
+        if suffix == ".docx":
+            return "docx"
+        return None
+
+    _CONTENT_TYPES = {
+        "pdf":  "application/pdf",
+        "docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    }
+
+    def _safe_code(raw: str) -> str:
+        s = (raw or "").strip().lower()
+        s = re.sub(r"[^a-z0-9_-]+", "_", s)
+        s = re.sub(r"_+", "_", s).strip("_")
+        return s[:60]
+
+    def _bump_version(prev_label: str | None) -> str:
+        if not prev_label:
+            return "v1.0"
+        m = re.match(r"^v(\d+)\.(\d+)$", prev_label.strip())
+        if not m:
+            return "v1.0"
+        return f"v{int(m.group(1))}.{int(m.group(2)) + 1}"
 
     def _template_abspath(relpath: str) -> Path:
         return storage.ensure_local(relpath)
@@ -248,9 +276,22 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
         return True
 
     def _template_choices(conn):
-        templates = [dict(r) for r in conn.execute("SELECT * FROM doc_templates WHERE brand=? AND module=? ORDER BY created_at DESC, id DESC", (_brand(), module_key)).fetchall()]
+        templates = [dict(r) for r in conn.execute(
+            "SELECT t.*, v.version_label AS current_version_label, "
+            "       v.uploaded_at AS current_version_at "
+            "FROM doc_templates t "
+            "LEFT JOIN doc_template_versions v "
+            "       ON v.template_id=t.id AND v.is_current=1 "
+            "WHERE t.brand=? AND t.module=? AND COALESCE(t.is_active,1)=1 "
+            "ORDER BY t.created_at DESC, t.id DESC",
+            (_brand(), module_key),
+        ).fetchall()]
         for tpl in templates:
             tpl["field_count"] = len(_load_schema(tpl))
+            # Normalize file_type for templates created before the column existed.
+            tpl.setdefault("file_type", "pdf")
+            if not tpl.get("file_type"):
+                tpl["file_type"] = "pdf"
         return templates
 
     def _calendar_events_for_admin(conn):
@@ -534,30 +575,59 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
 
     def template_upload():
         me = _admin_required()
-        f = request.files.get("pdf")
+        # Accept both legacy "pdf" name and new "file" name. Now both .pdf and
+        # .docx are supported: this is the consolidation point that retires
+        # the parallel docx_templates engine.
+        f = request.files.get("file") or request.files.get("pdf")
         month_key = (request.form.get("month_key") or datetime.now(timezone.utc).strftime("%Y-%m")).strip()
         display_name = (request.form.get("name") or "").strip()
+        code = _safe_code(request.form.get("code") or "")
+        description = (request.form.get("description") or "").strip() or None
         create_daily = (request.form.get("create_daily") or "").strip() == "1"
         daily_station_id = (request.form.get("daily_station_id") or "").strip()
         daily_title = (request.form.get("daily_title") or "").strip()
         daily_due_date = (request.form.get("daily_due_date") or "").strip()
 
-        if not f or not f.filename.lower().endswith(".pdf"):
-            abort(400)
+        kind = _detect_kind(f.filename if f else None)
+        if not f or kind is None:
+            abort(400, description="file_required")
+
         filename = secure_filename(f.filename)
         relpath = _template_relpath(month_key, filename)
-        storage.save_upload(f, relpath, content_type="application/pdf")
+        storage.save_upload(f, relpath, content_type=_CONTENT_TYPES[kind])
+        try:
+            local = storage.ensure_local(relpath)
+            size_bytes = local.stat().st_size if local.exists() else 0
+        except Exception:
+            size_bytes = 0
+
+        # Daily auto-creation only makes sense for PDFs while the staff DOCX
+        # capture flow doesn't exist yet — silently skip for .docx uploads.
+        if kind != "pdf":
+            create_daily = False
 
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
-            "INSERT INTO doc_templates (brand, module, name, file_path, month_key, field_schema_json, is_published, created_by, created_at) "
-            "VALUES (?,?,?,?,?,?,?,?,?)",
-            (_brand(), module_key, display_name or Path(filename).stem, relpath, month_key, "[]", 1 if create_daily else 0, int(me["id"]), _now_iso()),
+            "INSERT INTO doc_templates (brand, module, name, code, description, file_path, month_key, file_type, "
+            "field_schema_json, is_published, is_active, created_by, created_at, updated_at) "
+            "VALUES (?,?,?,?,?,?,?,?,?,?,1,?,?,?)",
+            (_brand(), module_key, display_name or Path(filename).stem,
+             code or None, description, relpath, month_key, kind, "[]",
+             1 if create_daily else 0, int(me["id"]), _now_iso(), _now_iso()),
         )
         template_id = cur.lastrowid
+        cur.execute(
+            "INSERT INTO doc_template_versions (template_id, version_label, file_path, "
+            "original_filename, file_size_bytes, is_current, uploaded_by, uploaded_at) "
+            "VALUES (?,?,?,?,?,1,?,?)",
+            (int(template_id), "v1.0", relpath, filename, size_bytes,
+             int(me["id"]), _now_iso()),
+        )
         conn.commit()
-        _ensure_template_previews(template_id, relpath)
+        # PDF previews use PyMuPDF, which can't render .docx — skip for those.
+        if kind == "pdf":
+            _ensure_template_previews(template_id, relpath)
 
         # Optional: create today's requirements per station (admin uploads daily template).
         if create_daily:
@@ -1037,6 +1107,398 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
         if not row: abort(404)
         return storage.send(row["pdf_path"], as_attachment=True)
 
+    # ------------------------------------------------------------------
+    # Template file serve (admin) + Staff library (read-only consumption)
+    # ------------------------------------------------------------------
+
+    def _get_version_row(conn, template_id: int, version_id: int | None):
+        """Return the requested version row, or the current one if none."""
+        if version_id:
+            row = conn.execute(
+                "SELECT id, file_path, original_filename, version_label "
+                "FROM doc_template_versions WHERE id=? AND template_id=?",
+                (int(version_id), int(template_id)),
+            ).fetchone()
+            if row:
+                return dict(row)
+        row = conn.execute(
+            "SELECT id, file_path, original_filename, version_label "
+            "FROM doc_template_versions "
+            "WHERE template_id=? AND is_current=1 "
+            "ORDER BY uploaded_at DESC, id DESC LIMIT 1",
+            (int(template_id),),
+        ).fetchone()
+        return dict(row) if row else None
+
+    def template_serve(template_id: int):
+        """Admin-only: serve the template file (any state, draft included)."""
+        me = _admin_required()
+        inline = (request.args.get("inline") or "").strip() in {"1", "true", "yes"}
+        try:
+            version_id = int(request.args.get("version_id") or 0)
+        except (TypeError, ValueError):
+            version_id = 0
+
+        conn = get_conn()
+        tpl = conn.execute(
+            "SELECT id, code, file_type, file_path "
+            "FROM doc_templates WHERE id=? AND brand=? AND module=? AND COALESCE(is_active,1)=1",
+            (template_id, _brand(), module_key),
+        ).fetchone()
+        if not tpl:
+            conn.close(); abort(404)
+        tpl = dict(tpl)
+        ver = _get_version_row(conn, template_id, version_id or None)
+        conn.close()
+
+        target_rel = (ver or {}).get("file_path") or tpl.get("file_path")
+        if not target_rel:
+            abort(404, description="file_missing")
+
+        try:
+            ctx.log_action(me, "doc_template_admin_view", entity=module_key,
+                           entity_id=str(template_id),
+                           meta={"version_id": (ver or {}).get("id"),
+                                 "inline": bool(inline)})
+        except Exception:
+            pass
+
+        kind = (tpl.get("file_type") or "pdf").lower()
+        as_attachment = not (inline and kind == "pdf")
+        download_name = (ver or {}).get("original_filename") or \
+                        f"{tpl.get('code') or 'plantilla'}.{kind}"
+        return storage.send(target_rel,
+                            as_attachment=as_attachment,
+                            download_name=download_name)
+
+    # ------------------------------------------------------------------
+    # Página de edición de plantilla (admin)
+    # ------------------------------------------------------------------
+
+    def template_edit_page(template_id: int):
+        """Admin: página centralizada de edición de encabezado/logo."""
+        _admin_required()
+        conn = get_conn()
+        tpl = conn.execute(
+            "SELECT id, code, name, description, file_type, file_path, logo_path, "
+            "       month_key, is_published, is_active, created_at, updated_at "
+            "FROM doc_templates "
+            "WHERE id=? AND brand=? AND module=? AND COALESCE(is_active,1)=1",
+            (template_id, _brand(), module_key),
+        ).fetchone()
+        if not tpl:
+            conn.close(); abort(404)
+        versions = [dict(r) for r in conn.execute(
+            "SELECT id, version_label, original_filename, notes, is_current, "
+            "       file_size_bytes, uploaded_at "
+            "FROM doc_template_versions WHERE template_id=? "
+            "ORDER BY uploaded_at DESC, id DESC",
+            (template_id,),
+        ).fetchall()]
+        current_version = next((v for v in versions if v.get("is_current")), None)
+        conn.close()
+        return render_template(
+            f"{template_folder}/template_edit.html",
+            **_base_context(
+                template=dict(tpl),
+                versions=versions,
+                current_version=current_version,
+            ),
+        )
+
+    # ------------------------------------------------------------------
+    # Logo de encabezado — sube un logo y lo incrusta en la plantilla
+    # ------------------------------------------------------------------
+
+    def _apply_logo_to_docx(src_path: Path, logo_path: Path, out_path: Path) -> None:
+        """Abre el DOCX, inserta el logo en la 1ª celda de la 1ª tabla y guarda."""
+        from docx import Document as _DocxDocument
+        from docx.shared import Inches as _Inches
+        doc = _DocxDocument(str(src_path))
+        if not doc.tables:
+            # Sin tabla → insertar imagen al inicio del documento
+            para = doc.paragraphs[0] if doc.paragraphs else doc.add_paragraph()
+            run = para.add_run()
+            run.add_picture(str(logo_path), width=_Inches(1.4))
+        else:
+            cell = doc.tables[0].cell(0, 0)
+            # Limpiar contenido previo de la celda
+            for para in cell.paragraphs:
+                for run in para.runs:
+                    run.text = ""
+            # Insertar logo en el primer párrafo
+            para = cell.paragraphs[0] if cell.paragraphs else cell.add_paragraph()
+            run = para.add_run()
+            run.add_picture(str(logo_path), width=_Inches(1.4))
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        doc.save(str(out_path))
+
+    def _apply_logo_to_pdf(src_path: Path, logo_path: Path, out_path: Path) -> None:
+        """Abre el PDF y dibuja el logo dentro de la celda blanca del encabezado.
+
+        La posición se calcula dinámicamente:
+        1) Se intenta detectar la tabla de cabecera con find_tables() y usar
+           la primera celda (esquina sup-izq).
+        2) Si falla, se buscan rectángulos dibujados en el tercio superior y
+           se toma el más cercano a la esquina sup-izq.
+        3) Como último recurso, se usa una estimación conservadora.
+        """
+        try:
+            import pymupdf as fitz
+        except Exception:
+            import fitz  # type: ignore
+        doc = fitz.open(str(src_path))
+        try:
+            page = doc.load_page(0)
+            page_w = page.rect.width
+            page_h = page.rect.height
+
+            target_rect = None
+
+            # 1) Detección por tabla
+            try:
+                tabs = page.find_tables()
+                tables = getattr(tabs, "tables", []) or []
+                if tables:
+                    # Tabla más alta (cabecera)
+                    top_table = min(tables, key=lambda t: t.bbox[1])
+                    # Primera celda no vacía (algunas pueden ser None por merges)
+                    first_cell = next((c for c in top_table.cells if c), None)
+                    if first_cell:
+                        target_rect = fitz.Rect(*first_cell)
+            except Exception:
+                target_rect = None
+
+            # 2) Detección por rectángulos dibujados
+            if target_rect is None:
+                try:
+                    candidates = []
+                    for d in page.get_drawings():
+                        r = d.get("rect")
+                        if not r:
+                            continue
+                        # Sólo rectángulos del tercio superior con tamaño razonable
+                        if r.y0 < page_h * 0.25 and r.width > 30 and r.height > 25:
+                            candidates.append(r)
+                    if candidates:
+                        # El que esté más a la izquierda-arriba
+                        target_rect = min(candidates, key=lambda r: (r.x0, r.y0))
+                except Exception:
+                    target_rect = None
+
+            # 3) Estimación de fallback (más ajustada que antes)
+            if target_rect is None:
+                target_rect = fitz.Rect(
+                    page_w * 0.04, page_h * 0.012,
+                    page_w * 0.18, page_h * 0.085,
+                )
+
+            # Padding interno para que el logo no toque los bordes de la celda
+            pad_x = target_rect.width * 0.08
+            pad_y = target_rect.height * 0.10
+            logo_rect = fitz.Rect(
+                target_rect.x0 + pad_x,
+                target_rect.y0 + pad_y,
+                target_rect.x1 - pad_x,
+                target_rect.y1 - pad_y,
+            )
+
+            page.insert_image(logo_rect, filename=str(logo_path), keep_proportion=True)
+            out_path.parent.mkdir(parents=True, exist_ok=True)
+            doc.save(str(out_path), deflate=True)
+        finally:
+            doc.close()
+
+    def template_logo_upload(template_id: int):
+        """Admin: sube un logo PNG/JPG, lo incrusta en el DOCX/PDF y crea una nueva versión."""
+        me = _admin_required()
+        f = request.files.get("logo")
+        if not f or not (f.filename or "").strip():
+            abort(400, description="logo_required")
+
+        from pathlib import Path as _Path
+        from werkzeug.utils import secure_filename as _sf
+        import io as _io
+
+        fname = _sf(f.filename or "logo.png")
+        ext = _Path(fname).suffix.lower()
+        if ext not in {".png", ".jpg", ".jpeg", ".webp"}:
+            abort(400, description="Formato no permitido. Usa PNG, JPG o WEBP.")
+
+        conn = get_conn()
+        tpl = conn.execute(
+            "SELECT id, code, file_type, file_path, logo_path "
+            "FROM doc_templates WHERE id=? AND brand=? AND module=? AND COALESCE(is_active,1)=1",
+            (template_id, _brand(), module_key),
+        ).fetchone()
+        if not tpl:
+            conn.close(); abort(404)
+        tpl = dict(tpl)
+
+        ver = _get_version_row(conn, template_id, None)
+        if not ver or not ver.get("file_path"):
+            conn.close(); abort(400, description="La plantilla no tiene archivo cargado aún.")
+        ver = dict(ver)
+
+        # ── Guardar el logo ──────────────────────────────────────────
+        logo_rel = f"{module_key}_template_logos/{_brand()}/{template_id}/logo{ext}"
+        storage.save_upload(f, logo_rel, content_type=f"image/{ext.lstrip('.')}")
+        logo_abs = storage.ensure_local(logo_rel)
+
+        # ── Obtener fuente (versión actual) ──────────────────────────
+        src_rel  = ver["file_path"]
+        src_abs  = storage.ensure_local(src_rel)
+
+        # ── Calcular nombre para la nueva versión ────────────────────
+        prev_label = ver.get("version_label") or "v1.0"
+        new_label  = _bump_version(prev_label)
+        kind       = (tpl.get("file_type") or "pdf").lower()
+        base_name  = _Path(ver.get("original_filename") or f"plantilla.{kind}").stem
+        new_fname  = f"{base_name}_{new_label}.{kind}"
+        new_rel    = f"{module_key}_templates/{_brand()}/logo_versions/{template_id}/{new_fname}"
+        new_abs    = upload_dir / new_rel
+
+        # ── Aplicar logo ─────────────────────────────────────────────
+        try:
+            if kind == "docx":
+                _apply_logo_to_docx(src_abs, logo_abs, new_abs)
+            else:
+                _apply_logo_to_pdf(src_abs, logo_abs, new_abs)
+        except Exception as exc:
+            conn.close()
+            abort(500, description=f"Error al incrustar el logo: {exc}")
+
+        # ── Subir al storage ─────────────────────────────────────────
+        content_type = (
+            "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+            if kind == "docx" else "application/pdf"
+        )
+        storage.upload_local_file(new_abs, new_rel, content_type=content_type)
+        size_bytes = new_abs.stat().st_size if new_abs.exists() else 0
+
+        # ── Registrar versión en BD ──────────────────────────────────
+        cur = conn.cursor()
+        # Desmarcar versión anterior como current
+        cur.execute(
+            "UPDATE doc_template_versions SET is_current=0 WHERE template_id=?",
+            (int(template_id),),
+        )
+        cur.execute(
+            "INSERT INTO doc_template_versions "
+            "(template_id, version_label, file_path, original_filename, "
+            "file_size_bytes, notes, is_current, uploaded_by, uploaded_at) "
+            "VALUES (?,?,?,?,?,?,1,?,?)",
+            (int(template_id), new_label, new_rel, new_fname,
+             size_bytes, "Logo de encabezado aplicado",
+             int(me["id"]), _now_iso()),
+        )
+        cur.execute(
+            "UPDATE doc_templates SET file_path=?, logo_path=?, updated_at=? WHERE id=? AND brand=? AND module=?",
+            (new_rel, logo_rel, _now_iso(), int(template_id), _brand(), module_key),
+        )
+        conn.commit()
+
+        try:
+            ctx.log_action(me, "doc_template_logo_applied", entity=module_key,
+                           entity_id=str(template_id),
+                           meta={"version": new_label, "kind": kind})
+        except Exception:
+            pass
+
+        conn.close()
+        return redirect(f"{admin_base}/templates")
+
+    def staff_library_page():
+        """Staff: grid of published templates for the current module."""
+        _staff_allowed()
+        conn = get_conn()
+        rows = [dict(r) for r in conn.execute(
+            "SELECT t.id, t.code, t.name, t.description, t.file_type, t.month_key, "
+            "       v.version_label AS current_version_label, "
+            "       v.uploaded_at   AS current_version_at "
+            "FROM doc_templates t "
+            "LEFT JOIN doc_template_versions v ON v.template_id=t.id AND v.is_current=1 "
+            "WHERE t.brand=? AND t.module=? AND COALESCE(t.is_active,1)=1 "
+            "      AND t.is_published=1 "
+            "ORDER BY COALESCE(t.updated_at, t.created_at) DESC, t.id DESC",
+            (_brand(), module_key),
+        ).fetchall()]
+        conn.close()
+        return render_template(
+            f"{template_folder}/staff_library.html",
+            **_base_context(items=rows),
+        )
+
+    def staff_library_view(template_id: int):
+        """Staff: detail page with inline PDF or DOCX download."""
+        _staff_allowed()
+        conn = get_conn()
+        tpl_row = conn.execute(
+            "SELECT id, code, name, description, file_type, month_key, "
+            "       created_at, updated_at "
+            "FROM doc_templates "
+            "WHERE id=? AND brand=? AND module=? AND COALESCE(is_active,1)=1 "
+            "      AND is_published=1",
+            (template_id, _brand(), module_key),
+        ).fetchone()
+        if not tpl_row:
+            conn.close(); abort(404)
+        versions = [dict(r) for r in conn.execute(
+            "SELECT id, version_label, original_filename, uploaded_at, is_current, "
+            "       file_size_bytes "
+            "FROM doc_template_versions WHERE template_id=? "
+            "ORDER BY uploaded_at DESC, id DESC",
+            (template_id,),
+        ).fetchall()]
+        conn.close()
+        return render_template(
+            f"{template_folder}/staff_library_view.html",
+            **_base_context(template=dict(tpl_row), versions=versions),
+        )
+
+    def staff_library_serve(template_id: int):
+        """Staff: serve the file. Only published & active templates."""
+        me = _staff_allowed()
+        inline = (request.args.get("inline") or "").strip() in {"1", "true", "yes"}
+        try:
+            version_id = int(request.args.get("version_id") or 0)
+        except (TypeError, ValueError):
+            version_id = 0
+
+        conn = get_conn()
+        tpl = conn.execute(
+            "SELECT id, code, file_type, file_path "
+            "FROM doc_templates "
+            "WHERE id=? AND brand=? AND module=? AND COALESCE(is_active,1)=1 "
+            "      AND is_published=1",
+            (template_id, _brand(), module_key),
+        ).fetchone()
+        if not tpl:
+            conn.close(); abort(404)
+        tpl = dict(tpl)
+        ver = _get_version_row(conn, template_id, version_id or None)
+        conn.close()
+
+        target_rel = (ver or {}).get("file_path") or tpl.get("file_path")
+        if not target_rel:
+            abort(404, description="file_missing")
+
+        try:
+            ctx.log_action(me, "doc_template_staff_view", entity=module_key,
+                           entity_id=str(template_id),
+                           meta={"version_id": (ver or {}).get("id"),
+                                 "inline": bool(inline)})
+        except Exception:
+            pass
+
+        kind = (tpl.get("file_type") or "pdf").lower()
+        as_attachment = not (inline and kind == "pdf")
+        download_name = (ver or {}).get("original_filename") or \
+                        f"{tpl.get('code') or 'plantilla'}.{kind}"
+        return storage.send(target_rel,
+                            as_attachment=as_attachment,
+                            download_name=download_name)
+
     def health():
         me = _staff_allowed(); conn = get_conn()
         templates = conn.execute("SELECT COUNT(*) AS c FROM doc_templates WHERE brand=? AND module=?", (_brand(), module_key)).fetchone()["c"]
@@ -1052,6 +1514,14 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
     _route(f"{admin_base}/templates/<int:template_id>/fields", f"{module_key}_docs_edit_fields", edit_fields)
     _route(f"{admin_base}/templates/<int:template_id>/fields", f"{module_key}_docs_save_fields", save_fields, methods=("POST",))
     _route(f"{admin_base}/templates/<int:template_id>/publish", f"{module_key}_docs_publish_template", publish_template, methods=("POST",))
+    _route(f"{admin_base}/templates/<int:template_id>/file", f"{module_key}_docs_template_serve", template_serve)
+    _route(f"{admin_base}/templates/<int:template_id>/edit", f"{module_key}_docs_template_edit", template_edit_page)
+    _route(f"{admin_base}/templates/<int:template_id>/logo", f"{module_key}_docs_template_logo", template_logo_upload, methods=("POST",))
+
+    # Staff "library" — published templates available for consultation.
+    _route(f"{staff_base}/library", f"{module_key}_docs_staff_library", staff_library_page)
+    _route(f"{staff_base}/library/<int:template_id>", f"{module_key}_docs_staff_library_view", staff_library_view)
+    _route(f"{staff_base}/library/<int:template_id>/file", f"{module_key}_docs_staff_library_serve", staff_library_serve)
     _route(f"{admin_base}/requirements", f"{module_key}_docs_create_requirement", create_requirement, methods=("POST",))
     _route(f"{admin_base}/reviews", f"{module_key}_docs_reviews", reviews)
     _route(f"{admin_base}/submissions/<int:submission_id>/review", f"{module_key}_docs_review_submission", review_submission, methods=("POST",))

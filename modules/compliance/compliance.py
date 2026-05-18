@@ -211,7 +211,7 @@ def register(app):
 
     @app.post("/api/compliance/item/<code>/status")
     @login_required
-    @role_required("admin", "jefe_estacion", "auditor")
+    @role_required("admin", "jefe_estacion")
     def api_compliance_set_status(code: str):
         deny = _ensure_brand_petroleum()
         if deny:
@@ -224,12 +224,48 @@ def register(app):
         expiry_date = (data.get('expiry_date') or '').strip()
         if not station_id or status not in {"pending", "in_review", "approved", "rejected"}:
             return jsonify({"ok": False, "error": "bad_request", "message": "Datos inválidos"}), 400
+        try:
+            sid_req = int(station_id)
+        except Exception:
+            return jsonify({"ok": False, "error": "bad_request", "message": "station_id inválido"}), 400
         conn = get_conn()
         cur = conn.cursor()
         cur.execute("SELECT 1 FROM compliance_items WHERE code=?", (code,))
         if not cur.fetchone():
             conn.close()
             return jsonify({"ok": False, "error": "not_found", "message": "Elemento no existe"}), 404
+
+        # Cross-station write guard (BUG-001 fix).
+        # Espeja la lógica del GET /api/compliance/items: un jefe_estacion sólo
+        # puede tocar estaciones petroleum dentro de su mismo group_name; otros
+        # roles no-admin sólo su propia estación. Sin este check, cualquier
+        # usuario con rol jefe_estacion podía modificar compliance_records de
+        # cualquier estación petroleum.
+        me = get_user(session.get('user_id')) or {}
+        role = (me.get('role') or '').strip().lower()
+        if role != 'admin':
+            sid_owner = me.get('station_id')
+            allowed: set[int] = set()
+            if role == 'jefe_estacion':
+                cur.execute('SELECT group_name FROM stations WHERE id=?', (sid_owner,))
+                rr = cur.fetchone()
+                gname = (rr['group_name'] if rr else None)
+                if gname:
+                    cur.execute(
+                        'SELECT id FROM stations WHERE brand=? AND group_name=?',
+                        ('petroleum', gname),
+                    )
+                    allowed = {int(r['id']) for r in cur.fetchall()}
+                else:
+                    allowed = {int(sid_owner)} if sid_owner else set()
+            else:
+                allowed = {int(sid_owner)} if sid_owner else set()
+            if sid_req not in allowed:
+                conn.close()
+                return jsonify({
+                    "ok": False, "error": "forbidden",
+                    "message": "No tienes acceso a esa estación",
+                }), 403
 
         cur.execute(
             """

@@ -207,14 +207,90 @@ def register(app):
 
         # Document requirements due/open dates
         cur.execute(
-            f"SELECT id, title, due_date, station_id, module, status FROM doc_requirements WHERE brand=? AND date(due_date) BETWEEN date(?) AND date(?) {station_clause} ORDER BY date(due_date) ASC",
-            tuple([brand, d_from.isoformat(), d_to.isoformat()] + params_scope),
+            f"""
+            SELECT r.id, r.title, r.open_date, r.due_date, r.station_id, r.module, r.status,
+                   t.name AS template_name
+            FROM doc_requirements r
+            LEFT JOIN doc_templates t ON t.id=r.template_id AND t.brand=r.brand AND t.module=r.module
+            WHERE r.brand=?
+              AND (date(r.open_date) BETWEEN date(?) AND date(?)
+                   OR date(r.due_date) BETWEEN date(?) AND date(?))
+              {station_clause}
+            ORDER BY date(r.open_date) ASC
+            """,
+            tuple([brand, d_from.isoformat(), d_to.isoformat(),
+                   d_from.isoformat(), d_to.isoformat()] + params_scope),
         )
         for r in cur.fetchall():
-            mod = (r.get("module") or "doc").upper()
-            items.append({"kind": "documento", "title": f"{mod}: {r['title']}", "date": r["due_date"], "station_id": r["station_id"], "status": r.get("status"), "color": "#7c3aed", "url": "/admin/document-center" if me.get("role") == "admin" else "/mod/panel"})
+            mod = (r.get("module") or "doc").lower()
+            mod_upper = mod.upper()
+            tpl_name = r.get("template_name") or r["title"]
+            if me.get("role") == "admin":
+                url = "/admin/document-center"
+            else:
+                url = f"/staff/{mod}/docs/library"
+            items.append({
+                "kind": "documento",
+                "title": f"{mod_upper}: {tpl_name}",
+                "date": r["open_date"],
+                "end_date": r["due_date"],
+                "station_id": r["station_id"],
+                "status": r.get("status"),
+                "color": "#7c3aed",
+                "url": url,
+            })
+
+        # Published templates — visible desde su mes de publicación.
+        # Si el admin sube y publica una plantilla para "2026-05", aparece
+        # en el calendario de todo el mes sin necesitar un doc_requirement.
+        # No tienen station_id, así que son visibles para todo el staff del módulo.
+        cur.execute(
+            """
+            SELECT id, name, description, module, month_key, file_type,
+                   COALESCE(updated_at, created_at) AS pub_at
+            FROM doc_templates
+            WHERE brand=? AND COALESCE(is_active,1)=1 AND is_published=1
+              AND month_key IS NOT NULL AND month_key != ''
+            ORDER BY month_key ASC, id ASC
+            """,
+            (brand,),
+        )
+        for r in cur.fetchall():
+            month_key = (r.get("month_key") or "").strip()  # "YYYY-MM"
+            if len(month_key) < 7:
+                continue
+            try:
+                # Primer día del mes
+                tpl_start = datetime.date.fromisoformat(month_key[:7] + "-01")
+                # Último día del mes
+                if tpl_start.month == 12:
+                    tpl_end = datetime.date(tpl_start.year + 1, 1, 1) - datetime.timedelta(days=1)
+                else:
+                    tpl_end = datetime.date(tpl_start.year, tpl_start.month + 1, 1) - datetime.timedelta(days=1)
+            except Exception:
+                continue
+            # Mostrar solo si el rango del mes cruza el rango visible del calendario
+            if tpl_end < d_from or tpl_start > d_to:
+                continue
+            mod = (r.get("module") or "doc").lower()
+            mod_upper = mod.upper()
+            kind_label = (r.get("file_type") or "pdf").upper()
+            if me.get("role") == "admin":
+                url = f"/admin/{mod}/docs/templates"
+            else:
+                url = f"/staff/{mod}/docs/library"
+            items.append({
+                "kind": "plantilla",
+                "title": f"📄 {mod_upper}: {r['name']}",
+                "date": tpl_start.isoformat(),
+                "end_date": tpl_end.isoformat(),
+                "station_id": None,
+                "color": "#0d9488",   # verde esmeralda — diferente a reqs (morado)
+                "url": url,
+            })
 
         # Library expirations
+
         cur.execute(
             f"SELECT document_id, title, expires_at, station_id, module FROM document_versions WHERE brand=? AND expires_at IS NOT NULL AND date(expires_at) BETWEEN date(?) AND date(?) {station_clause} ORDER BY date(expires_at) ASC",
             tuple([brand, d_from.isoformat(), d_to.isoformat()] + params_scope),

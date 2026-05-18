@@ -1,10 +1,306 @@
-{% extends "layout.html" %}{% block head %}<style>.grid2{display:grid;grid-template-columns:1.2fr 1fr;gap:16px}.cardx{background:#fff;border:1px solid rgba(15,23,42,.08);border-radius:18px;padding:18px;box-shadow:0 10px 30px rgba(2,6,23,.05)}.table{width:100%;border-collapse:collapse}.table th,.table td{padding:10px;border-bottom:1px solid #e5e7eb;text-align:left;font-size:14px}.field{display:grid;gap:6px;margin-bottom:12px}.field input,.field select,.field textarea{padding:10px 12px;border-radius:12px;border:1px solid #cbd5e1}.btnx{display:inline-flex;align-items:center;justify-content:center;padding:10px 14px;border-radius:12px;background:#0f766e;color:#fff;text-decoration:none;font-weight:800;border:0;cursor:pointer}.btnx.alt{background:#0f172a}.muted{color:#64748b}.pill{display:inline-flex;padding:4px 10px;border-radius:999px;font-size:12px;font-weight:800;background:#ecfeff;color:#0f766e}@media (max-width:980px){.grid2{grid-template-columns:1fr}}</style>{% endblock %}{% block content %}<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><h1 style="margin:0 0 6px">Plantillas y programación • {{ module_label }}</h1><div class="muted">Sube PDFs, define sus cajas blancas y programa cuándo se pueden realizar.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btnx alt" href="{{ admin_base }}">Volver al dashboard</a><a class="btnx" href="{{ admin_base }}/reviews">Ir a revisión</a></div></div></div><div class="grid2" style="margin-top:16px"><section class="cardx"><h3 style="margin-top:0">Subir PDF plantilla</h3><form action="{{ admin_base }}/templates/upload" method="post" enctype="multipart/form-data"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="field"><label>Nombre visible</label><input name="name" placeholder="Ej. Documento {{ module_label }} Enero"></div><div class="field"><label>Mes / carpeta</label><input name="month_key" value="2026-01" placeholder="2026-01"></div><div class="field"><label>PDF</label><input type="file" name="pdf" accept="application/pdf" required></div><div style="margin-top:10px;padding:12px;border:1px dashed #cbd5e1;border-radius:14px">
-  <div style="font-weight:900;margin-bottom:6px">Publicar para hoy (opcional)</div>
-  <div class="muted" style="margin-bottom:10px">Si activas esto, al subir la plantilla se crean automáticamente documentos del día para las estaciones seleccionadas. el administrador podrá generar y guardar el documento final por estación.</div>
-  <div class="field"><label><input type="checkbox" name="create_daily" value="1"> Crear documentos para hoy</label></div>
-  <div class="field"><label>Estación (opcional)</label>
-    <select name="daily_station_id"><option value="">Todas las estaciones</option>{% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}</select>
+{% extends "layout.html" %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/documental_docs.css"/>
+<style>
+/* Drawer lateral para formularios */
+.drawer-backdrop{
+  position:fixed;inset:0;background:rgba(2,6,23,.45);
+  opacity:0;visibility:hidden;transition:opacity .2s ease,visibility .2s ease;
+  z-index:90;
+}
+.drawer-backdrop.open{opacity:1;visibility:visible}
+.drawer{
+  position:fixed;top:0;right:0;height:100vh;width:min(560px,94vw);
+  background:#fff;box-shadow:-18px 0 40px rgba(2,6,23,.18);
+  transform:translateX(100%);transition:transform .25s ease;
+  z-index:100;display:flex;flex-direction:column;
+}
+.drawer.open{transform:translateX(0)}
+.drawer-head{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:16px 20px;border-bottom:1px solid var(--hme-border);
+  background:#fff;position:sticky;top:0;z-index:1;
+}
+.drawer-head h3{margin:0;font-size:18px;font-weight:900}
+.drawer-close{
+  background:none;border:0;cursor:pointer;font-size:22px;line-height:1;
+  color:var(--hme-text-soft);padding:4px 10px;border-radius:8px;font-weight:700;
+}
+.drawer-close:hover{background:rgba(15,23,42,.06);color:var(--hme-text)}
+.drawer-body{padding:18px 20px 28px;overflow-y:auto;flex:1}
+body.drawer-open{overflow:hidden}
+
+.dropzone{
+  display:block;border:2px dashed var(--hme-border);border-radius:14px;
+  padding:22px 18px;text-align:center;color:var(--hme-text-soft);
+  cursor:pointer;transition:background .18s,border-color .18s;background:#fff;
+}
+.dropzone:hover,.dropzone.drag{
+  background:rgba(134,184,33,.06);border-color:var(--hme-green);color:var(--hme-text);
+}
+.dropzone .dz-icon{
+  display:inline-flex;align-items:center;justify-content:center;
+  width:38px;height:38px;border-radius:12px;background:rgba(134,184,33,.12);margin-bottom:6px;
+}
+.dropzone .dz-icon svg{width:20px;height:20px;stroke:var(--hme-green-dark);fill:none;stroke-width:2}
+.dropzone .file-name{display:block;margin-top:8px;color:var(--hme-text);font-weight:800;font-size:13px}
+
+.tpl-help{
+  margin-top:14px;padding:12px 14px;background:#f8fafc;
+  border:1px dashed var(--hme-border);border-radius:12px;
+  font-size:13px;color:var(--hme-text-soft);line-height:1.55;
+}
+.daily-box{
+  margin-top:10px;padding:12px 14px;border:1px dashed var(--hme-border);
+  border-radius:14px;background:#fcfcfd;
+}
+
+.tpl-row-actions{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.tpl-row-actions a,.tpl-row-actions button{
+  font-weight:800;background:none;border:0;cursor:pointer;
+  color:var(--hme-green-dark);text-decoration:none;font-size:13px;padding:0;
+}
+.tpl-row-actions a:hover,.tpl-row-actions button:hover{text-decoration:underline}
+.pill-docx{background:rgba(37,99,235,.10);color:#1e3a8a}
+.pill-pdf{background:rgba(220,38,38,.10);color:#991b1b}
+
+.flash{display:none;padding:12px 14px;border-radius:12px;margin-top:14px;font-weight:700;font-size:14px}
+.flash.ok{display:block;background:rgba(34,197,94,.10);color:#166534;border:1px solid rgba(34,197,94,.30)}
+.flash.err{display:block;background:rgba(220,38,38,.08);color:#991b1b;border:1px solid rgba(220,38,38,.30)}
+
+.empty-row{text-align:center;color:var(--hme-text-soft);padding:24px 12px}
+</style>
+{% endblock %}
+
+{% block content %}
+{% set subheader_back_url = '/admin/menu' %}{% set subheader_back_label = 'Volver a módulos' %}
+{% include 'documental_docs/_subheader.html' %}
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <div>
+      <div class="muted" style="text-transform:uppercase;font-weight:800;letter-spacing:.6px;font-size:11px">{{ module_label }} · Plantillas</div>
+      <h1 style="margin:4px 0 6px">Plantillas y programación</h1>
+      <div class="muted">Sube archivos <b>.docx</b> o <b>.pdf</b>, define cuándo deben realizarse y publícalas para las estaciones.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btnx alt" href="{{ admin_base }}">← Volver al dashboard</a>
+      <button type="button" class="btnx ghost" data-open-drawer="drawer-new-template">+ Nueva plantilla</button>
+      <button type="button" class="btnx ghost" data-open-drawer="drawer-schedule-doc">+ Programar documento</button>
+      <a class="btnx" href="{{ admin_base }}/reviews">Ir a revisión</a>
+    </div>
   </div>
-  <div class="field"><label>Título (opcional)</label><input name="daily_title" placeholder="Ej. Plantilla del día"></div>
-  <div class="field"><label>Fecha límite (opcional)</label><input type="date" name="daily_due_date"></div>
-</div><button class="btnx" type="submit">Subir plantilla</button></form><hr style="margin:18px 0;border:none;border-top:1px solid #e5e7eb"><h3 style="margin-top:0">Programar documento administrativo</h3><form action="{{ admin_base }}/requirements" method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="field"><label>Título de la tarea</label><input name="title" required placeholder="Ej. Elaborar documento {{ module_label }}"></div><div class="field"><label>Plantilla</label><select name="template_id" required><option value="">Selecciona...</option>{% for tpl in templates %}<option value="{{ tpl.id }}">{{ tpl.name }} {% if tpl.month_key %}• {{ tpl.month_key }}{% endif %}</option>{% endfor %}</select></div><div class="field"><label>Se habilita el día</label><input type="date" name="open_date" required></div><div class="field"><label>Fecha límite</label><input type="date" name="due_date" required></div><div class="field"><label>Estación (opcional)</label><select name="station_id"><option value="">Todas / no aplica</option>{% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}</select></div><div class="field"><label>Usuario asignado (recomendado)</label><select name="assigned_user_id"><option value="">Sin asignar</option>{% for u in users %}<option value="{{ u.id }}">{{ u.username }} • {{ u.role }}</option>{% endfor %}</select></div><button class="btnx" type="submit">Programar documento</button></form></section><section class="cardx"><h3 style="margin-top:0">Plantillas cargadas</h3><table class="table"><thead><tr><th>Nombre</th><th>Mes</th><th>Campos</th><th>Acciones</th></tr></thead><tbody>{% for tpl in templates %}<tr><td><div style="font-weight:800">{{ tpl.name }}</div><div class="muted">{{ tpl.file_path }}</div></td><td>{{ tpl.month_key or '-' }}</td><td><span class="pill">{{ tpl.field_count }} campos</span> {% if tpl.is_published %}<span class="pill">PUBLICADA</span>{% endif %}</td><td><div style="display:flex;gap:8px;flex-wrap:wrap"><a href="{{ admin_base }}/templates/{{ tpl.id }}/fields">Editar cuadros</a> <a href="{{ admin_base }}/templates/{{ tpl.id }}/record">Generar y guardar</a>{% if not tpl.is_published %}<form action="{{ admin_base }}/templates/{{ tpl.id }}/publish" method="post" style="display:inline"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><button type="submit" style="border:0;background:none;color:#0f766e;font-weight:800;cursor:pointer">Publicar</button></form>{% endif %}</div></td></tr>{% else %}<tr><td colspan="4" class="muted">No hay plantillas cargadas aún.</td></tr>{% endfor %}</tbody></table></section></div>{% endblock %}
+</div>
+
+<div id="flash" class="flash" role="status"></div>
+
+<section class="cardx" style="margin-top:16px">
+  <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:6px">
+    <h3 style="margin:0">Plantillas cargadas <span class="muted" style="font-weight:600;font-size:14px">· {{ module_label }}</span></h3>
+  </div>
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Plantilla</th>
+        <th style="width:140px">Mes / Versión</th>
+        <th style="width:300px;text-align:right">Acciones</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for tpl in templates %}
+      {% set kind = (tpl.file_type or 'pdf')|lower %}
+      <tr>
+        <td>
+          <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-bottom:2px">
+            <div style="font-weight:800">{{ tpl.name }}</div>
+            {% if kind == 'pdf' %}<span class="pill pill-pdf">PDF</span>{% else %}<span class="pill pill-docx">DOCX</span>{% endif %}
+            {% if tpl.is_published %}<span class="pill" style="font-size:11px">Publicada</span>{% else %}<span class="muted" style="font-size:11px;font-weight:700">Borrador</span>{% endif %}
+          </div>
+          {% if tpl.code or tpl.description %}
+          <div class="muted" style="font-size:12px">{% if tpl.code %}{{ tpl.code }}{% endif %}{% if tpl.code and tpl.description %} · {% endif %}{% if tpl.description %}{{ tpl.description }}{% endif %}</div>
+          {% endif %}
+          {% if kind == 'pdf' and tpl.field_count is defined %}
+          <div class="muted" style="font-size:11px;margin-top:2px">{{ tpl.field_count }} campo{{ '' if tpl.field_count == 1 else 's' }}</div>
+          {% endif %}
+        </td>
+        <td>
+          <div>{{ tpl.month_key or '-' }}</div>
+          <div class="muted" style="font-size:12px">{{ tpl.current_version_label or 'v1.0' }}</div>
+        </td>
+        <td>
+          <div class="tpl-row-actions">
+            {% if kind == 'pdf' %}
+              <a href="{{ admin_base }}/templates/{{ tpl.id }}/file?inline=1" target="_blank" rel="noopener">Ver</a>
+            {% else %}
+              <a href="{{ admin_base }}/templates/{{ tpl.id }}/file">Descargar</a>
+            {% endif %}
+            <a href="{{ admin_base }}/templates/{{ tpl.id }}/edit" style="font-weight:900">Editar</a>
+            {% if kind == 'pdf' %}
+              <a href="{{ admin_base }}/templates/{{ tpl.id }}/fields">Campos</a>
+              <a href="{{ admin_base }}/templates/{{ tpl.id }}/record">Generar</a>
+            {% endif %}
+            {% if not tpl.is_published %}
+            <form action="{{ admin_base }}/templates/{{ tpl.id }}/publish" method="post" style="display:inline">
+              <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+              <button type="submit">Publicar</button>
+            </form>
+            {% endif %}
+          </div>
+        </td>
+      </tr>
+
+      {% else %}
+      <tr><td colspan="3" class="empty-row">No hay plantillas cargadas aún.</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</section>
+
+<!-- Drawer: Nueva plantilla -->
+<div class="drawer-backdrop" id="drawer-backdrop"></div>
+<aside class="drawer" id="drawer-new-template" aria-hidden="true" role="dialog" aria-labelledby="drawer-new-template-title">
+  <div class="drawer-head">
+    <h3 id="drawer-new-template-title">Nueva plantilla</h3>
+    <button type="button" class="drawer-close" data-close-drawer aria-label="Cerrar">×</button>
+  </div>
+  <div class="drawer-body">
+    <form id="upload-form" action="{{ admin_base }}/templates/upload" method="post" enctype="multipart/form-data" autocomplete="off">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+      <div class="field">
+        <label>Nombre visible</label>
+        <input name="name" required placeholder="Ej. Documento {{ module_label }} Enero">
+      </div>
+      <div class="field">
+        <label>Código <span class="muted" style="font-weight:500">— opcional, corto y sin espacios</span></label>
+        <input name="code" placeholder="Ej. bitacora_mensual" pattern="[a-z0-9_\-]*">
+      </div>
+      <div class="field">
+        <label>Descripción <span class="muted" style="font-weight:500">— opcional</span></label>
+        <textarea name="description" rows="2" placeholder="Breve descripción del propósito"></textarea>
+      </div>
+      <div class="field">
+        <label>Mes / carpeta</label>
+        <input name="month_key" placeholder="2026-01">
+      </div>
+      <div class="field">
+        <label>Archivo (.docx o .pdf)</label>
+        <label class="dropzone" id="dropzone">
+          <span class="dz-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3v12m0 0l-4-4m4 4l4-4M5 21h14"/></svg>
+          </span>
+          <div><b>Haz clic</b> o arrastra aquí tu archivo <b>.docx</b> o <b>.pdf</b></div>
+          <input type="file" name="file" accept=".docx,.pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf" required style="display:none">
+          <span class="file-name" id="file-name"></span>
+        </label>
+      </div>
+
+      <div class="daily-box">
+        <div style="font-weight:900;margin-bottom:6px">Publicar para hoy (opcional, solo PDF)</div>
+        <div class="muted" style="margin-bottom:10px">Si activas esto, al subir la plantilla se crean automáticamente documentos del día para las estaciones seleccionadas.</div>
+        <div class="field"><label><input type="checkbox" name="create_daily" value="1"> Crear documentos para hoy</label></div>
+        <div class="field"><label>Estación (opcional)</label>
+          <select name="daily_station_id"><option value="">Todas las estaciones</option>{% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}</select>
+        </div>
+        <div class="field"><label>Título (opcional)</label><input name="daily_title" placeholder="Ej. Plantilla del día"></div>
+        <div class="field"><label>Fecha límite (opcional)</label><input type="date" name="daily_due_date"></div>
+      </div>
+
+      <button class="btnx" type="submit" id="upload-btn">Subir plantilla</button>
+    </form>
+
+    <div class="tpl-help">
+      Acepta <b>Word (.docx)</b> y <b>PDF</b>. Una vez subida, podrás programarla, asignarla a una estación, publicarla y ver el archivo. La identificación de áreas editables se hará en una etapa posterior.
+    </div>
+  </div>
+</aside>
+
+<!-- Drawer: Programar documento -->
+<aside class="drawer" id="drawer-schedule-doc" aria-hidden="true" role="dialog" aria-labelledby="drawer-schedule-doc-title">
+  <div class="drawer-head">
+    <h3 id="drawer-schedule-doc-title">Programar documento administrativo</h3>
+    <button type="button" class="drawer-close" data-close-drawer aria-label="Cerrar">×</button>
+  </div>
+  <div class="drawer-body">
+    <form action="{{ admin_base }}/requirements" method="post">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <div class="field"><label>Título de la tarea</label><input name="title" required placeholder="Ej. Elaborar documento {{ module_label }}"></div>
+      <div class="field"><label>Plantilla</label>
+        <select name="template_id" required>
+          <option value="">Selecciona...</option>
+          {% for tpl in templates %}<option value="{{ tpl.id }}">{{ tpl.name }} {% if tpl.month_key %}• {{ tpl.month_key }}{% endif %}</option>{% endfor %}
+        </select>
+      </div>
+      <div class="field"><label>Se habilita el día</label><input type="date" name="open_date" required></div>
+      <div class="field"><label>Fecha límite</label><input type="date" name="due_date" required></div>
+      <div class="field"><label>Estación (opcional)</label>
+        <select name="station_id"><option value="">Todas / no aplica</option>{% for st in stations %}<option value="{{ st.id }}">{{ st.code }} • {{ st.name }}</option>{% endfor %}</select>
+      </div>
+      <div class="field"><label>Usuario asignado (recomendado)</label>
+        <select name="assigned_user_id"><option value="">Sin asignar</option>{% for u in users %}<option value="{{ u.id }}">{{ u.username }} • {{ u.role }}</option>{% endfor %}</select>
+      </div>
+      <button class="btnx" type="submit">Programar documento</button>
+    </form>
+  </div>
+</aside>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function(){
+  const dz = document.getElementById('dropzone');
+  if(!dz) return;
+  const fileInput = dz.querySelector('input[type=file]');
+  const fileName = document.getElementById('file-name');
+  fileInput.addEventListener('change', () => {
+    fileName.textContent = fileInput.files[0] ? fileInput.files[0].name : '';
+  });
+  ['dragenter','dragover'].forEach(ev => dz.addEventListener(ev, e => {
+    e.preventDefault(); dz.classList.add('drag');
+  }));
+  ['dragleave','drop'].forEach(ev => dz.addEventListener(ev, e => {
+    e.preventDefault(); dz.classList.remove('drag');
+  }));
+  dz.addEventListener('drop', e => {
+    if(e.dataTransfer.files && e.dataTransfer.files.length){
+      fileInput.files = e.dataTransfer.files;
+      fileName.textContent = fileInput.files[0].name;
+    }
+  });
+})();
+
+// Drawer lateral: apertura/cierre
+(function(){
+  const backdrop = document.getElementById('drawer-backdrop');
+  const drawers = document.querySelectorAll('.drawer');
+  if(!backdrop || !drawers.length) return;
+
+  function openDrawer(id){
+    const d = document.getElementById(id);
+    if(!d) return;
+    d.classList.add('open');
+    d.setAttribute('aria-hidden','false');
+    backdrop.classList.add('open');
+    document.body.classList.add('drawer-open');
+  }
+  function closeDrawers(){
+    drawers.forEach(d => { d.classList.remove('open'); d.setAttribute('aria-hidden','true'); });
+    backdrop.classList.remove('open');
+    document.body.classList.remove('drawer-open');
+  }
+
+  document.querySelectorAll('[data-open-drawer]').forEach(btn => {
+    btn.addEventListener('click', () => openDrawer(btn.getAttribute('data-open-drawer')));
+  });
+  document.querySelectorAll('[data-close-drawer]').forEach(btn => {
+    btn.addEventListener('click', closeDrawers);
+  });
+  backdrop.addEventListener('click', closeDrawers);
+  document.addEventListener('keydown', e => {
+    if(e.key === 'Escape') closeDrawers();
+  });
+})();
+
+
+</script>
+{% endblock %}
