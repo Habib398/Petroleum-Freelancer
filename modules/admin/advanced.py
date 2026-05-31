@@ -196,13 +196,18 @@ def register(app):
             items = [it for it in items if q in ((it.get("title") or "") + " " + (it.get("body") or "") + " " + (it.get("category") or "")).lower()]
         return jsonify({"ok": True, "items": items, "branding": get_branding_settings(brand)})
 
+    _INCIDENT_STATUSES = {"pendiente", "leido", "atendido", "reportado"}
+    _INCIDENT_OPERATIVE_ROLES = ("operador", "jefe_estacion")
+
     @app.get("/mod/incidents")
     @login_required
+    @role_required(*_INCIDENT_OPERATIVE_ROLES)
     def incidents_page():
         return render_template("mod/incidents.html")
 
     @app.get("/api/incidents")
     @login_required
+    @role_required(*_INCIDENT_OPERATIVE_ROLES)
     def api_incidents_list():
         me = ctx.get_me() or {}
         brand = get_brand()
@@ -210,27 +215,57 @@ def register(app):
         conn = get_conn(); cur = conn.cursor()
         params = [brand]
         sql = (
-            "SELECT i.*, s.code AS station_code, s.name AS station_name, u.username AS assigned_name "
-            "FROM incident_logs i LEFT JOIN stations s ON s.id=i.station_id LEFT JOIN users u ON u.id=i.assigned_to WHERE i.brand=?"
+            "SELECT i.*, s.code AS station_code, s.name AS station_name, "
+            "u.username AS assigned_name, c.username AS created_by_name, "
+            "ack.username AS acknowledged_by_name "
+            "FROM incident_logs i "
+            "LEFT JOIN stations s ON s.id=i.station_id "
+            "LEFT JOIN users u ON u.id=i.assigned_to "
+            "LEFT JOIN users c ON c.id=i.created_by "
+            "LEFT JOIN users ack ON ack.id=i.acknowledged_by "
+            "WHERE i.brand=?"
         )
-        if status in {"open", "in_progress", "closed"}:
+        if status in _INCIDENT_STATUSES:
             sql += " AND i.status=?"
             params.append(status)
-        if me.get("role") != "admin":
-            scope = sorted(list(ctx.station_scope_ids(me)))
-            if scope:
-                sql += " AND (i.station_id IS NULL OR i.station_id IN (%s))" % ",".join(["?"] * len(scope))
-                params.extend(scope)
-            else:
-                sql += " AND i.station_id IS NULL"
-        sql += " ORDER BY CASE i.status WHEN 'open' THEN 0 WHEN 'in_progress' THEN 1 ELSE 2 END, i.id DESC LIMIT 300"
+        scope = sorted(list(ctx.station_scope_ids(me)))
+        if scope:
+            sql += " AND (i.station_id IS NULL OR i.station_id IN (%s))" % ",".join(["?"] * len(scope))
+            params.extend(scope)
+        else:
+            sql += " AND i.station_id IS NULL"
+        sql += (
+            " ORDER BY CASE i.status WHEN 'pendiente' THEN 0 WHEN 'leido' THEN 1 ELSE 2 END,"
+            " i.id DESC LIMIT 300"
+        )
         cur.execute(sql, tuple(params))
         rows = [dict(r) for r in cur.fetchall()]
         conn.close()
         return jsonify({"ok": True, "items": rows})
 
+    @app.get("/api/incidents/pending-count")
+    @login_required
+    @role_required(*_INCIDENT_OPERATIVE_ROLES)
+    def api_incidents_pending_count():
+        me = ctx.get_me() or {}
+        brand = get_brand()
+        scope = sorted(list(ctx.station_scope_ids(me)))
+        conn = get_conn(); cur = conn.cursor()
+        sql = "SELECT COUNT(*) AS c FROM incident_logs WHERE brand=? AND status='pendiente'"
+        params = [brand]
+        if scope:
+            sql += " AND (station_id IS NULL OR station_id IN (%s))" % ",".join(["?"] * len(scope))
+            params.extend(scope)
+        else:
+            sql += " AND station_id IS NULL"
+        cur.execute(sql, tuple(params))
+        count = int(cur.fetchone()["c"] or 0)
+        conn.close()
+        return jsonify({"ok": True, "count": count})
+
     @app.post("/api/incidents")
     @login_required
+    @role_required(*_INCIDENT_OPERATIVE_ROLES)
     def api_incidents_create():
         me = ctx.get_me() or {}
         payload = request.get_json(silent=True) or {}
@@ -248,34 +283,37 @@ def register(app):
         else:
             station_id = int(me.get("station_id")) if me.get("station_id") else None
         severity = (payload.get("severity") or "medium").strip().lower()
-        status = (payload.get("status") or "open").strip().lower()
         if severity not in {"low", "medium", "high", "critical"}:
             severity = "medium"
-        if status not in {"open", "in_progress", "closed"}:
-            status = "open"
-        assigned_to = payload.get("assigned_to")
-        if assigned_to not in (None, ""):
-            try:
-                assigned_to = int(assigned_to)
-            except Exception:
-                assigned_to = None
+        brand = get_brand()
         conn = get_conn(); cur = conn.cursor()
         cur.execute(
-            "INSERT INTO incident_logs (brand, station_id, module, category, severity, status, title, description, created_by, assigned_to, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,CURRENT_TIMESTAMP)",
+            "INSERT INTO incident_logs (brand, station_id, module, category, severity, status, title, description, created_by, updated_at) "
+            "VALUES (?,?,?,?,?,'pendiente',?,?,?,CURRENT_TIMESTAMP)",
             (
-                get_brand(), station_id, (payload.get("module") or "general").strip(), (payload.get("category") or "general").strip(),
-                severity, status, title, (payload.get("description") or "").strip() or None, me.get("id"), assigned_to,
+                brand, station_id, (payload.get("module") or "general").strip(),
+                (payload.get("category") or "general").strip(), severity,
+                title, (payload.get("description") or "").strip() or None, me.get("id"),
             ),
         )
         incident_id = int(cur.lastrowid)
         conn.commit(); conn.close()
-        ctx.log_action(me, "create_incident", "incident_logs", str(incident_id), {"station_id": station_id, "severity": severity, "status": status})
-        if assigned_to:
-            ctx.notify(int(assigned_to), station_id, "Incidencia asignada", title[:180], "/mod/incidents", ntype="incident", brand=get_brand())
+        ctx.log_action(me, "create_incident", "incident_logs", str(incident_id), {"station_id": station_id, "severity": severity, "status": "pendiente"})
+        if station_id:
+            ctx.notify_station_chiefs(
+                int(station_id),
+                "Nueva incidencia pendiente",
+                title[:180],
+                "/mod/incidents",
+                exclude_user_id=me.get("id"),
+                ntype="incident",
+                brand=brand,
+            )
         return jsonify({"ok": True, "id": incident_id})
 
     @app.patch("/api/incidents/<int:incident_id>")
     @login_required
+    @role_required("jefe_estacion")
     def api_incidents_update(incident_id: int):
         me = ctx.get_me() or {}
         payload = request.get_json(silent=True) or {}
@@ -286,19 +324,28 @@ def register(app):
             conn.close(); return jsonify({"ok": False, "error": "not_found"}), 404
         if not _station_scope_filter(ctx, me, row.get("station_id")):
             conn.close(); return jsonify({"ok": False, "error": "forbidden_station"}), 403
-        status = (payload.get("status") or row.get("status") or "open").strip().lower()
-        if status not in {"open", "in_progress", "closed"}:
-            status = row.get("status") or "open"
-        assigned_to = payload.get("assigned_to", row.get("assigned_to"))
-        try:
-            assigned_to = int(assigned_to) if assigned_to not in (None, "") else None
-        except Exception:
-            assigned_to = row.get("assigned_to")
-        resolved_at = ctx.now_iso() if status == "closed" else None
+        prev_status = (row.get("status") or "pendiente").strip().lower()
+        new_status = (payload.get("status") or prev_status).strip().lower()
+        if new_status not in _INCIDENT_STATUSES:
+            new_status = prev_status
+        # acknowledged_*: se fija la primera vez que la incidencia sale de "pendiente".
+        ack_by = row.get("acknowledged_by")
+        ack_at = row.get("acknowledged_at")
+        if new_status != "pendiente" and not ack_by:
+            ack_by = me.get("id")
+            ack_at = ctx.now_iso()
+        # resolved_*: se fija la primera vez que la incidencia entra a un estado terminal.
+        resolved_by = row.get("resolved_by")
+        resolved_at = row.get("resolved_at")
+        if new_status in ("atendido", "reportado") and not resolved_by:
+            resolved_by = me.get("id")
+            resolved_at = ctx.now_iso()
         cur.execute(
-            "UPDATE incident_logs SET status=?, assigned_to=?, resolved_by=?, resolved_at=?, updated_at=CURRENT_TIMESTAMP, description=?, title=?, severity=? WHERE id=? AND brand=?",
+            "UPDATE incident_logs SET status=?, acknowledged_by=?, acknowledged_at=?, "
+            "resolved_by=?, resolved_at=?, updated_at=CURRENT_TIMESTAMP, "
+            "description=?, title=?, severity=? WHERE id=? AND brand=?",
             (
-                status, assigned_to, me.get("id") if status == "closed" else None, resolved_at,
+                new_status, ack_by, ack_at, resolved_by, resolved_at,
                 (payload.get("description") or row.get("description") or "").strip() or None,
                 (payload.get("title") or row.get("title") or "").strip(),
                 (payload.get("severity") or row.get("severity") or "medium").strip().lower(),
@@ -306,7 +353,7 @@ def register(app):
             ),
         )
         conn.commit(); conn.close()
-        ctx.log_action(me, "update_incident", "incident_logs", str(incident_id), {"status": status, "assigned_to": assigned_to})
+        ctx.log_action(me, "update_incident", "incident_logs", str(incident_id), {"prev_status": prev_status, "status": new_status})
         return jsonify({"ok": True})
 
     @app.get("/mod/corrections")
@@ -561,12 +608,8 @@ def register(app):
             alerts = int(cur.fetchone()["c"] or 0)
             cur.execute("SELECT COUNT(*) AS c FROM correction_tasks WHERE brand=? AND station_id=? AND status IN ('open','in_progress')", (brand, sid))
             tasks = int(cur.fetchone()["c"] or 0)
-            cur.execute("SELECT COUNT(*) AS c FROM incident_logs WHERE brand=? AND station_id=? AND status IN ('open','in_progress')", (brand, sid))
-            incidents = int(cur.fetchone()["c"] or 0)
-            station_breakdown.append({"station": st["code"], "alerts": alerts, "tasks": tasks, "incidents": incidents})
+            station_breakdown.append({"station": st["code"], "alerts": alerts, "tasks": tasks})
         cur.execute("SELECT status, COUNT(*) AS c FROM correction_tasks WHERE brand=? GROUP BY status", (brand,))
         task_status = {r["status"]: int(r["c"] or 0) for r in cur.fetchall()}
-        cur.execute("SELECT status, COUNT(*) AS c FROM incident_logs WHERE brand=? GROUP BY status", (brand,))
-        incident_status = {r["status"]: int(r["c"] or 0) for r in cur.fetchall()}
         conn.close()
-        return jsonify({"ok": True, "station_breakdown": station_breakdown, "task_status": task_status, "incident_status": incident_status})
+        return jsonify({"ok": True, "station_breakdown": station_breakdown, "task_status": task_status})

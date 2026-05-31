@@ -212,12 +212,12 @@
     try{
       const r = await fetch('/api/admin/dashboard/charts');
       const j = await r.json();
-      const st = (j.station_breakdown||[]).slice(0,8).map(x=>({label:x.station, value:(Number(x.alerts||0)+Number(x.tasks||0)+Number(x.incidents||0))}));
+      const st = (j.station_breakdown||[]).slice(0,8).map(x=>({label:x.station, value:(Number(x.alerts||0)+Number(x.tasks||0))}));
       drawBars($('stationBars'), st.length?st:[{label:'Sin datos', value:0}]);
       const status = [];
-      const task = j.task_status||{}; const inc = j.incident_status||{};
-      ['open','in_progress','done','cancelled','closed'].forEach(k=>{
-        const v = Number(task[k]||0) + Number(inc[k]||0);
+      const task = j.task_status||{};
+      ['open','in_progress','done','cancelled'].forEach(k=>{
+        const v = Number(task[k]||0);
         if(v>0) status.push({label:k, value:v});
       });
       drawBars($('statusBars'), status.length?status:[{label:'Sin datos', value:0}]);

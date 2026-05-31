@@ -126,6 +126,7 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
         data = json.loads(text or "[]")
         if not isinstance(data, list):
             raise ValueError("El esquema debe ser una lista JSON")
+        allowed_types = {"text", "textarea", "date", "number", "checkbox"}
         cleaned: list[dict] = []
         for idx, item in enumerate(data, start=1):
             if not isinstance(item, dict):
@@ -134,15 +135,19 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
             label = str(item.get("label") or key or f"Campo {idx}").strip()
             if not key:
                 raise ValueError(f"Fila {idx}: falta key")
+            field_type = str(item.get("type") or "text").strip().lower()
+            if field_type not in allowed_types:
+                field_type = "text"
             page = int(item.get("page", 0))
             x = float(item.get("x", 0))
             y = float(item.get("y", 0))
-            w = float(item.get("w", 220))
-            h = float(item.get("h", 18))
+            # Defaults más pequeños para checkbox; el editor visual los sobreescribe
+            default_w, default_h = (14.0, 14.0) if field_type == "checkbox" else (220.0, 18.0)
+            w = float(item.get("w", default_w))
+            h = float(item.get("h", default_h))
             font_size = float(item.get("font_size", 10))
             max_len = int(item.get("max_len", 160))
             align = str(item.get("align") or "left").strip().lower()
-            field_type = str(item.get("type") or "text").strip().lower()
             cleaned.append({
                 "key": key,
                 "label": label,
@@ -154,7 +159,7 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
                 "font_size": font_size,
                 "max_len": max_len,
                 "align": align if align in {"left", "center", "right"} else "left",
-                "type": field_type if field_type in {"text", "textarea", "date", "number"} else "text",
+                "type": field_type,
                 "placeholder": str(item.get("placeholder") or ""),
                 "staff_editable": True if item.get("staff_editable") in {True, 1, "1", "true", "yes", "on"} else False,
             })
@@ -164,23 +169,38 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
         src = storage.ensure_local(template_relpath)
         out = upload_dir / out_relpath
         out.parent.mkdir(parents=True, exist_ok=True)
+        truthy = {"1", "true", "yes", "on", "checked", "x", "✓"}
         doc = fitz.open(src)
         try:
             for field in schema:
                 page_no = int(field.get("page", 0))
                 if page_no < 0 or page_no >= len(doc):
                     continue
-                value = str(values.get(field["key"], "") or "").strip()
+                page = doc.load_page(page_no)
+                x = float(field.get("x", 0))
+                y = float(field.get("y", 0))
+                w = float(field.get("w", 220))
+                h = float(field.get("h", 18))
+                field_type = str(field.get("type") or "text").strip().lower()
+                raw_value = values.get(field["key"], "")
+
+                if field_type == "checkbox":
+                    if str(raw_value).strip().lower() not in truthy:
+                        continue
+                    # Palomita (✓): dos líneas dentro del rect
+                    p0 = fitz.Point(x + w * 0.18, y + h * 0.55)
+                    p1 = fitz.Point(x + w * 0.42, y + h * 0.82)
+                    p2 = fitz.Point(x + w * 0.86, y + h * 0.18)
+                    stroke = max(1.0, min(w, h) * 0.12)
+                    page.draw_line(p0, p1, color=(0, 0, 0), width=stroke)
+                    page.draw_line(p1, p2, color=(0, 0, 0), width=stroke)
+                    continue
+
+                value = str(raw_value or "").strip()
                 if not value:
                     continue
                 value = value[: int(field.get("max_len", 160))]
-                page = doc.load_page(page_no)
-                rect = fitz.Rect(
-                    float(field.get("x", 0)),
-                    float(field.get("y", 0)),
-                    float(field.get("x", 0)) + float(field.get("w", 220)),
-                    float(field.get("y", 0)) + float(field.get("h", 18)),
-                )
+                rect = fitz.Rect(x, y, x + w, y + h)
                 align_value = {"left": 0, "center": 1, "right": 2}.get(str(field.get("align", "left")), 0)
                 page.insert_textbox(
                     rect,
@@ -338,8 +358,9 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
 
     def _example_schema() -> str:
         return json.dumps([
-            {"key": "fecha", "label": "Fecha", "page": 0, "x": 380, "y": 130, "w": 140, "h": 18, "font_size": 10, "max_len": 40, "align": "left", "type": "date", "placeholder": "2026-01-15", "staff_editable": true},
-            {"key": "responsable", "label": "Responsable", "page": 0, "x": 130, "y": 210, "w": 250, "h": 18, "font_size": 10, "max_len": 90, "align": "left", "type": "text", "placeholder": "Nombre completo", "staff_editable": false},
+            {"key": "fecha", "label": "Fecha", "page": 0, "x": 380, "y": 130, "w": 140, "h": 18, "font_size": 10, "max_len": 40, "align": "left", "type": "date", "placeholder": "2026-01-15", "staff_editable": True},
+            {"key": "responsable", "label": "Responsable", "page": 0, "x": 130, "y": 210, "w": 250, "h": 18, "font_size": 10, "max_len": 90, "align": "left", "type": "text", "placeholder": "Nombre completo", "staff_editable": False},
+            {"key": "mes_enero", "label": "Enero", "page": 0, "x": 320, "y": 380, "w": 14, "h": 14, "type": "checkbox", "staff_editable": True},
         ], ensure_ascii=False, indent=2)
 
     def _base_context(**extra):
@@ -1066,8 +1087,22 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
         if not editable:
             conn.close()
             abort(403)
+        # Para el overlay necesitamos el schema completo (para mostrar campos no
+        # editables como referencia visual) + las imágenes preview del PDF.
+        previews = _ensure_template_previews(int(tpl["id"]), tpl["file_path"]) if tpl and tpl.get("file_path") else []
+        editable_keys = [f.get("key") for f in editable if f.get("key")]
         conn.close()
-        return render_template(f"{template_folder}/staff_record_edit.html", **_base_context(record=dict(row), template_row=dict(tpl) if tpl else None, schema=editable, values=values))
+        return render_template(
+            f"{template_folder}/staff_record_edit.html",
+            **_base_context(
+                record=dict(row),
+                template_row=dict(tpl) if tpl else None,
+                schema=schema,
+                editable_keys=editable_keys,
+                values=values,
+                previews=previews,
+            ),
+        )
 
     def staff_record_edit_save(record_id: int):
         me = _staff_allowed()

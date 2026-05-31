@@ -1,6 +1,65 @@
 {% extends "layout.html" %}
 {% block head %}
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css">
+<link rel="stylesheet" href="/static/css/calendar-shared.css">
+<style>
+  /* === Específico de Calendario Operativo === */
+  .opcal-wrap { display:flex; flex-direction:column; gap:14px; }
+
+  /* Color por tipo en los chips de filtro */
+  .cal-chip.on[data-kind="actividad"]{ background:rgba(37,99,235,.10); color:#1d4ed8; border-color:rgba(37,99,235,.25); }
+  .cal-chip.on[data-kind="documento"]{ background:rgba(124,58,237,.10); color:#6d28d9; border-color:rgba(124,58,237,.25); }
+  .cal-chip.on[data-kind="vencimiento"]{ background:rgba(234,88,12,.10); color:#c2410c; border-color:rgba(234,88,12,.25); }
+  .cal-chip.on[data-kind="cumplimiento"]{ background:rgba(220,38,38,.10); color:#b91c1c; border-color:rgba(220,38,38,.25); }
+
+  /* Banner / tira de plantillas del mes */
+  .opcal-tplstrip{
+    display:none;
+    padding:12px 14px; border-radius:14px;
+    background:linear-gradient(180deg, rgba(13,148,136,.06), rgba(13,148,136,.02));
+    border:1px solid rgba(13,148,136,.18);
+  }
+  .opcal-tplstrip.show{ display:block; }
+  .opcal-tplstrip-head{
+    display:flex; align-items:center; gap:10px; margin-bottom:8px;
+    font-size:12px; font-weight:800; color:#0f766e;
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .opcal-tplstrip-head .pill{
+    background:rgba(13,148,136,.15); color:#0f766e;
+    padding:2px 8px; border-radius:999px;
+    font-size:11px; font-weight:800;
+  }
+  .opcal-tplstrip-list{ display:flex; flex-wrap:wrap; gap:6px; }
+  .opcal-tplchip{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:5px 10px; border-radius:8px;
+    background:#fff; border:1px solid rgba(13,148,136,.25);
+    font-size:12px; font-weight:700; color:#0f766e;
+    transition:all .15s; cursor:pointer;
+    font-family:inherit;
+  }
+  .opcal-tplchip:hover{ background:rgba(13,148,136,.08); transform:translateY(-1px); box-shadow:0 3px 8px rgba(13,148,136,.18); }
+  .opcal-tplchip .mod{ font-size:10px; padding:1px 6px; border-radius:4px; background:rgba(13,148,136,.15); }
+  .opcal-tplchip .ft{ font-size:10px; opacity:.7; }
+  .opcal-tplchip.is-overdue{ border-color:#dc2626; border-style:dashed; color:#b91c1c; }
+  .opcal-tplchip.is-overdue .mod{ background:rgba(220,38,38,.15); color:#b91c1c; }
+  .opcal-tplchip.is-overdue:hover{ background:rgba(220,38,38,.06); box-shadow:0 3px 8px rgba(220,38,38,.22); }
+  .opcal-tplchip .warn{ font-size:13px; line-height:1; color:#dc2626; }
+
+  /* Leyenda */
+  .opcal-legend{
+    display:flex; flex-wrap:wrap; gap:14px;
+    padding-top:14px; margin-top:14px;
+    border-top:1px dashed rgba(2,6,23,.08);
+    font-size:11.5px; color:var(--hme-text-soft,#64748b);
+  }
+  .opcal-legend .li{ display:inline-flex; align-items:center; gap:6px; font-weight:600; }
+  .opcal-legend .sw{ width:12px; height:12px; border-radius:4px; }
+
+  /* En la vista operativa los eventos son clickeables (abren popover) */
+  #calendar .fc-event{ cursor:pointer; }
+</style>
 {% endblock %}
 {% block content %}
   <div class="pagehead">
@@ -14,13 +73,55 @@
       <button id="btnReload" class="btn ghost" type="button">Actualizar</button>
     </div>
   </div>
-  <div class="card" style="margin-top:14px;">
-    <div id="calendar"></div>
+
+  <div class="opcal-wrap" style="margin-top:14px;">
+
+    <!-- Toolbar: vistas + filtros -->
+    <div class="cal-toolbar">
+      <div class="group">
+        <label class="tiny">Vista</label>
+        <div class="cal-views" id="opcalViews">
+          <button type="button" data-view="dayGridMonth" class="active">Mes</button>
+          <button type="button" data-view="dayGridWeek">Semana</button>
+          <button type="button" data-view="listMonth">Agenda</button>
+        </div>
+      </div>
+      <div class="group" style="flex:1;">
+        <label class="tiny">Filtrar</label>
+        <div class="cal-chips" id="opcalChips">
+          <span class="cal-chip on" data-kind="actividad"><span class="dot"></span>Actividades <span class="count" data-c="actividad">0</span></span>
+          <span class="cal-chip on" data-kind="documento"><span class="dot"></span>Documentos <span class="count" data-c="documento">0</span></span>
+          <span class="cal-chip on" data-kind="vencimiento"><span class="dot"></span>Vencimientos <span class="count" data-c="vencimiento">0</span></span>
+          <span class="cal-chip on" data-kind="cumplimiento"><span class="dot"></span>Cumplimiento <span class="count" data-c="cumplimiento">0</span></span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Plantillas activas del mes (banner compacto) -->
+    <div class="opcal-tplstrip" id="opcalTplStrip">
+      <div class="opcal-tplstrip-head">
+        <span>Plantillas activas del mes</span>
+        <span class="pill" id="opcalTplCount">0</span>
+      </div>
+      <div class="opcal-tplstrip-list" id="opcalTplList"></div>
+    </div>
+
+    <!-- Calendario -->
+    <div class="cal-card">
+      <div id="calendar"></div>
+      <div class="opcal-legend">
+        <span class="li"><span class="sw" style="background:#2563eb"></span>Actividad / agenda</span>
+        <span class="li"><span class="sw" style="background:#7c3aed"></span>Documento (apertura → cierre)</span>
+        <span class="li"><span class="sw" style="background:#ea580c"></span>Vencimiento de documento</span>
+        <span class="li"><span class="sw" style="background:#dc2626"></span>Cumplimiento normativo</span>
+        <span class="li"><span class="sw" style="background:#0d9488"></span>Plantilla del mes (banner superior)</span>
+      </div>
+    </div>
+
   </div>
-  <div class="card" style="margin-top:14px;">
-    <div style="font-weight:900;">Eventos del rango</div>
-    <div id="list" class="help" style="margin-top:10px;">Cargando…</div>
-  </div>
+
+  <div class="cal-pop-backdrop" id="opcalPopoverBackdrop"></div>
+  <div class="cal-pop" id="opcalPopover" role="dialog" aria-modal="true" aria-label="Detalle del evento"></div>
 {% endblock %}
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>

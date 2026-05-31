@@ -1,4 +1,863 @@
-{% extends "layout.html" %}{% block head %}<link rel="stylesheet" href="/static/css/documental_docs.css"/><style>.field textarea{min-height:520px;border-radius:14px;font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,Consolas,monospace;font-size:13px}@media (max-width:980px){.grid2{grid-template-columns:1fr}}</style>{% endblock %}{% block content %}
+{% extends "layout.html" %}
+{% block head %}
+<link rel="stylesheet" href="/static/css/documental_docs.css"/>
+<style>
+  /* Layout del editor */
+  .fed-grid{display:grid;grid-template-columns:1fr 340px;gap:16px;margin-top:16px}
+  @media (max-width:1100px){.fed-grid{grid-template-columns:1fr}}
+
+  .fed-toolbar{
+    display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+    padding:10px 12px;background:#fff;border:1px solid var(--hme-border);
+    border-radius:14px;margin-bottom:12px;
+    position:sticky;top:0;z-index:10;
+  }
+  .fed-toolbar .tool{
+    display:inline-flex;align-items:center;gap:6px;padding:8px 12px;
+    border:1px solid var(--hme-border);border-radius:10px;background:#fff;
+    font-weight:800;font-size:13px;color:var(--hme-text);cursor:pointer;
+  }
+  .fed-toolbar .tool:hover{background:rgba(15,23,42,.04)}
+  .fed-toolbar .tool.active{background:var(--hme-green-soft);border-color:var(--hme-green);color:var(--hme-green-dark)}
+  .fed-toolbar .sep{width:1px;height:24px;background:var(--hme-border);margin:0 4px}
+  .fed-toolbar .info{font-size:12px;color:var(--hme-text-soft);margin-left:auto}
+
+  /* Páginas y overlay */
+  .page-wrap{
+    position:relative;display:block;margin:0 auto 18px;
+    background:#fff;border:1px solid var(--hme-border);border-radius:10px;overflow:hidden;
+    box-shadow:0 6px 14px rgba(2,6,23,.04);width:fit-content;max-width:100%;
+  }
+  .page-wrap .page-img{display:block;max-width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+  .page-overlay{
+    position:absolute;inset:0;cursor:crosshair;
+  }
+  .page-overlay.tool-none{cursor:default}
+
+  .field-box{
+    position:absolute;border:2px solid rgba(134,184,33,.85);
+    background:rgba(134,184,33,.12);box-sizing:border-box;
+    transition:background .12s;cursor:move;
+  }
+  .field-box:hover{background:rgba(134,184,33,.22)}
+  .field-box.selected{border-color:#1e3a8a;background:rgba(37,99,235,.16);box-shadow:0 0 0 2px rgba(37,99,235,.25)}
+
+  /* Manijas de redimensión (solo en field seleccionado) */
+  .field-box .handle{display:none;position:absolute;width:10px;height:10px;background:#fff;border:1.5px solid #1e3a8a;border-radius:2px;z-index:3}
+  .field-box.solo .handle{display:block}
+  .handle.nw{left:-6px;top:-6px;cursor:nw-resize}
+  .handle.n {left:50%;top:-6px;margin-left:-5px;cursor:n-resize}
+  .handle.ne{right:-6px;top:-6px;cursor:ne-resize}
+  .handle.e {right:-6px;top:50%;margin-top:-5px;cursor:e-resize}
+  .handle.se{right:-6px;bottom:-6px;cursor:se-resize}
+  .handle.s {left:50%;bottom:-6px;margin-left:-5px;cursor:s-resize}
+  .handle.sw{left:-6px;bottom:-6px;cursor:sw-resize}
+  .handle.w {left:-6px;top:50%;margin-top:-5px;cursor:w-resize}
+  .field-box .lbl{
+    position:absolute;top:-18px;left:-2px;background:var(--hme-green-dark);color:#fff;
+    font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;white-space:nowrap;
+    pointer-events:none;
+  }
+  .field-box.selected .lbl{background:#1e3a8a}
+  .field-box.checkbox{border-color:#7c3aed;background:rgba(124,58,237,.14)}
+  .field-box.checkbox.selected{border-color:#1e3a8a;background:rgba(37,99,235,.18)}
+  .field-box.checkbox .lbl{background:#7c3aed}
+  .field-box.checkbox.selected .lbl{background:#1e3a8a}
+  .drag-box.grid{border-color:#0891b2;background:rgba(8,145,178,.16)}
+  .drag-box.select{border-color:#1e3a8a;background:rgba(37,99,235,.10);border-style:solid}
+
+  /* Modal */
+  .modal-backdrop{
+    position:fixed;inset:0;background:rgba(2,6,23,.55);
+    display:none;align-items:center;justify-content:center;z-index:200;
+  }
+  .modal-backdrop.open{display:flex}
+  .modal{
+    background:#fff;border-radius:16px;padding:20px;
+    width:min(440px,92vw);box-shadow:0 24px 60px rgba(2,6,23,.30);
+  }
+  .modal h3{margin:0 0 6px;font-size:16px;font-weight:900}
+  .modal .hint{font-size:12px;color:var(--hme-text-soft);margin-bottom:12px}
+  .modal .row{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+  .modal .full{grid-column:1/-1}
+  .modal label{display:block;font-size:11px;font-weight:800;color:var(--hme-text-soft);margin-bottom:3px}
+  .modal input,.modal select{
+    width:100%;padding:8px 10px;border-radius:10px;border:1px solid var(--hme-border);
+    background:#fff;color:var(--hme-text);font:inherit;font-size:13px;box-sizing:border-box;
+  }
+  .modal .actions{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+
+  .fed-props-actions{display:flex;gap:6px;margin-top:10px}
+  .fed-props-actions button{flex:1;padding:8px 10px;border-radius:10px;border:1px solid var(--hme-border);background:#fff;font-weight:800;font-size:13px;cursor:pointer}
+  .fed-props-actions button:hover{background:rgba(15,23,42,.04)}
+  .fed-props-actions .del{color:#991b1b;border-color:rgba(220,38,38,.30)}
+  .fed-props-actions .del:hover{background:rgba(220,38,38,.06)}
+
+  .drag-box{
+    position:absolute;border:2px dashed var(--hme-green-dark);
+    background:rgba(134,184,33,.18);pointer-events:none;box-sizing:border-box;
+  }
+
+  /* Panel lateral */
+  .fed-side{position:sticky;top:74px;align-self:start;display:flex;flex-direction:column;gap:12px;max-height:calc(100vh - 100px)}
+  .fed-list{
+    background:#fff;border:1px solid var(--hme-border);border-radius:14px;
+    padding:12px;overflow:auto;flex:1;min-height:200px;
+  }
+  .fed-list h3{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--hme-text-soft)}
+  .fed-list .item{
+    display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;
+    border:1px solid var(--hme-border);margin-bottom:6px;cursor:pointer;background:#fff;
+  }
+  .fed-list .item:hover{background:rgba(15,23,42,.03)}
+  .fed-list .item.active{background:rgba(37,99,235,.06);border-color:#1e3a8a}
+  .fed-list .item .tag{font-size:10px;font-weight:800;padding:1px 6px;border-radius:6px;background:var(--hme-green-soft);color:var(--hme-green-dark);text-transform:uppercase}
+  .fed-list .item .tag.checkbox{background:rgba(124,58,237,.12);color:#5b21b6}
+  .fed-list .item .tag.textarea{background:rgba(245,158,11,.14);color:#92400e}
+  .fed-list .item .name{flex:1;font-weight:700;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fed-list .item .del{background:none;border:0;color:#991b1b;font-weight:900;cursor:pointer;font-size:14px;padding:2px 6px;border-radius:6px}
+  .fed-list .item .del:hover{background:rgba(220,38,38,.08)}
+  .fed-list .empty{font-size:13px;color:var(--hme-text-soft);text-align:center;padding:18px 4px}
+
+  .fed-props{
+    background:#fff;border:1px solid var(--hme-border);border-radius:14px;padding:12px;
+  }
+  .fed-props h3{margin:0 0 8px;font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--hme-text-soft)}
+  .fed-props .row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+  .fed-props label{display:block;font-size:11px;font-weight:800;color:var(--hme-text-soft);margin-bottom:3px}
+  .fed-props input,.fed-props select{
+    width:100%;padding:7px 9px;border-radius:8px;border:1px solid var(--hme-border);
+    background:#fff;color:var(--hme-text);font:inherit;font-size:13px;
+  }
+  .fed-props .full{grid-column:1/-1}
+  .fed-props .check-row{display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700}
+
+  .fed-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .fed-actions .btnx{flex:1;justify-content:center}
+
+  /* Modo avanzado: JSON crudo */
+  details.advanced{background:#fff;border:1px solid var(--hme-border);border-radius:14px;padding:10px 12px}
+  details.advanced summary{cursor:pointer;font-weight:800;font-size:13px;color:var(--hme-text-soft)}
+  details.advanced textarea{
+    width:100%;min-height:200px;margin-top:10px;font-family:ui-monospace,Menlo,Consolas,monospace;
+    font-size:12px;padding:10px;border-radius:10px;border:1px solid var(--hme-border);
+  }
+</style>
+{% endblock %}
+{% block content %}
 {% set subheader_back_url = '/admin/menu' %}{% set subheader_back_label = 'Volver a módulos' %}
 {% include 'documental_docs/_subheader.html' %}
-<div class="card"><div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap"><div><h1 style="margin:0 0 6px">Editar cuadros blancos • {{ module_label }}</h1><div class="muted">{{ template_row.name }} • Coordenadas en puntos, origen arriba-izquierda (página 0,1,2...).</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><a class="btnx alt" href="{{ admin_base }}/templates">Volver</a></div></div></div><div class="grid2" style="margin-top:16px"><section class="cardx"><h3 style="margin-top:0">Esquema JSON de campos</h3><form method="post"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><div class="field"><textarea name="schema_json">{{ schema_json }}</textarea></div><button class="btnx" type="submit">Guardar esquema</button></form><div class="muted" style="margin-top:12px">Ejemplo:</div><pre style="white-space:pre-wrap;background:rgba(15,23,42,.03);border:1px solid var(--hme-border);border-radius:14px;padding:12px;font-size:12px;overflow:auto">{{ example_schema }}</pre></section><section class="cardx"><h3 style="margin-top:0">Vista previa del PDF</h3><div class="muted" style="margin-bottom:12px">Usa estas páginas como referencia visual para colocar tus campos.</div>{% for preview in previews %}<img class="preview" src="/uploads/{{ preview }}" alt="preview {{ loop.index }}">{% else %}<div class="muted">No se pudieron generar previsualizaciones.</div>{% endfor %}</section></div>{% endblock %}
+
+<div class="card">
+  <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
+    <div>
+      <h1 style="margin:0 0 6px">Editor visual de campos • {{ module_label }}</h1>
+      <div class="muted">{{ template_row.name }} — Arrastra sobre el PDF para definir cuadros editables.</div>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btnx alt" href="{{ admin_base }}/templates">Volver</a>
+    </div>
+  </div>
+</div>
+
+<div class="fed-grid">
+  <div>
+    <!-- Toolbar -->
+    <div class="fed-toolbar" id="fed-toolbar">
+      <button type="button" class="tool active" data-type="select" title="Selección (drag para rubber-band)">↖ Seleccionar</button>
+      <span class="sep"></span>
+      <button type="button" class="tool" data-type="text">▭ Texto</button>
+      <button type="button" class="tool" data-type="textarea">▭ Área de texto</button>
+      <button type="button" class="tool" data-type="date">📅 Fecha</button>
+      <button type="button" class="tool" data-type="number">№ Número</button>
+      <button type="button" class="tool" data-type="checkbox">☑ Casilla</button>
+      <span class="sep"></span>
+      <button type="button" class="tool" data-type="grid">▦ Cuadrícula</button>
+      <span class="sep"></span>
+      <span class="info" id="fed-info">0 campos</span>
+    </div>
+    <div class="muted" style="font-size:12px;margin:-4px 4px 12px">
+      <b>↖ Seleccionar</b>: arrastra en zona vacía para multi-seleccionar (rubber-band), <b>Shift+arrastre</b> para sumar a la selección.
+      Sobre campos seleccionados: <b>arrástralos</b> (mueve todos), <b>esquinas</b> para redimensionar (sólo uno), <b>flechas</b> para ajuste fino (Shift = 10pt).
+      <b>Shift+clic</b> alterna un campo. <b>Esc</b> limpia la selección.
+    </div>
+
+    <!-- Páginas del PDF -->
+    {% for preview in previews %}
+    <div class="page-wrap" data-page="{{ loop.index0 }}" data-zoom="1.3">
+      <img class="page-img" src="/uploads/{{ preview }}" alt="page {{ loop.index }}" data-page="{{ loop.index0 }}">
+      <div class="page-overlay" data-page="{{ loop.index0 }}"></div>
+    </div>
+    {% else %}
+    <div class="cardx"><div class="muted">No se pudieron generar previsualizaciones.</div></div>
+    {% endfor %}
+  </div>
+
+  <!-- Sidebar -->
+  <aside class="fed-side">
+    <div class="fed-list" id="fed-list">
+      <h3>Campos definidos</h3>
+      <div id="fed-list-items"></div>
+    </div>
+
+    <div class="fed-props" id="fed-props" style="display:none">
+      <h3 id="fed-props-title">Propiedades</h3>
+      <div id="props-fields">
+        <div class="row">
+          <div>
+            <label>Key (interno)</label>
+            <input id="prop-key" type="text" pattern="[a-z0-9_]+" placeholder="ej. fecha_inicio">
+          </div>
+          <div>
+            <label>Tipo</label>
+            <select id="prop-type">
+              <option value="text">Texto</option>
+              <option value="textarea">Área de texto</option>
+              <option value="date">Fecha</option>
+              <option value="number">Número</option>
+              <option value="checkbox">Casilla</option>
+            </select>
+          </div>
+          <div class="full">
+            <label>Etiqueta visible</label>
+            <input id="prop-label" type="text" placeholder="Lo que verá el jefe de estación">
+          </div>
+          <div id="row-text-only">
+            <label>Tamaño de fuente</label>
+            <input id="prop-fontsize" type="number" min="6" max="48" step="0.5" value="10">
+          </div>
+          <div id="row-text-only-2">
+            <label>Alineación</label>
+            <select id="prop-align"><option value="left">Izquierda</option><option value="center">Centro</option><option value="right">Derecha</option></select>
+          </div>
+          <div class="full check-row">
+            <input id="prop-staff" type="checkbox">
+            <label for="prop-staff" style="margin:0">Editable por el jefe de estación</label>
+          </div>
+        </div>
+      </div>
+      <div class="muted" style="font-size:11px;margin-top:6px" id="prop-coords"></div>
+      <div class="fed-props-actions">
+        <button type="button" id="btn-duplicate" title="Crear una copia desplazada (Ctrl+D)">Duplicar</button>
+        <button type="button" class="del" id="btn-delete-sel">Eliminar</button>
+      </div>
+    </div>
+
+    <form id="fed-form" method="post" action="">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+      <input type="hidden" name="schema_json" id="schema_json_input">
+      <div class="fed-actions">
+        <button type="submit" class="btnx">Guardar esquema</button>
+        <button type="button" class="btnx alt" id="btn-clear">Limpiar todo</button>
+      </div>
+    </form>
+
+    <details class="advanced">
+      <summary>Modo avanzado: JSON crudo</summary>
+      <textarea id="raw-json" readonly>{{ schema_json }}</textarea>
+      <div class="muted" style="font-size:11px;margin-top:6px">Se actualiza automáticamente al modificar campos.</div>
+    </details>
+  </aside>
+</div>
+
+<!-- Modal generador de cuadrícula -->
+<div class="modal-backdrop" id="modal-grid">
+  <div class="modal" role="dialog" aria-labelledby="modal-grid-title">
+    <h3 id="modal-grid-title">Generar cuadrícula</h3>
+    <div class="hint">Se crearán <b><span id="grid-count-preview">0</span> campos</b> distribuidos dentro del rectángulo dibujado.</div>
+    <div class="row">
+      <div>
+        <label>Filas</label>
+        <input id="grid-rows" type="number" min="1" max="60" value="6">
+      </div>
+      <div>
+        <label>Columnas</label>
+        <input id="grid-cols" type="number" min="1" max="60" value="12">
+      </div>
+      <div>
+        <label>Prefijo del key</label>
+        <input id="grid-prefix" type="text" value="celda" pattern="[a-z0-9_]+">
+      </div>
+      <div>
+        <label>Tipo en cada celda</label>
+        <select id="grid-type">
+          <option value="checkbox" selected>Casilla</option>
+          <option value="text">Texto</option>
+          <option value="number">Número</option>
+          <option value="date">Fecha</option>
+        </select>
+      </div>
+      <div class="full">
+        <label>Etiquetas de fila <span style="font-weight:500;color:var(--hme-text-soft)">— opcional, separadas por coma</span></label>
+        <input id="grid-row-labels" type="text" placeholder="Ej. Mensual, Trimestral, Anual, Cada 5 años">
+      </div>
+      <div class="full">
+        <label>Etiquetas de columna <span style="font-weight:500;color:var(--hme-text-soft)">— opcional, separadas por coma</span></label>
+        <input id="grid-col-labels" type="text" placeholder="Ej. E, F, M, A, M, J, J, A, S, O, N, D">
+      </div>
+      <div class="full check-row" style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:700">
+        <input id="grid-staff" type="checkbox" checked>
+        <label for="grid-staff" style="margin:0">Editables por el jefe de estación</label>
+      </div>
+    </div>
+    <div class="actions">
+      <button type="button" class="btnx alt" id="grid-cancel">Cancelar</button>
+      <button type="button" class="btnx" id="grid-confirm">Crear campos</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const ZOOM = 1.3; // factor del preview (fitz.Matrix(1.3, 1.3))
+  let fields;
+  try { fields = JSON.parse({{ schema_json|tojson }}); } catch(_) { fields = []; }
+  if (!Array.isArray(fields)) fields = [];
+  // Asegurar IDs internos para selección
+  fields.forEach((f,i) => f._id = f._id || ('f_'+Date.now()+'_'+i));
+
+  let activeTool = 'select';
+  let selectedIds = [];     // array de _id seleccionados (multi-select)
+  let pendingGrid = null; // {page, x, y, w, h} en pt PDF; activo entre mouseup-grid y confirmar modal
+
+  // ── Helpers de selección ───────────────────────────────────────────
+  const isSelected     = id => selectedIds.includes(id);
+  const setSelection   = ids => { selectedIds = Array.from(new Set(ids.filter(Boolean))); };
+  const selectOnly     = id => setSelection([id]);
+  const toggleSelected = id => {
+    if (isSelected(id)) selectedIds = selectedIds.filter(x => x !== id);
+    else selectedIds = selectedIds.concat([id]);
+  };
+  const clearSelection = () => { selectedIds = []; };
+  const primaryId      = () => (selectedIds.length === 1 ? selectedIds[0] : null);
+
+  const toolbar = document.getElementById('fed-toolbar');
+  const info    = document.getElementById('fed-info');
+  const listEl  = document.getElementById('fed-list-items');
+  const props   = document.getElementById('fed-props');
+  const rawJson = document.getElementById('raw-json');
+  const hidden  = document.getElementById('schema_json_input');
+
+  // ── Conversión coords ──────────────────────────────────────────────
+  function imgScale(img){
+    // Display px → PDF points: (display / clientWidth) * naturalWidth / ZOOM
+    return img.naturalWidth ? (img.naturalWidth / img.clientWidth) / ZOOM : 1 / ZOOM;
+  }
+  function displayToPdf(img, dx, dy, dw, dh){
+    const s = imgScale(img);
+    return { x: dx * s, y: dy * s, w: dw * s, h: dh * s };
+  }
+  function pdfToDisplay(img, x, y, w, h){
+    const s = 1 / imgScale(img);
+    return { x: x * s, y: y * s, w: w * s, h: h * s };
+  }
+
+  // ── Toolbar ────────────────────────────────────────────────────────
+  toolbar.addEventListener('click', e => {
+    const btn = e.target.closest('.tool');
+    if (!btn) return;
+    activeTool = btn.dataset.type;
+    toolbar.querySelectorAll('.tool').forEach(b => b.classList.toggle('active', b === btn));
+  });
+
+  // ── Drag para crear campo ──────────────────────────────────────────
+  document.querySelectorAll('.page-overlay').forEach(overlay => {
+    const page = parseInt(overlay.dataset.page, 10);
+    const img  = overlay.parentElement.querySelector('.page-img');
+    let drag = null;
+
+    overlay.addEventListener('mousedown', e => {
+      if (e.target.closest('.field-box')) return; // clic sobre campo: lo maneja otro handler
+      e.preventDefault();
+      const rect = overlay.getBoundingClientRect();
+      drag = {
+        x0: e.clientX - rect.left,
+        y0: e.clientY - rect.top,
+        box: document.createElement('div'),
+      };
+      drag.box.className = 'drag-box' +
+        (activeTool === 'grid' ? ' grid' : '') +
+        (activeTool === 'select' ? ' select' : '');
+      overlay.appendChild(drag.box);
+    });
+
+    document.addEventListener('mousemove', e => {
+      if (!drag) return;
+      const rect = overlay.getBoundingClientRect();
+      const x1 = e.clientX - rect.left;
+      const y1 = e.clientY - rect.top;
+      const x = Math.min(drag.x0, x1), y = Math.min(drag.y0, y1);
+      const w = Math.abs(x1 - drag.x0), h = Math.abs(y1 - drag.y0);
+      drag.box.style.left = x+'px'; drag.box.style.top = y+'px';
+      drag.box.style.width = w+'px'; drag.box.style.height = h+'px';
+    });
+
+    document.addEventListener('mouseup', e => {
+      if (!drag) return;
+      const dx = parseFloat(drag.box.style.left)||0;
+      const dy = parseFloat(drag.box.style.top)||0;
+      const dw = parseFloat(drag.box.style.width)||0;
+      const dh = parseFloat(drag.box.style.height)||0;
+      drag.box.remove();
+      drag = null;
+
+      // Herramienta cuadrícula: requiere arrastre real, abre modal
+      if (activeTool === 'grid'){
+        if (dw < 10 || dh < 10) return;
+        pendingGrid = { page, ...displayToPdf(img, dx, dy, dw, dh) };
+        openGridModal();
+        return;
+      }
+
+      // Herramienta selección: clic vacío limpia, drag = rubber-band
+      if (activeTool === 'select'){
+        if (dw < 4 && dh < 4){
+          // Clic en zona vacía: limpiar selección (a menos que Shift)
+          if (!e.shiftKey){ clearSelection(); renderAll(); }
+          return;
+        }
+        const sel = displayToPdf(img, dx, dy, dw, dh);
+        const x0 = sel.x, y0 = sel.y, x1 = sel.x + sel.w, y1 = sel.y + sel.h;
+        const hitIds = fields
+          .filter(f => f.page === page &&
+                       !(f.x + f.w < x0 || f.x > x1 || f.y + f.h < y0 || f.y > y1))
+          .map(f => f._id);
+        if (e.shiftKey){
+          hitIds.forEach(id => { if (!isSelected(id)) selectedIds.push(id); });
+        } else {
+          setSelection(hitIds);
+        }
+        renderAll();
+        return;
+      }
+
+      // Si fue un clic sin arrastre real, usar tamaño por defecto
+      let pdf;
+      if (dw < 5 || dh < 5){
+        const defW = activeTool === 'checkbox' ? 14 : 80;
+        const defH = activeTool === 'checkbox' ? 14 : 18;
+        pdf = displayToPdf(img, dx, dy, 0, 0);
+        pdf.w = defW; pdf.h = defH;
+      } else {
+        pdf = displayToPdf(img, dx, dy, dw, dh);
+      }
+      const idx = fields.length + 1;
+      const baseKey = activeTool === 'checkbox' ? 'casilla' : 'campo';
+      const newField = {
+        _id: 'f_'+Date.now()+'_'+idx,
+        key: baseKey + '_' + idx,
+        label: (activeTool === 'checkbox' ? 'Casilla ' : 'Campo ') + idx,
+        type: activeTool,
+        page: page,
+        x: +pdf.x.toFixed(2), y: +pdf.y.toFixed(2),
+        w: +pdf.w.toFixed(2), h: +pdf.h.toFixed(2),
+        font_size: 10, max_len: 160, align: 'left',
+        placeholder: '', staff_editable: true,
+      };
+      fields.push(newField);
+      selectOnly(newField._id);
+      renderAll();
+    });
+  });
+
+  // ── Render de campos sobre las páginas ─────────────────────────────
+  function renderFields(){
+    document.querySelectorAll('.page-overlay').forEach(ov => {
+      ov.querySelectorAll('.field-box').forEach(n => n.remove());
+    });
+    fields.forEach(f => {
+      const overlay = document.querySelector(`.page-overlay[data-page="${f.page}"]`);
+      if (!overlay) return;
+      const img = overlay.parentElement.querySelector('.page-img');
+      const d = pdfToDisplay(img, f.x, f.y, f.w, f.h);
+      const box = document.createElement('div');
+      const selected = isSelected(f._id);
+      const solo = selected && selectedIds.length === 1;
+      box.className = 'field-box ' + (f.type==='checkbox' ? 'checkbox ' : '') + (selected ? 'selected ' : '') + (solo ? 'solo' : '');
+      box.style.left = d.x+'px'; box.style.top = d.y+'px';
+      box.style.width = d.w+'px'; box.style.height = d.h+'px';
+      box.dataset.id = f._id;
+      const lbl = document.createElement('span');
+      lbl.className = 'lbl';
+      lbl.textContent = f.label || f.key;
+      box.appendChild(lbl);
+      // Manijas de redimensión (se muestran solo cuando está seleccionado, vía CSS)
+      ['nw','n','ne','e','se','s','sw','w'].forEach(dir => {
+        const h = document.createElement('span');
+        h.className = 'handle ' + dir;
+        h.dataset.dir = dir;
+        box.appendChild(h);
+      });
+      box.addEventListener('mousedown', e => onFieldMouseDown(e, f));
+      overlay.appendChild(box);
+    });
+  }
+
+  // ── Mover / redimensionar campo ────────────────────────────────────
+  let activeDrag = null; // {fieldId, mode, startClientX/Y, origX/Y/W/H, scale}
+
+  function onFieldMouseDown(e, f){
+    e.stopPropagation();
+    e.preventDefault();
+    const overlay = document.querySelector(`.page-overlay[data-page="${f.page}"]`);
+    const img = overlay.parentElement.querySelector('.page-img');
+    const isHandle = e.target.classList.contains('handle');
+
+    // Manija de resize: forzar selección única en este campo
+    if (isHandle){
+      selectOnly(f._id);
+      activeDrag = {
+        mode: 'resize-' + e.target.dataset.dir,
+        startClientX: e.clientX,
+        startClientY: e.clientY,
+        scale: imgScale(img),
+        fields: [{ id: f._id, origX: f.x, origY: f.y, origW: f.w, origH: f.h }],
+      };
+      renderAll();
+      return;
+    }
+
+    // Move: ajustar selección según Shift
+    if (e.shiftKey){
+      toggleSelected(f._id);
+    } else if (!isSelected(f._id)){
+      selectOnly(f._id);
+    }
+    // Si tras toggle quedó deseleccionado, no iniciar drag
+    if (!isSelected(f._id)){
+      renderAll();
+      return;
+    }
+
+    // Drag de todos los seleccionados a la vez
+    const dragFields = selectedIds
+      .map(id => fields.find(x => x._id === id))
+      .filter(Boolean)
+      .map(fld => ({ id: fld._id, origX: fld.x, origY: fld.y, origW: fld.w, origH: fld.h }));
+    activeDrag = {
+      mode: 'move',
+      startClientX: e.clientX,
+      startClientY: e.clientY,
+      scale: imgScale(img),
+      fields: dragFields,
+    };
+    renderAll();
+  }
+
+  document.addEventListener('mousemove', e => {
+    if (!activeDrag) return;
+    const dxPdf = (e.clientX - activeDrag.startClientX) * activeDrag.scale;
+    const dyPdf = (e.clientY - activeDrag.startClientY) * activeDrag.scale;
+
+    if (activeDrag.mode === 'move'){
+      activeDrag.fields.forEach(d => {
+        const f = fields.find(x => x._id === d.id);
+        if (!f) return;
+        f.x = +(d.origX + dxPdf).toFixed(2);
+        f.y = +(d.origY + dyPdf).toFixed(2);
+      });
+    } else {
+      // resize: solo single (asegurado en onFieldMouseDown)
+      const d = activeDrag.fields[0];
+      const f = fields.find(x => x._id === d.id);
+      if (!f) return;
+      const dir = activeDrag.mode.replace('resize-', '');
+      let x = d.origX, y = d.origY, w = d.origW, h = d.origH;
+      if (dir.includes('n')){ y = d.origY + dyPdf; h = d.origH - dyPdf; }
+      if (dir.includes('s')){ h = d.origH + dyPdf; }
+      if (dir.includes('w')){ x = d.origX + dxPdf; w = d.origW - dxPdf; }
+      if (dir.includes('e')){ w = d.origW + dxPdf; }
+      if (w < 4){ if (dir.includes('w')) x -= (4 - w); w = 4; }
+      if (h < 4){ if (dir.includes('n')) y -= (4 - h); h = 4; }
+      f.x = +x.toFixed(2); f.y = +y.toFixed(2);
+      f.w = +w.toFixed(2); f.h = +h.toFixed(2);
+    }
+    renderAll();
+  });
+
+  document.addEventListener('mouseup', () => { if (activeDrag) activeDrag = null; });
+
+  // ── Sidebar list ───────────────────────────────────────────────────
+  function renderList(){
+    listEl.innerHTML = '';
+    if (!fields.length){
+      listEl.innerHTML = '<div class="empty">Aún no hay campos. Selecciona un tipo arriba y arrastra sobre el PDF.</div>';
+      return;
+    }
+    fields.forEach(f => {
+      const it = document.createElement('div');
+      it.className = 'item' + (isSelected(f._id) ? ' active' : '');
+      it.innerHTML = `<span class="tag ${f.type}">${f.type}</span>
+        <span class="name">${escapeHtml(f.label || f.key)}</span>
+        <span class="muted" style="font-size:11px">p${f.page+1}</span>
+        <button type="button" class="del" title="Eliminar">×</button>`;
+      it.addEventListener('click', ev => {
+        if (ev.shiftKey) toggleSelected(f._id);
+        else selectOnly(f._id);
+        renderAll();
+      });
+      it.querySelector('.del').addEventListener('click', e => {
+        e.stopPropagation();
+        if (!confirm('¿Eliminar este campo?')) return;
+        fields = fields.filter(x => x._id !== f._id);
+        selectedIds = selectedIds.filter(id => id !== f._id);
+        renderAll();
+      });
+      listEl.appendChild(it);
+    });
+  }
+
+  // ── Props panel ────────────────────────────────────────────────────
+  function renderProps(){
+    if (selectedIds.length === 0){
+      props.style.display = 'none';
+      return;
+    }
+    props.style.display = '';
+    if (selectedIds.length > 1){
+      // Multi-select: ocultar campos editables individuales, dejar solo info + acciones
+      document.getElementById('props-fields').style.display = 'none';
+      document.getElementById('prop-coords').textContent =
+        `${selectedIds.length} campos seleccionados — usa arrastre, flechas o las acciones.`;
+      return;
+    }
+    document.getElementById('props-fields').style.display = '';
+    const f = fields.find(x => x._id === selectedIds[0]);
+    if (!f){ props.style.display = 'none'; return; }
+    document.getElementById('prop-key').value      = f.key;
+    document.getElementById('prop-label').value    = f.label || '';
+    document.getElementById('prop-type').value     = f.type;
+    document.getElementById('prop-fontsize').value = f.font_size || 10;
+    document.getElementById('prop-align').value    = f.align || 'left';
+    document.getElementById('prop-staff').checked  = !!f.staff_editable;
+    document.getElementById('prop-coords').textContent =
+      `Página ${f.page+1} • x:${f.x.toFixed(1)} y:${f.y.toFixed(1)} • ${f.w.toFixed(1)}×${f.h.toFixed(1)} pt`;
+    const isCheckbox = f.type === 'checkbox';
+    document.getElementById('row-text-only').style.display   = isCheckbox ? 'none' : '';
+    document.getElementById('row-text-only-2').style.display = isCheckbox ? 'none' : '';
+  }
+
+  function bindProps(){
+    document.getElementById('prop-key').addEventListener('input', e => withSelected(f => { f.key = (e.target.value||'').toLowerCase().replace(/[^a-z0-9_]/g,'_'); e.target.value = f.key; }));
+    document.getElementById('prop-label').addEventListener('input', e => withSelected(f => { f.label = e.target.value; }));
+    document.getElementById('prop-type').addEventListener('change', e => withSelected(f => { f.type = e.target.value; }));
+    document.getElementById('prop-fontsize').addEventListener('input', e => withSelected(f => { f.font_size = parseFloat(e.target.value)||10; }));
+    document.getElementById('prop-align').addEventListener('change', e => withSelected(f => { f.align = e.target.value; }));
+    document.getElementById('prop-staff').addEventListener('change', e => withSelected(f => { f.staff_editable = e.target.checked; }));
+  }
+  function withSelected(fn){
+    // Solo aplica edición individual cuando hay UN campo seleccionado
+    const id = primaryId();
+    if (!id) return;
+    const f = fields.find(x => x._id === id);
+    if (!f) return;
+    fn(f);
+    renderAll();
+  }
+
+  // ── Duplicar campos seleccionados ──────────────────────────────────
+  function duplicateSelected(){
+    if (!selectedIds.length) return;
+    const targets = selectedIds.map(id => fields.find(x => x._id === id)).filter(Boolean);
+    const newIds = [];
+    targets.forEach((f, idx) => {
+      const baseKey = f.key.replace(/_(\d+)$/, '');
+      let n = 2;
+      while (fields.some(x => x.key === `${baseKey}_${n}`)) n++;
+      const copy = {
+        ...f,
+        _id: 'f_'+Date.now()+'_dup'+idx+'_'+n,
+        key: `${baseKey}_${n}`,
+        label: f.label ? `${f.label} (copia)` : `${baseKey} ${n}`,
+        x: +(f.x + 10).toFixed(2),
+        y: +(f.y + 10).toFixed(2),
+      };
+      fields.push(copy);
+      newIds.push(copy._id);
+    });
+    setSelection(newIds);
+    renderAll();
+  }
+
+  // ── Generador de cuadrícula ────────────────────────────────────────
+  const modalGrid    = document.getElementById('modal-grid');
+  const gRows        = document.getElementById('grid-rows');
+  const gCols        = document.getElementById('grid-cols');
+  const gPrefix      = document.getElementById('grid-prefix');
+  const gType        = document.getElementById('grid-type');
+  const gStaff       = document.getElementById('grid-staff');
+  const gCountLabel  = document.getElementById('grid-count-preview');
+
+  function refreshGridPreview(){
+    const r = Math.max(1, parseInt(gRows.value,10) || 1);
+    const c = Math.max(1, parseInt(gCols.value,10) || 1);
+    gCountLabel.textContent = (r * c);
+  }
+  [gRows, gCols].forEach(el => el.addEventListener('input', refreshGridPreview));
+
+  function openGridModal(){
+    refreshGridPreview();
+    modalGrid.classList.add('open');
+    setTimeout(() => gRows.focus(), 30);
+  }
+  function closeGridModal(){
+    modalGrid.classList.remove('open');
+    pendingGrid = null;
+  }
+  document.getElementById('grid-cancel').addEventListener('click', closeGridModal);
+  modalGrid.addEventListener('click', e => { if (e.target === modalGrid) closeGridModal(); });
+  document.getElementById('grid-confirm').addEventListener('click', () => {
+    if (!pendingGrid){ closeGridModal(); return; }
+    const rows   = Math.max(1, Math.min(60, parseInt(gRows.value,10) || 1));
+    const cols   = Math.max(1, Math.min(60, parseInt(gCols.value,10) || 1));
+    const prefix = (gPrefix.value || 'celda').toLowerCase().replace(/[^a-z0-9_]/g,'_') || 'celda';
+    const type   = gType.value;
+    const staff  = gStaff.checked;
+    const rowLbls = parseCsv(document.getElementById('grid-row-labels').value);
+    const colLbls = parseCsv(document.getElementById('grid-col-labels').value);
+    generateGrid(pendingGrid, rows, cols, prefix, type, staff, rowLbls, colLbls);
+    closeGridModal();
+  });
+
+  function parseCsv(text){
+    return String(text||'').split(',').map(s => s.trim()).filter(Boolean);
+  }
+
+  function generateGrid(rect, rows, cols, prefix, type, staffEditable, rowLbls, colLbls){
+    const cellW = rect.w / cols;
+    const cellH = rect.h / rows;
+    const stamp = Date.now();
+    const newIds = [];
+    const hasCustomLbls = (rowLbls && rowLbls.length) || (colLbls && colLbls.length);
+    for (let r = 0; r < rows; r++){
+      for (let c = 0; c < cols; c++){
+        const cellX = rect.x + c * cellW;
+        const cellY = rect.y + r * cellH;
+        let fx, fy, fw, fh;
+        if (type === 'checkbox'){
+          // Cuadro centrado en la celda con padding proporcional
+          const size = Math.min(cellW, cellH) * 0.55;
+          fw = Math.max(8, Math.min(20, size));
+          fh = fw;
+          fx = cellX + (cellW - fw) / 2;
+          fy = cellY + (cellH - fh) / 2;
+        } else {
+          const padX = Math.min(2, cellW * 0.08);
+          const padY = Math.min(2, cellH * 0.10);
+          fx = cellX + padX;
+          fy = cellY + padY;
+          fw = Math.max(6, cellW - padX*2);
+          fh = Math.max(6, cellH - padY*2);
+        }
+        const id = `f_${stamp}_${r}_${c}`;
+        const rL = (rowLbls && rowLbls[r]) || `F${r+1}`;
+        const cL = (colLbls && colLbls[c]) || `C${c+1}`;
+        const label = hasCustomLbls ? `${rL} · ${cL}` : `${prefix} F${r+1}C${c+1}`;
+        fields.push({
+          _id: id,
+          key:   `${prefix}_r${r+1}c${c+1}`,
+          label,
+          type,
+          page: rect.page,
+          x: +fx.toFixed(2), y: +fy.toFixed(2),
+          w: +fw.toFixed(2), h: +fh.toFixed(2),
+          font_size: 10, max_len: 160, align: 'left',
+          placeholder: '', staff_editable: !!staffEditable,
+        });
+        newIds.push(id);
+      }
+    }
+    setSelection(newIds);
+    renderAll();
+  }
+
+  // ── Botones del panel de propiedades ──────────────────────────────
+  document.getElementById('btn-duplicate').addEventListener('click', duplicateSelected);
+  document.getElementById('btn-delete-sel').addEventListener('click', () => {
+    if (!selectedIds.length) return;
+    const n = selectedIds.length;
+    const msg = n === 1 ? '¿Eliminar este campo?' : `¿Eliminar ${n} campos seleccionados?`;
+    if (!confirm(msg)) return;
+    const toDel = new Set(selectedIds);
+    fields = fields.filter(x => !toDel.has(x._id));
+    clearSelection();
+    renderAll();
+  });
+
+  // ── Atajos de teclado ─────────────────────────────────────────────
+  document.addEventListener('keydown', e => {
+    // Ignorar si estamos escribiendo en un input/textarea/select
+    const tag = (e.target && e.target.tagName || '').toLowerCase();
+    if (['input','textarea','select'].includes(tag)) return;
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd' && selectedIds.length){
+      e.preventDefault();
+      duplicateSelected();
+    } else if ((e.key === 'Delete' || e.key === 'Backspace') && selectedIds.length){
+      e.preventDefault();
+      const n = selectedIds.length;
+      const msg = n === 1 ? '¿Eliminar este campo?' : `¿Eliminar ${n} campos seleccionados?`;
+      if (confirm(msg)){
+        const toDel = new Set(selectedIds);
+        fields = fields.filter(x => !toDel.has(x._id));
+        clearSelection();
+        renderAll();
+      }
+    } else if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.key) && selectedIds.length){
+      e.preventDefault();
+      const step = e.shiftKey ? 10 : 1;
+      const dx = e.key === 'ArrowLeft' ? -step : e.key === 'ArrowRight' ? step : 0;
+      const dy = e.key === 'ArrowUp'   ? -step : e.key === 'ArrowDown'  ? step : 0;
+      selectedIds.forEach(id => {
+        const f = fields.find(x => x._id === id);
+        if (!f) return;
+        f.x = +(f.x + dx).toFixed(2);
+        f.y = +(f.y + dy).toFixed(2);
+      });
+      renderAll();
+    } else if (e.key === 'Escape'){
+      if (modalGrid.classList.contains('open')) closeGridModal();
+      else if (selectedIds.length){ clearSelection(); renderAll(); }
+    }
+  });
+
+  // ── Render maestro + serialización ─────────────────────────────────
+  function renderAll(){
+    renderFields();
+    renderList();
+    renderProps();
+    info.textContent = fields.length + ' campo' + (fields.length===1?'':'s');
+    // Serializar sin _id
+    const serial = fields.map(({_id, ...rest}) => rest);
+    const json   = JSON.stringify(serial, null, 2);
+    rawJson.value = json;
+    hidden.value  = json;
+  }
+
+  function escapeHtml(s){
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  // ── Botón limpiar ──────────────────────────────────────────────────
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    if (!fields.length) return;
+    if (!confirm('¿Eliminar TODOS los campos definidos?')) return;
+    fields = []; clearSelection(); renderAll();
+  });
+
+  // ── Re-render en resize (cambia escala de las imágenes) ────────────
+  window.addEventListener('resize', () => { renderFields(); });
+
+  // ── Esperar a que las imágenes carguen para conocer naturalWidth ──
+  const imgs = document.querySelectorAll('.page-img');
+  let pending = imgs.length;
+  if (pending === 0){
+    bindProps(); renderAll();
+  } else {
+    imgs.forEach(img => {
+      if (img.complete) { if (--pending === 0){ bindProps(); renderAll(); } }
+      else img.addEventListener('load', () => { if (--pending === 0){ bindProps(); renderAll(); } });
+    });
+  }
+})();
+</script>
+{% endblock %}

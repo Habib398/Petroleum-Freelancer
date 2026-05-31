@@ -4,7 +4,8 @@
       "Bash(python -)",
       "Bash(.venv/Scripts/pip.exe install *)",
       "Bash(.venv/Scripts/python.exe scripts/tests/test_block_H_petroleum_control.py)",
-      "Bash(.venv/Scripts/python.exe scripts/tests/test_block_D_documental_docs.py)"
+      "Bash(.venv/Scripts/python.exe scripts/tests/test_block_D_documental_docs.py)",
+      "Bash(python -m py_compile modules/admin/reports.py)"
     ]
   }
 }

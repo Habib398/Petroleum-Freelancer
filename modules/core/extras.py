@@ -196,14 +196,68 @@ def register(app):
             return jsonify({"ok": True, "items": []})
 
         items: list[dict] = []
+        templates_month: list[dict] = []
+        today_iso = today.isoformat()
 
-        # Activities / agenda
+        # Station id -> name (para mostrar en el popover sin entrar al módulo)
+        cur.execute("SELECT id, code, name FROM stations WHERE brand=?", (brand,))
+        station_map = {r["id"]: (r["name"] or r["code"] or f"#{r['id']}") for r in cur.fetchall()}
+
+        def _resolve_station(sid):
+            if sid is None:
+                return "Todas las estaciones"
+            return station_map.get(sid) or f"Estación #{sid}"
+
+        # Estaciones contra las que se valida el cumplimiento (admin: todas; staff: su scope).
+        verify_stations: set = set(station_map.keys()) if me.get("role") == "admin" else set(scope)
+
+        # ---- Activities / agenda ----
         cur.execute(
             f"SELECT id, title, start_date, station_id FROM calendar_events WHERE brand=? AND date(start_date) BETWEEN date(?) AND date(?) {station_clause} ORDER BY date(start_date) ASC",
             tuple([brand, d_from.isoformat(), d_to.isoformat()] + params_scope),
         )
-        for r in cur.fetchall():
-            items.append({"kind": "actividad", "title": r["title"], "date": r["start_date"], "station_id": r["station_id"], "color": "#2563eb", "url": f"/mod/activities/event/{r['id']}"})
+        activity_rows = cur.fetchall()
+
+        # Conjunto de (event_id, station_id) que ya tienen entrega aceptable.
+        delivered_event_station: set = set()
+        delivered_event_any: set = set()
+        if activity_rows:
+            ev_ids = [r["id"] for r in activity_rows]
+            q = ",".join(["?"] * len(ev_ids))
+            cur.execute(
+                f"SELECT DISTINCT event_id, station_id FROM submissions "
+                f"WHERE brand=? AND event_id IN ({q}) "
+                f"AND status IN ('submitted','reviewed','approved')",
+                tuple([brand] + ev_ids),
+            )
+            for sr in cur.fetchall():
+                delivered_event_station.add((sr["event_id"], sr["station_id"]))
+                delivered_event_any.add(sr["event_id"])
+
+        for r in activity_rows:
+            eid = r["id"]
+            sid = r["station_id"]
+            is_past = r["start_date"] < today_iso
+            if not is_past:
+                overdue = False
+            elif sid is None:
+                # Evento global: para admin alcanza con cualquier entrega; para staff con la suya.
+                if me.get("role") == "admin":
+                    overdue = eid not in delivered_event_any
+                else:
+                    overdue = not any((eid, st) in delivered_event_station for st in verify_stations)
+            else:
+                overdue = (eid, sid) not in delivered_event_station
+            items.append({
+                "kind": "actividad",
+                "title": r["title"],
+                "date": r["start_date"],
+                "station_id": sid,
+                "station_name": _resolve_station(sid),
+                "color": "#2563eb",
+                "overdue": overdue,
+                "url": f"/mod/activities/event/{eid}",
+            })
 
         # Document requirements due/open dates
         cur.execute(
@@ -229,16 +283,26 @@ def register(app):
                 url = "/admin/document-center"
             else:
                 url = f"/staff/{mod}/docs/library"
+            status_up = (r.get("status") or "").upper()
+            overdue = (r["due_date"] and r["due_date"] < today_iso and status_up not in ("CLOSED", "APPROVED"))
             items.append({
                 "kind": "documento",
                 "title": f"{mod_upper}: {tpl_name}",
                 "date": r["open_date"],
                 "end_date": r["due_date"],
                 "station_id": r["station_id"],
+                "station_name": _resolve_station(r["station_id"]),
                 "status": r.get("status"),
                 "color": "#7c3aed",
+                "overdue": bool(overdue),
                 "url": url,
             })
+
+        # Pre-cargo qué (template_id, station_id) ya tienen registro capturado.
+        cur.execute("SELECT DISTINCT template_id, station_id FROM doc_records WHERE brand=?", (brand,))
+        captured_by_template: dict[int, set] = {}
+        for rec in cur.fetchall():
+            captured_by_template.setdefault(rec["template_id"], set()).add(rec["station_id"])
 
         # Published templates — visible desde su mes de publicación.
         # Si el admin sube y publica una plantilla para "2026-05", aparece
@@ -279,13 +343,21 @@ def register(app):
                 url = f"/admin/{mod}/docs/templates"
             else:
                 url = f"/staff/{mod}/docs/library"
-            items.append({
-                "kind": "plantilla",
-                "title": f"📄 {mod_upper}: {r['name']}",
-                "date": tpl_start.isoformat(),
-                "end_date": tpl_end.isoformat(),
-                "station_id": None,
-                "color": "#0d9488",   # verde esmeralda — diferente a reqs (morado)
+            # Vencida si el mes ya pasó y aún hay estaciones (en el scope) sin capturar.
+            tpl_overdue = False
+            if tpl_end < today and verify_stations:
+                captured = captured_by_template.get(r["id"], set())
+                pending = verify_stations - captured
+                tpl_overdue = bool(pending)
+            templates_month.append({
+                "module": mod_upper,
+                "name": r["name"],
+                "description": r.get("description") or "",
+                "file_type": (r.get("file_type") or "pdf").upper(),
+                "month_key": month_key[:7],
+                "month_start": tpl_start.isoformat(),
+                "month_end": tpl_end.isoformat(),
+                "overdue": tpl_overdue,
                 "url": url,
             })
 
@@ -296,7 +368,8 @@ def register(app):
             tuple([brand, d_from.isoformat(), d_to.isoformat()] + params_scope),
         )
         for r in cur.fetchall():
-            items.append({"kind": "vencimiento", "title": f"Vence: {r['title']}", "date": r["expires_at"], "station_id": r["station_id"], "color": "#ea580c", "url": "/admin/document-center"})
+            exp = r["expires_at"] or ""
+            items.append({"kind": "vencimiento", "title": f"Vence: {r['title']}", "date": exp, "station_id": r["station_id"], "station_name": _resolve_station(r["station_id"]), "module": (r["module"] or "").upper(), "color": "#ea580c", "overdue": (exp[:10] < today_iso) if exp else False, "url": "/admin/document-center"})
 
         # Petroleum compliance expirations
         if brand == "petroleum":
@@ -308,10 +381,16 @@ def register(app):
             for r in cur.fetchall():
                 code = (r['item_code'] or '').strip().lower()
                 title = (docs_cfg.get(code) or {}).get('title') or r['title']
-                items.append({"kind": "cumplimiento", "title": f"Cumplimiento: {title}", "date": r['expiry_date'], "station_id": r['station_id'], "color": "#dc2626", "url": "/petroleum/cumplimiento"})
+                exp = r['expiry_date'] or ""
+                items.append({"kind": "cumplimiento", "title": f"Cumplimiento: {title}", "date": exp, "station_id": r['station_id'], "station_name": _resolve_station(r['station_id']), "color": "#dc2626", "overdue": (exp[:10] < today_iso) if exp else False, "url": "/petroleum/cumplimiento"})
 
         conn.close()
-        return jsonify({"ok": True, "items": items[:600], "range": {"from": d_from.isoformat(), "to": d_to.isoformat()}})
+        return jsonify({
+            "ok": True,
+            "items": items[:600],
+            "templates_month": templates_month,
+            "range": {"from": d_from.isoformat(), "to": d_to.isoformat()},
+        })
 
     @app.get("/api/admin/settings/deadlines")
     @login_required

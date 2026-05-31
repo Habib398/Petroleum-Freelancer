@@ -692,6 +692,73 @@ def _apply_versioned_migrations(conn):
             pass
         _mark_migration(conn, mid, "doc_templates.logo_path for header logo")
 
+    # M10: Nuevo modelo de estados para incidencias (pendiente/leido/atendido/reportado)
+    # + columnas acknowledged_by / acknowledged_at para registrar cuándo el jefe la marca leída.
+    # SQLite no permite ALTER al CHECK constraint, así que el patrón es:
+    # tabla nueva → copiar con mapeo de status → drop → rename → reindexar.
+    mid = "2026-05-29_01_incidents_v2_status_model"
+    if not _migration_applied(conn, mid):
+        try:
+            has_table = conn.execute(
+                "SELECT 1 FROM sqlite_master WHERE type='table' AND name='incident_logs'"
+            ).fetchone()
+            if has_table:
+                _safe_executescript(conn, """
+                CREATE TABLE incident_logs_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    brand TEXT NOT NULL DEFAULT 'consulting',
+                    station_id INTEGER,
+                    module TEXT,
+                    category TEXT,
+                    severity TEXT NOT NULL DEFAULT 'medium' CHECK(severity IN ('low','medium','high','critical')),
+                    status TEXT NOT NULL DEFAULT 'pendiente' CHECK(status IN ('pendiente','leido','atendido','reportado')),
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    folio TEXT,
+                    created_by INTEGER,
+                    assigned_to INTEGER,
+                    acknowledged_by INTEGER,
+                    acknowledged_at TEXT,
+                    resolved_by INTEGER,
+                    resolved_at TEXT,
+                    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TEXT,
+                    FOREIGN KEY(station_id) REFERENCES stations(id) ON DELETE SET NULL,
+                    FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL,
+                    FOREIGN KEY(assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+                    FOREIGN KEY(acknowledged_by) REFERENCES users(id) ON DELETE SET NULL,
+                    FOREIGN KEY(resolved_by) REFERENCES users(id) ON DELETE SET NULL
+                );
+
+                INSERT INTO incident_logs_new (
+                    id, brand, station_id, module, category, severity, status,
+                    title, description, folio, created_by, assigned_to,
+                    acknowledged_by, acknowledged_at,
+                    resolved_by, resolved_at, created_at, updated_at
+                )
+                SELECT
+                    id, brand, station_id, module, category, severity,
+                    CASE status
+                        WHEN 'open' THEN 'pendiente'
+                        WHEN 'in_progress' THEN 'leido'
+                        WHEN 'closed' THEN 'atendido'
+                        ELSE 'pendiente'
+                    END AS status,
+                    title, description, folio, created_by, assigned_to,
+                    CASE WHEN status = 'closed' THEN resolved_by ELSE NULL END AS acknowledged_by,
+                    CASE WHEN status = 'closed' THEN resolved_at ELSE NULL END AS acknowledged_at,
+                    resolved_by, resolved_at, created_at, updated_at
+                FROM incident_logs;
+
+                DROP TABLE incident_logs;
+                ALTER TABLE incident_logs_new RENAME TO incident_logs;
+                CREATE INDEX IF NOT EXISTS idx_incident_scope
+                    ON incident_logs(brand, station_id, status, severity, created_at);
+                """)
+        except Exception:
+            pass
+        _mark_migration(conn, mid, "Incidents v2: status model + acknowledged_by/at")
+
 
 def init_db():
     os.makedirs(os.path.join(BASE_DIR, "data"), exist_ok=True)
@@ -1428,12 +1495,14 @@ CREATE TABLE IF NOT EXISTS evidence_photos (
         module TEXT,
         category TEXT,
         severity TEXT NOT NULL DEFAULT 'medium' CHECK(severity IN ('low','medium','high','critical')),
-        status TEXT NOT NULL DEFAULT 'open' CHECK(status IN ('open','in_progress','closed')),
+        status TEXT NOT NULL DEFAULT 'pendiente' CHECK(status IN ('pendiente','leido','atendido','reportado')),
         title TEXT NOT NULL,
         description TEXT,
         folio TEXT,
         created_by INTEGER,
         assigned_to INTEGER,
+        acknowledged_by INTEGER,
+        acknowledged_at TEXT,
         resolved_by INTEGER,
         resolved_at TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -1441,6 +1510,7 @@ CREATE TABLE IF NOT EXISTS evidence_photos (
         FOREIGN KEY(station_id) REFERENCES stations(id) ON DELETE SET NULL,
         FOREIGN KEY(created_by) REFERENCES users(id) ON DELETE SET NULL,
         FOREIGN KEY(assigned_to) REFERENCES users(id) ON DELETE SET NULL,
+        FOREIGN KEY(acknowledged_by) REFERENCES users(id) ON DELETE SET NULL,
         FOREIGN KEY(resolved_by) REFERENCES users(id) ON DELETE SET NULL
     );
 

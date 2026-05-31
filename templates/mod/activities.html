@@ -1,8 +1,8 @@
 {% extends "layout.html" %}
 {% block head %}
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
+  <link rel="stylesheet" href="/static/css/calendar-shared.css">
   <style>
-    #calendar{background:rgba(255,255,255,.96);border:1px solid var(--hme-border);border-radius:var(--radius);box-shadow:var(--shadow);padding:12px;}
     dialog{border:none;border-radius:16px;box-shadow:0 22px 60px rgba(0,0,0,.25);max-width:640px;width:95%;}
     dialog::backdrop{background:rgba(0,0,0,.35);}
   </style>
@@ -43,7 +43,9 @@
 
 
 
-  <div id="calendar"></div>
+  <div class="cal-card" style="margin-top:12px;">
+    <div id="calendar"></div>
+  </div>
 
   <details class="card" style="margin:12px 0;" >
     <summary style="cursor:pointer;font-weight:900;">Filtros y reportes</summary>

@@ -45,14 +45,22 @@
 
       {% for field in schema %}
         <div class="field">
-          <label>{{ field.label or field.key }}</label>
           {% set ftype = field.type or 'text' %}
           {% set ph = field.placeholder or '' %}
           {% set val = (values.get(field.key) if values else '') %}
-          {% if ftype in ['textarea','multiline','paragraph'] or (field.h and field.h|int > 28) %}
-            <textarea name="{{ field.key }}" placeholder="{{ ph }}">{{ val }}</textarea>
+          {% if ftype == 'checkbox' %}
+            {% set checked = (val|string).lower() in ['1','true','yes','on','checked','x'] %}
+            <label style="display:flex;align-items:center;gap:8px;font-weight:700">
+              <input type="checkbox" name="{{ field.key }}" value="1" {% if checked %}checked{% endif %}>
+              {{ field.label or field.key }}
+            </label>
           {% else %}
-            <input type="{{ 'date' if ftype=='date' else 'text' }}" name="{{ field.key }}" value="{{ val }}" placeholder="{{ ph }}">
+            <label>{{ field.label or field.key }}</label>
+            {% if ftype in ['textarea','multiline','paragraph'] or (field.h and field.h|int > 28) %}
+              <textarea name="{{ field.key }}" placeholder="{{ ph }}">{{ val }}</textarea>
+            {% else %}
+              <input type="{{ 'date' if ftype=='date' else ('number' if ftype=='number' else 'text') }}" name="{{ field.key }}" value="{{ val }}" placeholder="{{ ph }}">
+            {% endif %}
           {% endif %}
           <div class="muted">p{{ field.page }} • x{{ field.x }} y{{ field.y }} • {{ field.w }}×{{ field.h }}</div>
         </div>

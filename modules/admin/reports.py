@@ -650,5 +650,465 @@ def register(app):
             headers={"Content-Disposition": f"attachment; filename=reporte_consolidado_{brand}.pdf"},
         )
 
+    # ---------------- Activity compliance analytics (Reportes web) ----------------
+    @app.get("/api/reports/activity-compliance")
+    @login_required
+    def api_reports_activity_compliance():
+        """Estadísticas de cumplimiento de actividades para /mod/reports.
+
+        Optimizado: hace 1 query de eventos del periodo + 1 query (en lotes) de
+        entregas aprobadas, y agrega todos los recortes (día/semana/mes/año,
+        12 meses, 8 semanas, ranking por estación) en memoria. Sustituye al
+        enfoque previo de ~50-100 queries pequeñas.
+        """
+        from collections import defaultdict
+
+        me = ctx.get_me() or {}
+        role = me.get("role")
+        if role not in ("admin", "jefe_estacion"):
+            return jsonify({"error": "forbidden"}), 403
+
+        brand = get_brand()
+        today = datetime.date.today()
+        try:
+            year = int(request.args.get("year") or today.year)
+        except Exception:
+            year = today.year
+        raw_st = request.args.get("station_id")
+        try:
+            station_filter = int(raw_st) if raw_st not in (None, "", "0", "all") else None
+        except Exception:
+            station_filter = None
+
+        conn = get_conn(); cur = conn.cursor()
+
+        # 1) Estaciones accesibles según rol
+        if role == "admin":
+            cur.execute("SELECT id, code, name FROM stations WHERE brand=? ORDER BY code, id", (brand,))
+            all_stations = [dict(r) for r in cur.fetchall()]
+        else:
+            sid0 = me.get("station_id")
+            cur.execute("SELECT group_name FROM stations WHERE id=? AND brand=?", (sid0, brand))
+            r = cur.fetchone()
+            g = (r["group_name"] if r else None)
+            if g:
+                cur.execute("SELECT id, code, name FROM stations WHERE brand=? AND group_name=? ORDER BY code, id", (brand, g))
+            elif sid0:
+                cur.execute("SELECT id, code, name FROM stations WHERE id=? AND brand=?", (sid0, brand))
+            else:
+                cur.execute("SELECT id, code, name FROM stations WHERE 1=0")
+            all_stations = [dict(r) for r in cur.fetchall()]
+
+        accessible_ids = [s["id"] for s in all_stations]
+        if not accessible_ids:
+            conn.close()
+            return jsonify({
+                "ok": True, "scope": role, "today": today.isoformat(), "year": year,
+                "stations_accessible": [], "selected_station_id": None,
+                "period": {}, "by_month": [], "by_weeks": [], "by_station": [],
+            })
+
+        # 2) Scope efectivo
+        if station_filter and station_filter in accessible_ids:
+            scope_ids = [station_filter]
+            selected = station_filter
+        else:
+            scope_ids = list(accessible_ids)
+            selected = None
+        n_scope = len(scope_ids)
+
+        # 3) Rango temporal a cubrir = unión de [año seleccionado] y [últimas 8 semanas hasta hoy]
+        def end_of_month(d: datetime.date) -> datetime.date:
+            if d.month == 12:
+                return datetime.date(d.year, 12, 31)
+            return datetime.date(d.year, d.month + 1, 1) - datetime.timedelta(days=1)
+
+        current_wk_start = today - datetime.timedelta(days=today.weekday())
+        earliest_week_start = current_wk_start - datetime.timedelta(weeks=7)
+        yr_start = datetime.date(year, 1, 1)
+        yr_end = datetime.date(year, 12, 31)
+        fetch_from = min(yr_start, earliest_week_start, today.replace(day=1))
+        fetch_to = max(yr_end, current_wk_start + datetime.timedelta(days=6), today)
+
+        # 4) UNA query de eventos en el rango, filtrados por scope
+        ph_scope = ",".join(["?"] * n_scope)
+        cur.execute(
+            f"SELECT id, station_id, substr(start_date,1,10) AS d "
+            f"FROM calendar_events "
+            f"WHERE brand=? AND date(start_date) BETWEEN date(?) AND date(?) "
+            f"AND (station_id IS NULL OR station_id IN ({ph_scope}))",
+            tuple([brand, fetch_from.isoformat(), fetch_to.isoformat()] + scope_ids),
+        )
+        events = cur.fetchall()
+        event_ids = [r["id"] for r in events]
+        # Mapa event_id -> (station_id, date) para resolver submissions
+        event_meta = {r["id"]: (r["station_id"], r["d"]) for r in events}
+
+        # 5) Entregas aprobadas — en lotes para no exceder el límite de parámetros de SQLite
+        approved_done_by_date: dict[str, int] = defaultdict(int)
+        # Para ranking por estación necesitamos también (date, station)
+        approved_done_by_date_station: dict[tuple[str, int], int] = defaultdict(int)
+
+        if event_ids:
+            BATCH = 400  # mantener total de params bien por debajo del límite de SQLite (999)
+            for i in range(0, len(event_ids), BATCH):
+                batch = event_ids[i:i + BATCH]
+                eph = ",".join(["?"] * len(batch))
+                cur.execute(
+                    f"SELECT event_id, station_id FROM submissions "
+                    f"WHERE brand=? AND status='approved' AND station_id IN ({ph_scope}) "
+                    f"AND event_id IN ({eph})",
+                    tuple([brand] + scope_ids + batch),
+                )
+                for sr in cur.fetchall():
+                    meta = event_meta.get(sr["event_id"])
+                    if not meta:
+                        continue
+                    _, d = meta
+                    approved_done_by_date[d] += 1
+                    approved_done_by_date_station[(d, sr["station_id"])] += 1
+
+        conn.close()
+
+        # 6) Totales por fecha (cada evento global cuenta n_scope; específico cuenta 1)
+        totals_by_date: dict[str, int] = defaultdict(int)
+        # Específicos por (date, station) para ranking
+        totals_by_date_station: dict[tuple[str, int], int] = defaultdict(int)
+        global_by_date: dict[str, int] = defaultdict(int)
+        for r in events:
+            d = r["d"]
+            sid = r["station_id"]
+            if sid is None:
+                totals_by_date[d] += n_scope
+                global_by_date[d] += 1
+            else:
+                totals_by_date[d] += 1
+                totals_by_date_station[(d, sid)] += 1
+
+        # 7) Sumadores por rango
+        def sum_range(start: datetime.date, end: datetime.date) -> tuple[int, int]:
+            total = 0
+            done = 0
+            day = start
+            while day <= end:
+                ds = day.isoformat()
+                total += totals_by_date.get(ds, 0)
+                done += approved_done_by_date.get(ds, 0)
+                day += datetime.timedelta(days=1)
+            return done, total
+
+        def pct(done: int, total: int) -> int:
+            return int(round((done / total) * 100)) if total else 0
+
+        def period_obj(start: datetime.date, end: datetime.date) -> dict:
+            d, t = sum_range(start, end)
+            return {"done": d, "total": t, "pct": pct(d, t)}
+
+        # 8) Periodos (siempre relativos a hoy)
+        wk_end = current_wk_start + datetime.timedelta(days=6)
+        mo_start = today.replace(day=1)
+        mo_end = end_of_month(today)
+        # Para el "yearly" se usa el año del filtro
+        period = {
+            "daily":   period_obj(today, today),
+            "weekly":  period_obj(current_wk_start, wk_end),
+            "monthly": period_obj(mo_start, mo_end),
+            "yearly":  period_obj(yr_start, yr_end),
+        }
+
+        # 9) Serie mensual del año seleccionado
+        meses = ["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"]
+        by_month = []
+        for m in range(1, 13):
+            ms = datetime.date(year, m, 1)
+            mse = end_of_month(ms)
+            d, t = sum_range(ms, mse)
+            by_month.append({"month": f"{year}-{m:02d}", "label": meses[m-1],
+                             "done": d, "total": t, "pct": pct(d, t)})
+
+        # 10) Últimas 8 semanas (terminando en la semana actual)
+        by_weeks = []
+        for i in range(7, -1, -1):
+            ws = current_wk_start - datetime.timedelta(weeks=i)
+            we = ws + datetime.timedelta(days=6)
+            d, t = sum_range(ws, we)
+            by_weeks.append({"week_start": ws.isoformat(),
+                             "label": ws.strftime("%d %b"),
+                             "done": d, "total": t, "pct": pct(d, t)})
+
+        # 11) Ranking por estación (solo admin) basado en el mes actual
+        by_station = []
+        if role == "admin":
+            # Total global del mes (eventos sin station_id)
+            global_total_month = 0
+            day = mo_start
+            while day <= mo_end:
+                global_total_month += global_by_date.get(day.isoformat(), 0)
+                day += datetime.timedelta(days=1)
+
+            for st in all_stations:
+                sid = st["id"]
+                stot = global_total_month
+                sdone = 0
+                day = mo_start
+                while day <= mo_end:
+                    ds = day.isoformat()
+                    stot += totals_by_date_station.get((ds, sid), 0)
+                    sdone += approved_done_by_date_station.get((ds, sid), 0)
+                    day += datetime.timedelta(days=1)
+                by_station.append({
+                    "station_id": sid, "code": st["code"], "name": st["name"],
+                    "done": sdone, "total": stot, "pct": pct(sdone, stot),
+                })
+            by_station.sort(key=lambda x: x["pct"], reverse=True)
+
+        return jsonify({
+            "ok": True,
+            "scope": role,
+            "today": today.isoformat(),
+            "year": year,
+            "stations_accessible": all_stations,
+            "selected_station_id": selected,
+            "period": period,
+            "by_month": by_month,
+            "by_weeks": by_weeks,
+            "by_station": by_station,
+        })
+
+    # ---- Reporte mensual de incidencias (solo admin) ----
+    # Diseño: el admin elige una estación + mes/año y obtiene los datos
+    # agregados de incident_logs. Las incidencias vivas las maneja el
+    # jefe en /mod/incidents; este reporte es la vista del admin.
+
+    _INCIDENT_STATUSES = ("pendiente", "leido", "atendido", "reportado")
+    _INCIDENT_SEVERITIES = ("low", "medium", "high", "critical")
+
+    def _incidents_report_data(brand: str, station_id: int, year: int, month: int) -> dict:
+        start = datetime.date(year, month, 1)
+        end = datetime.date(year + 1, 1, 1) if month == 12 else datetime.date(year, month + 1, 1)
+        rng_from = start.isoformat()
+        rng_to = (end - datetime.timedelta(days=1)).isoformat()
+        # Filtramos por created_at dentro del mes seleccionado.
+        # incident_logs.station_id puede ser NULL (incidencias globales): las excluimos
+        # del reporte por estación para no contar lo mismo dos veces.
+        conn = get_conn(); cur = conn.cursor()
+        cur.execute("SELECT id, code, name FROM stations WHERE id=? AND brand=?", (int(station_id), brand))
+        st_row = cur.fetchone()
+        st = dict(st_row) if st_row else None
+        base_where = (
+            "WHERE i.brand=? AND i.station_id=? "
+            "AND DATE(i.created_at) >= ? AND DATE(i.created_at) <= ?"
+        )
+        base_params = (brand, int(station_id), rng_from, rng_to)
+        cur.execute(
+            f"SELECT i.status, COUNT(*) AS c FROM incident_logs i {base_where} GROUP BY i.status",
+            base_params,
+        )
+        status_rows = {r["status"]: int(r["c"] or 0) for r in cur.fetchall()}
+        totals = {s: int(status_rows.get(s, 0)) for s in _INCIDENT_STATUSES}
+        totals["total"] = sum(totals.values())
+        cur.execute(
+            f"SELECT i.severity, COUNT(*) AS c FROM incident_logs i {base_where} GROUP BY i.severity",
+            base_params,
+        )
+        sev_rows = {r["severity"]: int(r["c"] or 0) for r in cur.fetchall()}
+        by_severity = {s: int(sev_rows.get(s, 0)) for s in _INCIDENT_SEVERITIES}
+        # Tiempo de respuesta promedio en horas: (acknowledged_at - created_at) * 24
+        cur.execute(
+            f"SELECT AVG((julianday(i.acknowledged_at) - julianday(i.created_at)) * 24.0) AS avg_h "
+            f"FROM incident_logs i {base_where} AND i.acknowledged_at IS NOT NULL",
+            base_params,
+        )
+        avg_row = cur.fetchone()
+        avg_h = avg_row["avg_h"] if avg_row else None
+        avg_response_hours = round(float(avg_h), 2) if avg_h is not None else None
+        cur.execute(
+            f"SELECT i.id, i.folio, i.title, i.description, i.severity, i.status, "
+            f"i.created_at, i.acknowledged_at, i.resolved_at, "
+            f"c.username AS created_by_name, ack.username AS acknowledged_by_name, "
+            f"r.username AS resolved_by_name "
+            f"FROM incident_logs i "
+            f"LEFT JOIN users c ON c.id=i.created_by "
+            f"LEFT JOIN users ack ON ack.id=i.acknowledged_by "
+            f"LEFT JOIN users r ON r.id=i.resolved_by "
+            f"{base_where} ORDER BY i.created_at ASC, i.id ASC",
+            base_params,
+        )
+        items = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return {
+            "station": st,
+            "period": {"year": year, "month": month, "from": rng_from, "to": rng_to},
+            "totals": totals,
+            "by_severity": by_severity,
+            "avg_response_hours": avg_response_hours,
+            "items": items,
+        }
+
+    @app.get("/admin/incidents-report")
+    @login_required
+    @role_required("admin")
+    def admin_incidents_report_page():
+        return render_template("admin/incidents_report.html")
+
+    @app.get("/api/admin/incidents-report")
+    @login_required
+    @role_required("admin")
+    def api_admin_incidents_report():
+        try:
+            year = int(request.args.get("year") or datetime.date.today().year)
+            month = int(request.args.get("month") or datetime.date.today().month)
+        except Exception:
+            return jsonify({"ok": False, "error": "invalid_period"}), 400
+        if not (1 <= month <= 12):
+            return jsonify({"ok": False, "error": "invalid_month"}), 400
+        station_id = _pick_admin_station_id(request.args.get("station_id"))
+        if station_id is None:
+            return jsonify({"ok": False, "error": "no_station_available",
+                            "message": "No hay estaciones registradas para generar el reporte."}), 400
+        data = _incidents_report_data(get_brand(), int(station_id), year, month)
+        data["ok"] = True
+        return jsonify(data)
+
+    @app.get("/admin/incidents-report.pdf")
+    @login_required
+    @role_required("admin")
+    def admin_incidents_report_pdf():
+        me = ctx.get_me() or {}
+        try:
+            year = int(request.args.get("year") or datetime.date.today().year)
+            month = int(request.args.get("month") or datetime.date.today().month)
+        except Exception:
+            return jsonify({"error": "invalid_period"}), 400
+        if not (1 <= month <= 12):
+            return jsonify({"error": "invalid_month"}), 400
+        station_id = _pick_admin_station_id(request.args.get("station_id"))
+        if station_id is None:
+            return jsonify({"error": "no_station_available",
+                            "message": "No hay estaciones registradas para generar el reporte."}), 400
+        data = _incidents_report_data(get_brand(), int(station_id), year, month)
+        st = data["station"]
+        totals = data["totals"]
+        by_sev = data["by_severity"]
+        items = data["items"]
+        avg_h = data["avg_response_hours"]
+        period = data["period"]
+
+        from reportlab.lib.pagesizes import letter
+        from reportlab.pdfgen import canvas
+        import tempfile
+        tmp = tempfile.NamedTemporaryFile(delete=False, suffix=".pdf")
+        c = canvas.Canvas(tmp.name, pagesize=letter)
+        w, h = letter
+
+        # Header
+        c.setFont("Helvetica-Bold", 14)
+        c.drawString(40, h - 50, "COG WORK LOG - Reporte mensual de incidencias")
+        c.setFont("Helvetica", 10)
+        st_line = f"Estación: {st['name']} ({st['code']})" if st else f"Estación: {station_id}"
+        c.drawString(40, h - 70, st_line)
+        c.drawString(40, h - 84, f"Periodo: {year}-{month:02d}   Rango: {period['from']} a {period['to']}")
+        c.drawString(40, h - 98, f"Generado por: {me.get('username','-')} • Rol: {me.get('role','-')} • {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+        # Resumen — totales por estado
+        y = h - 130
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(40, y, "Resumen por estado")
+        y -= 16
+        c.setFont("Helvetica", 10)
+        status_labels = {"pendiente": "Pendientes", "leido": "Leídas", "atendido": "Atendidas", "reportado": "Reportadas"}
+        for s in _INCIDENT_STATUSES:
+            c.drawString(60, y, f"{status_labels[s]}: {totals[s]}")
+            y -= 14
+        c.setFont("Helvetica-Bold", 10)
+        c.drawString(60, y, f"Total del mes: {totals['total']}")
+        y -= 18
+        c.setFont("Helvetica", 10)
+        avg_label = f"{avg_h} h" if avg_h is not None else "Sin datos"
+        c.drawString(60, y, f"Tiempo promedio de respuesta del jefe: {avg_label}")
+        y -= 24
+
+        # Resumen — totales por severidad
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(40, y, "Resumen por severidad")
+        y -= 16
+        c.setFont("Helvetica", 10)
+        sev_labels = {"low": "Baja", "medium": "Media", "high": "Alta", "critical": "Crítica"}
+        for s in _INCIDENT_SEVERITIES:
+            c.drawString(60, y, f"{sev_labels[s]}: {by_sev[s]}")
+            y -= 14
+        y -= 12
+
+        # Tabla detallada
+        c.setFont("Helvetica-Bold", 11)
+        c.drawString(40, y, "Detalle de incidencias")
+        y -= 16
+        c.setFont("Helvetica-Bold", 9)
+        c.drawString(40, y, "Fecha")
+        c.drawString(105, y, "Folio")
+        c.drawString(160, y, "Sev")
+        c.drawString(190, y, "Estado")
+        c.drawString(245, y, "Título / descripción")
+        y -= 10
+        c.line(40, y, w - 40, y)
+        y -= 12
+
+        def wrap(text, max_chars):
+            text = (text or "").replace("\n", " ").strip()
+            if not text:
+                return [""]
+            out = []
+            while len(text) > max_chars:
+                cut = text.rfind(" ", 0, max_chars)
+                if cut <= 0:
+                    cut = max_chars
+                out.append(text[:cut].strip())
+                text = text[cut:].strip()
+            out.append(text)
+            return out
+
+        c.setFont("Helvetica", 9)
+        if not items:
+            c.drawString(40, y, "Sin incidencias registradas en el periodo.")
+        else:
+            for it in items:
+                if y < 70:
+                    c.showPage()
+                    y = h - 60
+                    c.setFont("Helvetica", 9)
+                fecha = (it.get("created_at") or "")[:10]
+                folio = (it.get("folio") or f"#{it['id']}")[:10]
+                sev = (it.get("severity") or "")[:6]
+                status = (it.get("status") or "")[:9]
+                titulo = (it.get("title") or "").strip()
+                desc = (it.get("description") or "").strip()
+                full = titulo if not desc else f"{titulo} — {desc}"
+                lines = wrap(full, 70)
+                c.drawString(40, y, fecha)
+                c.drawString(105, y, folio)
+                c.drawString(160, y, sev)
+                c.drawString(190, y, status)
+                c.drawString(245, y, lines[0])
+                y -= 12
+                for extra in lines[1:]:
+                    if y < 70:
+                        c.showPage()
+                        y = h - 60
+                        c.setFont("Helvetica", 9)
+                    c.drawString(245, y, extra)
+                    y -= 12
+
+        c.showPage()
+        c.save()
+        tmp.close()
+        ctx.log_action(me, "download_incidents_report", "incident_logs",
+                       f"{station_id}:{year}-{month:02d}", {"total": totals["total"]})
+        code = (st or {}).get("code") or station_id
+        return send_from_directory(
+            os.path.dirname(tmp.name), os.path.basename(tmp.name),
+            as_attachment=True,
+            download_name=f"incidencias_{code}_{year}_{month:02d}.pdf",
+        )
+
 # Analytics + exports live in a dedicated module to keep this file smaller
     # and to ensure routes are always registered inside the app factory.

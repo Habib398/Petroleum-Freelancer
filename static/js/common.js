@@ -56,6 +56,10 @@ async function loadMe(){
   qsa("[data-not-operador]").forEach(a=>{
     a.hidden = me.role === "operador";
   });
+  // not-admin links (hide for admin: admin tiene su propia entrada)
+  qsa("[data-not-admin]").forEach(a=>{
+    a.hidden = me.role === "admin";
+  });
 
   // privileged-only links (admin/contador/auditor)
   qsa("[data-map-privileged]").forEach(a=>{
@@ -216,6 +220,36 @@ function updateNotifBadges(unread){
   }
 }
 
+async function fetchIncidentsPending(){
+  try {
+    const data = await api("/api/incidents/pending-count");
+    return parseInt(data.count ?? 0, 10) || 0;
+  } catch(e){ return 0; }
+}
+
+function updateIncidentsBadge(count){
+  const badge = qs("#incidentsBadge");
+  if (!badge) return;
+  if (count > 0){
+    badge.textContent = count > 99 ? "99+" : String(count);
+    badge.style.display = "inline-flex";
+  } else {
+    badge.style.display = "none";
+  }
+}
+
+function initIncidentsBadge(me){
+  // El badge solo aplica al jefe de estación: refleja su obligación
+  // de marcar incidencias pendientes en su scope.
+  if (!me || me.role !== "jefe_estacion") return;
+  async function tick(){
+    const n = await fetchIncidentsPending();
+    updateIncidentsBadge(n);
+  }
+  tick();
+  setInterval(tick, 30000);
+}
+
 function initNotifications(){
   // Poll in-app notifications and show badge + optional toast
   let lastToastId = 0;
@@ -259,12 +293,14 @@ function initNotifications(){
 document.addEventListener("DOMContentLoaded", async ()=>{
   initTheme();
   initNavToggle();
+  let __me = null;
   try{
-    const me = await loadMe();
-    try{ renderRoleGuide(me); }catch(e){}
+    __me = await loadMe();
+    try{ renderRoleGuide(__me); }catch(e){}
   }catch(e){
     // if not authenticated, allow on login/inicio
   }
   setActiveNav();
   try{ initNotifications(); }catch(e){}
+  try{ initIncidentsBadge(__me); }catch(e){}
 });

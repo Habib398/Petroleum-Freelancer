@@ -1,26 +1,453 @@
 {% extends "layout.html" %}
+{% block head %}
+<style>
+  /* Banner de pendientes (jefe) */
+  .inc-pending-banner{
+    display:flex; align-items:center; gap:14px;
+    padding:14px 18px; border-radius:14px;
+    background:linear-gradient(180deg, rgba(220,38,38,.06), rgba(220,38,38,.02));
+    border:1px solid rgba(220,38,38,.22);
+    margin-top:14px;
+  }
+  .inc-pending-banner .ico{
+    width:42px; height:42px; border-radius:12px;
+    background:#dc2626; color:#fff;
+    display:flex; align-items:center; justify-content:center;
+    font-size:22px; font-weight:900;
+    box-shadow: 0 4px 10px rgba(220,38,38,.30);
+  }
+  .inc-pending-banner .text .lbl{
+    font-size:11px; color:#7f1d1d; font-weight:800;
+    text-transform:uppercase; letter-spacing:.06em;
+  }
+  .inc-pending-banner .text .msg{
+    font-size:16px; font-weight:700; color:#1f2937; line-height:1.2; margin-top:2px;
+  }
+  .inc-pending-banner .text .msg b{ color:#b91c1c; font-size:20px; }
+
+  /* Toolbar */
+  .inc-toolbar{
+    display:flex; gap:14px; align-items:center; flex-wrap:wrap;
+    padding:10px 14px; border-radius:14px;
+    background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55));
+    border:1px solid var(--hme-border, rgba(2,6,23,.08));
+    box-shadow: 0 1px 2px rgba(2,6,23,.04);
+    margin-top:14px;
+  }
+  .inc-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+  .inc-chip{
+    display:inline-flex; align-items:center; gap:7px;
+    padding:7px 14px; border-radius:999px;
+    background:#fff; border:1px solid rgba(2,6,23,.10);
+    font-size:13px; font-weight:600; color:#1f2937;
+    cursor:pointer; transition: all .15s ease;
+    font-family: inherit;
+  }
+  .inc-chip:hover{ border-color:rgba(2,6,23,.22); background:#f8fafc; }
+  .inc-chip.active{ background:#0f172a; color:#fff; border-color:#0f172a; }
+  .inc-chip .count{
+    display:inline-block; padding:1px 8px; border-radius:999px;
+    background:rgba(2,6,23,.08); font-size:11px; font-weight:800; color:#475569;
+    min-width:18px; text-align:center;
+  }
+  .inc-chip.active .count{ background:rgba(255,255,255,.18); color:#fff; }
+  .inc-chip[data-chip="pendiente"]:not(.active) .count{ background:rgba(220,38,38,.12); color:#b91c1c; }
+
+  .inc-new-btn{
+    margin-left:auto;
+    padding:8px 16px; border-radius:10px;
+    background:#0f172a; color:#fff; font-weight:700;
+    font-size:13px; cursor:pointer; border:0;
+    display:inline-flex; align-items:center; gap:6px;
+    transition: all .15s;
+    font-family: inherit;
+  }
+  .inc-new-btn:hover{ background:#1e293b; transform: translateY(-1px); }
+  .inc-new-btn.is-open{ background:#dc2626; }
+  .inc-new-btn .plus{ font-size:16px; line-height:1; }
+
+  /* Formulario colapsable */
+  .inc-form{
+    margin-top:10px;
+    background:#fff;
+    border:1px solid rgba(2,6,23,.08); border-radius:14px;
+    overflow:hidden;
+    max-height:0; opacity:0;
+    transition: max-height .25s ease, opacity .15s, margin .15s;
+  }
+  .inc-form.open{ max-height:480px; opacity:1; }
+  .inc-form-inner{ padding:18px; }
+  .inc-form-row{ display:grid; grid-template-columns:1fr 220px; gap:12px; margin-top:10px; }
+  .inc-form .actions{ display:flex; gap:8px; justify-content:flex-end; align-items:center; margin-top:12px; }
+  .inc-form .actions #msg{ margin-right:auto; font-size:12px; color:#64748b; }
+  .inc-form .actions #msg.ok{ color:#15803d; }
+  .inc-form .actions #msg.err{ color:#b91c1c; }
+
+  /* Lista */
+  .inc-listwrap{ margin-top:14px; }
+  .inc-list{ display:flex; flex-direction:column; gap:8px; }
+
+  .inc-row{
+    background:#fff;
+    border:1px solid rgba(2,6,23,.08); border-radius:12px;
+    padding:14px 18px;
+    display:grid; grid-template-columns: auto 1fr auto; gap:14px;
+    align-items:start;
+    transition: box-shadow .15s ease, transform .12s ease, border-color .15s;
+    position:relative;
+  }
+  .inc-row:hover{ box-shadow: 0 4px 14px rgba(2,6,23,.06); border-color:rgba(2,6,23,.16); }
+  .inc-row::before{
+    content:""; position:absolute; left:0; top:14px; bottom:14px; width:3px;
+    border-radius:0 3px 3px 0;
+  }
+  .inc-row.s-pendiente::before{ background:#dc2626; }
+  .inc-row.s-leido::before    { background:#0ea5e9; }
+  .inc-row.s-atendido::before { background:#16a34a; }
+  .inc-row.s-reportado::before{ background:#9333ea; }
+  .inc-row.s-atendido, .inc-row.s-reportado{ opacity:.88; }
+
+  /* Severidad — chip lateral */
+  .inc-sev{
+    width:46px; height:46px; border-radius:11px;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
+    flex-shrink:0;
+  }
+  .inc-sev .icon{ font-size:16px; line-height:1; margin-bottom:2px; }
+  .inc-sev.low{      background:#f1f5f9; color:#64748b; }
+  .inc-sev.medium{   background:#fef3c7; color:#92400e; }
+  .inc-sev.high{     background:#fee2e2; color:#b91c1c; }
+  .inc-sev.critical{ background:#7f1d1d; color:#fff; }
+
+  /* Cuerpo */
+  .inc-body{ min-width:0; }
+  .inc-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:2px; }
+  .inc-folio{
+    font-size:10.5px; color:#64748b; font-weight:700;
+    letter-spacing:.04em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .inc-status{
+    display:inline-flex; align-items:center; gap:4px;
+    padding:2px 9px; border-radius:8px;
+    font-size:10.5px; font-weight:800;
+    text-transform:uppercase; letter-spacing:.04em;
+  }
+  .inc-status.pendiente{ background:#fef2f2; color:#b91c1c; }
+  .inc-status.leido    { background:#e0f2fe; color:#0369a1; }
+  .inc-status.atendido { background:#dcfce7; color:#15803d; }
+  .inc-status.reportado{ background:#f3e8ff; color:#6b21a8; }
+  .inc-status .dot{ width:6px; height:6px; border-radius:50%; background:currentColor; }
+
+  .inc-title{ font-size:15px; font-weight:700; color:#0f172a; line-height:1.35; margin:2px 0 4px; }
+  .inc-desc{
+    font-size:13px; color:#475569; line-height:1.5;
+    white-space:pre-wrap; margin-bottom:6px;
+    overflow:hidden;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
+  }
+  .inc-row.expanded .inc-desc{ display:block; -webkit-line-clamp:initial; }
+  .inc-desc-toggle{
+    font-size:11.5px; color:#0369a1; font-weight:600;
+    cursor:pointer; background:none; border:0; padding:0; margin-bottom:6px;
+  }
+  .inc-meta{
+    font-size:11.5px; color:#64748b;
+    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+  }
+  .inc-meta .sep{ color:#cbd5e1; }
+
+  /* Acciones */
+  .inc-actions{ display:flex; gap:6px; flex-shrink:0; align-items:center; }
+  .btn-act{
+    padding:7px 12px; border-radius:9px;
+    font-size:12px; font-weight:700; cursor:pointer;
+    border:1px solid; background:#fff;
+    transition: all .15s ease;
+    font-family: inherit;
+    white-space: nowrap;
+  }
+  .btn-act:hover{ transform: translateY(-1px); }
+  .btn-act.read{   color:#0369a1; border-color:rgba(14,165,233,.30); }
+  .btn-act.read:hover{   background:#e0f2fe; border-color:rgba(14,165,233,.50); }
+  .btn-act.attend{ color:#15803d; border-color:rgba(34,197,94,.30); }
+  .btn-act.attend:hover{ background:#dcfce7; border-color:rgba(34,197,94,.50); }
+  .btn-act.report{ color:#6b21a8; border-color:rgba(147,51,234,.30); }
+  .btn-act.report:hover{ background:#f3e8ff; border-color:rgba(147,51,234,.50); }
+
+  /* Estado vacío */
+  .inc-empty{
+    padding:48px 24px; text-align:center;
+    background:#fff;
+    border:1px dashed rgba(2,6,23,.14); border-radius:14px;
+    color:#94a3b8;
+  }
+  .inc-empty .ico{ font-size:42px; opacity:.35; margin-bottom:10px; }
+  .inc-empty .ttl{ font-size:15px; font-weight:700; color:#475569; margin-bottom:4px; }
+  .inc-empty .sub{ font-size:13px; color:#94a3b8; }
+
+  /* Responsive */
+  @media (max-width:720px){
+    .inc-row{ grid-template-columns: auto 1fr; }
+    .inc-actions{ grid-column: 1 / -1; justify-content:flex-end; flex-wrap:wrap; }
+    .inc-form-row{ grid-template-columns:1fr; }
+    .inc-new-btn{ margin-left:0; }
+  }
+
+  body.dark .inc-toolbar,
+  body.dark .inc-form,
+  body.dark .inc-row,
+  body.dark .inc-chip,
+  body.dark .inc-empty,
+  body.dark .btn-act{
+    background:rgba(15,23,42,.55); border-color:rgba(255,255,255,.08); color:#e2e8f0;
+  }
+  body.dark .inc-title{ color:#f1f5f9; }
+  body.dark .inc-desc, body.dark .inc-meta{ color:#94a3b8; }
+</style>
+{% endblock %}
 {% block content %}
-<div class="pagehead"><div><h1 class="h1">Bitácora de incidencias</h1><div class="sub">Registro y seguimiento de hallazgos, observaciones e incidentes operativos.</div></div></div>
-<div class="grid cols-2" style="margin-top:14px;">
-  <div class="card">
-    <div class="help">Nueva incidencia</div>
-    <div style="display:grid;gap:10px;margin-top:10px;">
-      <input id="title" class="input" placeholder="Título">
-      <textarea id="description" class="input" style="min-height:110px;" placeholder="Descripción"></textarea>
-      <div class="grid cols-3"><input id="station_id" class="input" placeholder="ID estación"><select id="severity" class="input"><option>medium</option><option>low</option><option>high</option><option>critical</option></select><input id="module" class="input" placeholder="Módulo"></div>
-      <button class="btn primary" id="btnCreate">Registrar incidencia</button>
-      <div id="msg" class="help"></div>
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Bitácora de incidencias</h1>
+    <div class="sub">Registro y seguimiento de hallazgos, observaciones e incidentes operativos.</div>
+  </div>
+</div>
+
+<div id="pendingBanner" class="inc-pending-banner" style="display:none;">
+  <div class="ico">!</div>
+  <div class="text">
+    <div class="lbl">Pendientes de revisar</div>
+    <div class="msg"><b><span id="pendingCount">0</span></b> incidencia(s) sin marcar en tu estación</div>
+  </div>
+</div>
+
+<div class="inc-toolbar">
+  <div class="inc-chips" id="chipsBox">
+    <button class="inc-chip active" data-chip="" type="button">Todas <span class="count" data-count="">0</span></button>
+    <button class="inc-chip" data-chip="pendiente" type="button">Pendientes <span class="count" data-count="pendiente">0</span></button>
+    <button class="inc-chip" data-chip="leido" type="button">Leídas <span class="count" data-count="leido">0</span></button>
+    <button class="inc-chip" data-chip="atendido" type="button">Atendidas <span class="count" data-count="atendido">0</span></button>
+    <button class="inc-chip" data-chip="reportado" type="button">Reportadas <span class="count" data-count="reportado">0</span></button>
+  </div>
+  <button class="inc-new-btn" id="btnToggleForm" type="button"><span class="plus">+</span> Nueva incidencia</button>
+</div>
+
+<div class="inc-form" id="formBox">
+  <div class="inc-form-inner">
+    <input id="title" class="input" placeholder="Título breve" style="margin-bottom:10px;">
+    <textarea id="description" class="input" style="min-height:90px;" placeholder="Describe la incidencia con el detalle que el jefe necesita para actuar"></textarea>
+    <div class="inc-form-row">
+      <select id="severity" class="input">
+        <option value="medium">Severidad media</option>
+        <option value="low">Severidad baja</option>
+        <option value="high">Severidad alta</option>
+        <option value="critical">Severidad crítica</option>
+      </select>
+      <input id="module" class="input" placeholder="Módulo (opcional)">
+    </div>
+    <div class="actions">
+      <div id="msg"></div>
+      <button class="btn ghost" id="btnCancel" type="button">Cancelar</button>
+      <button class="btn primary" id="btnCreate" type="button">Registrar</button>
     </div>
   </div>
-  <div class="card"><div class="help">Filtro</div><select id="filter" class="input" style="margin-top:10px;"><option value="">Todas</option><option value="open">Abiertas</option><option value="in_progress">En progreso</option><option value="closed">Cerradas</option></select><div class="help" style="margin-top:10px;">Tip: desde aquí puedes cerrar incidencias y dejar trazabilidad.</div></div>
 </div>
-<div id="list" class="grid cols-2" style="margin-top:14px;"></div>
+
+<div class="inc-listwrap">
+  <div id="list" class="inc-list"></div>
+</div>
 {% endblock %}
 {% block scripts %}
 <script>
-async function refresh(){const st=document.getElementById('filter').value||''; const r=await api('/api/incidents'+(st?('?status='+encodeURIComponent(st)):'')); const box=document.getElementById('list'); box.innerHTML=(r.items||[]).map(it=>`<div class="card"><div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;"><div><div class="help">${_esc(it.folio||'')}</div><h3 style="margin:4px 0 8px;">${_esc(it.title||'')}</h3><div class="help">${_esc(it.station_code||'Global')} · ${_esc(it.severity||'medium')} · ${_esc(it.status||'open')}</div></div><div><button class="btn ghost" onclick="markIncident(${it.id},'in_progress')">Tomar</button> <button class="btn" onclick="markIncident(${it.id},'closed')">Cerrar</button></div></div><div style="margin-top:10px;white-space:pre-wrap;">${_esc(it.description||'')}</div></div>`).join('') || '<div class="card">Sin incidencias.</div>'; }
-async function createIncident(){await api('/api/incidents',{method:'POST',body:JSON.stringify({title:title.value,description:description.value,station_id:station_id.value,module:module.value,severity:severity.value})}); msg.textContent='Incidencia registrada.'; title.value=''; description.value=''; station_id.value=''; module.value=''; await refresh();}
-async function markIncident(id,status){await api('/api/incidents/'+id,{method:'PATCH',body:JSON.stringify({status})}); await refresh();}
-document.getElementById('btnCreate').addEventListener('click',()=>createIncident().catch(()=>msg.textContent='No se pudo registrar.')); document.getElementById('filter').addEventListener('change',()=>refresh().catch(()=>{})); window.markIncident=markIncident; refresh();
+const STATUS_LABEL   = {pendiente:'Pendiente', leido:'Leída', atendido:'Atendida', reportado:'Reportada'};
+const SEVERITY_LABEL = {low:'Baja', medium:'Media', high:'Alta', critical:'Crítica'};
+const SEVERITY_ICON  = {low:'·', medium:'!', high:'!!', critical:'!!!'};
+
+let ME_ROLE = '';
+let ALL_ITEMS = [];
+let FILTER = '';
+let EXPANDED = new Set();
+
+function fmtDate(s){ if(!s) return '—'; return String(s).replace('T',' ').slice(0,16); }
+
+function rowHtml(it){
+  const expanded = EXPANDED.has(it.id) ? 'expanded' : '';
+  const sev = (it.severity || 'medium').toLowerCase();
+  const status = (it.status || 'pendiente').toLowerCase();
+  const folio = it.folio || ('#' + it.id);
+  const meta = [
+    `<span>${_esc(it.station_code || 'Global')}</span>`,
+    `<span class="sep">·</span>`,
+    `<span>Creada ${_esc(fmtDate(it.created_at))}</span>`,
+  ];
+  if (it.created_by_name){
+    meta.push(`<span class="sep">·</span><span>Por ${_esc(it.created_by_name)}</span>`);
+  }
+  if (it.acknowledged_at){
+    meta.push(`<span class="sep">·</span><span>Leída ${_esc(fmtDate(it.acknowledged_at))}</span>`);
+  }
+  if (it.resolved_at){
+    meta.push(`<span class="sep">·</span><span>Cerrada ${_esc(fmtDate(it.resolved_at))}</span>`);
+  }
+
+  const actions = [];
+  if (ME_ROLE === 'jefe_estacion'){
+    if (status === 'pendiente'){
+      actions.push(`<button class="btn-act read" onclick="markIncident(${it.id},'leido')">Marcar leída</button>`);
+    }
+    if (status === 'pendiente' || status === 'leido'){
+      actions.push(`<button class="btn-act attend" onclick="markIncident(${it.id},'atendido')">Atender</button>`);
+      actions.push(`<button class="btn-act report" onclick="markIncident(${it.id},'reportado')">Reportar</button>`);
+    }
+  }
+
+  const desc = (it.description || '').trim();
+  const showToggle = desc.length > 140;
+  const descHtml = desc
+    ? `<div class="inc-desc">${_esc(desc)}</div>`
+      + (showToggle ? `<button class="inc-desc-toggle" onclick="toggleExpand(${it.id})">${EXPANDED.has(it.id)?'Ver menos':'Ver más'}</button>` : '')
+    : '';
+
+  return `
+    <article class="inc-row s-${status} ${expanded}" data-id="${it.id}">
+      <div class="inc-sev ${sev}" title="Severidad ${_esc(SEVERITY_LABEL[sev]||sev)}">
+        <span class="icon">${SEVERITY_ICON[sev]||'·'}</span>
+        <span>${_esc(SEVERITY_LABEL[sev]||sev)}</span>
+      </div>
+      <div class="inc-body">
+        <div class="inc-head">
+          <span class="inc-folio">${_esc(folio)}</span>
+          <span class="inc-status ${status}"><span class="dot"></span>${_esc(STATUS_LABEL[status]||status)}</span>
+        </div>
+        <div class="inc-title">${_esc(it.title || '(sin título)')}</div>
+        ${descHtml}
+        <div class="inc-meta">${meta.join('')}</div>
+      </div>
+      ${actions.length ? `<div class="inc-actions">${actions.join('')}</div>` : ''}
+    </article>`;
+}
+
+function updateCounts(){
+  const counts = {'': ALL_ITEMS.length, pendiente:0, leido:0, atendido:0, reportado:0};
+  ALL_ITEMS.forEach(it => { counts[it.status] = (counts[it.status]||0) + 1; });
+  qsa('[data-count]').forEach(el => {
+    const k = el.getAttribute('data-count');
+    el.textContent = counts[k] || 0;
+  });
+}
+
+function renderList(){
+  const box = qs('#list');
+  const items = FILTER ? ALL_ITEMS.filter(it => it.status === FILTER) : ALL_ITEMS;
+  if (!items.length){
+    box.innerHTML = `
+      <div class="inc-empty">
+        <div class="ico">∅</div>
+        <div class="ttl">No hay incidencias ${FILTER ? 'en este filtro' : 'registradas'}</div>
+        <div class="sub">${FILTER ? 'Cambia de filtro o limpia la selección.' : 'Cuando registres una incidencia, aparecerá en esta lista.'}</div>
+      </div>`;
+    return;
+  }
+  box.innerHTML = items.map(rowHtml).join('');
+}
+
+window.toggleExpand = function(id){
+  if (EXPANDED.has(id)) EXPANDED.delete(id);
+  else EXPANDED.add(id);
+  renderList();
+};
+
+async function refresh(){
+  const r = await api('/api/incidents');
+  ALL_ITEMS = r.items || [];
+  updateCounts();
+  renderList();
+}
+
+function setFilter(value){
+  FILTER = value;
+  qsa('.inc-chip').forEach(c => c.classList.toggle('active', c.getAttribute('data-chip') === value));
+  renderList();
+}
+
+async function createIncident(){
+  const title = qs('#title').value.trim();
+  const msg = qs('#msg');
+  msg.className = '';
+  if (!title){ msg.textContent = 'Falta el título.'; msg.className = 'err'; return; }
+  await api('/api/incidents', {
+    method:'POST',
+    body: JSON.stringify({
+      title,
+      description: qs('#description').value,
+      module: qs('#module').value,
+      severity: qs('#severity').value,
+    }),
+  });
+  msg.textContent = 'Registrada. El jefe de estación fue notificado.';
+  msg.className = 'ok';
+  qs('#title').value = '';
+  qs('#description').value = '';
+  qs('#module').value = '';
+  await Promise.all([refresh(), refreshPendingBanner()]);
+  setTimeout(() => closeForm(), 1200);
+}
+
+window.markIncident = async function(id, status){
+  await api('/api/incidents/' + id, {method:'PATCH', body: JSON.stringify({status})});
+  await Promise.all([refresh(), refreshPendingBanner()]);
+};
+
+async function refreshPendingBanner(){
+  if (ME_ROLE !== 'jefe_estacion') return;
+  try{
+    const r = await api('/api/incidents/pending-count');
+    const n = Number(r.count || 0);
+    qs('#pendingBanner').style.display = n > 0 ? 'flex' : 'none';
+    qs('#pendingCount').textContent = n;
+    if (typeof updateIncidentsBadge === 'function') updateIncidentsBadge(n);
+  }catch(e){}
+}
+
+function openForm(){
+  qs('#formBox').classList.add('open');
+  qs('#btnToggleForm').classList.add('is-open');
+  qs('#btnToggleForm').innerHTML = '<span class="plus">×</span> Cerrar';
+  setTimeout(() => qs('#title').focus(), 200);
+}
+function closeForm(){
+  qs('#formBox').classList.remove('open');
+  qs('#btnToggleForm').classList.remove('is-open');
+  qs('#btnToggleForm').innerHTML = '<span class="plus">+</span> Nueva incidencia';
+  qs('#msg').textContent = '';
+  qs('#msg').className = '';
+}
+
+(async () => {
+  try{
+    const r = await api('/api/me');
+    ME_ROLE = (r.me || {}).role || '';
+  }catch(e){}
+
+  // chips
+  qsa('.inc-chip').forEach(chip => {
+    chip.addEventListener('click', () => setFilter(chip.getAttribute('data-chip') || ''));
+  });
+
+  // form toggle
+  qs('#btnToggleForm').addEventListener('click', () => {
+    if (qs('#formBox').classList.contains('open')) closeForm(); else openForm();
+  });
+  qs('#btnCancel').addEventListener('click', closeForm);
+  qs('#btnCreate').addEventListener('click', () =>
+    createIncident().catch(() => {
+      qs('#msg').textContent = 'No se pudo registrar. Revisa los datos.';
+      qs('#msg').className = 'err';
+    })
+  );
+
+  await Promise.all([refresh(), refreshPendingBanner()]);
+})();
 </script>
 {% endblock %}

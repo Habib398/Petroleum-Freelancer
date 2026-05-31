@@ -1,0 +1,258 @@
+{% extends "layout.html" %}
+{% block head %}
+<style>
+  .ir-wrap{ display:flex; flex-direction:column; gap:14px; margin-top:14px; }
+  .ir-toolbar{
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+    padding:12px 14px; border-radius:14px;
+    background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55));
+    border:1px solid var(--hme-border, rgba(2,6,23,.08));
+    box-shadow:0 1px 2px rgba(2,6,23,.04);
+  }
+  .ir-toolbar .group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .ir-toolbar label.tiny{ font-size:11px; font-weight:700; color:var(--hme-text-soft,#64748b); text-transform:uppercase; letter-spacing:.04em; }
+  .ir-toolbar .input{ padding:8px 10px; font-size:13px; min-width:140px; }
+
+  .ir-card{
+    padding:18px; border-radius:16px; background:#fff;
+    border:1px solid var(--hme-border, rgba(2,6,23,.08));
+    box-shadow:0 1px 3px rgba(2,6,23,.04);
+  }
+
+  .ir-kpis{ display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; }
+  .ir-kpi{
+    padding:18px; border-radius:14px; background:#fff;
+    border:1px solid var(--hme-border, rgba(2,6,23,.08));
+    position:relative; overflow:hidden;
+  }
+  .ir-kpi .label{ font-size:11px; font-weight:800; color:var(--hme-text-soft,#64748b); text-transform:uppercase; letter-spacing:.06em; }
+  .ir-kpi .num{ font-size:36px; font-weight:900; line-height:1.1; margin:8px 0 4px; letter-spacing:-.02em; }
+  .ir-kpi .sub{ font-size:12px; color:var(--hme-text-soft,#64748b); font-weight:600; }
+
+  .ir-kpi.tone-red    { background:linear-gradient(180deg, rgba(220,38,38,.05),  #fff); border-color:rgba(220,38,38,.20); }
+  .ir-kpi.tone-red    .num{ color:#b91c1c; }
+  .ir-kpi.tone-blue   { background:linear-gradient(180deg, rgba(14,165,233,.05), #fff); border-color:rgba(14,165,233,.20); }
+  .ir-kpi.tone-blue   .num{ color:#0369a1; }
+  .ir-kpi.tone-green  { background:linear-gradient(180deg, rgba(34,197,94,.05),  #fff); border-color:rgba(34,197,94,.22); }
+  .ir-kpi.tone-green  .num{ color:#15803d; }
+  .ir-kpi.tone-purple { background:linear-gradient(180deg, rgba(147,51,234,.05), #fff); border-color:rgba(147,51,234,.22); }
+  .ir-kpi.tone-purple .num{ color:#6b21a8; }
+
+  .ir-summary-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .ir-summary-grid h3{ margin:0 0 10px; font-size:15px; font-weight:800; }
+  .ir-row{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(2,6,23,.06); font-size:14px; }
+  .ir-row:last-child{ border-bottom:0; }
+  .ir-row .k{ color:var(--hme-text-soft,#64748b); font-weight:600; }
+  .ir-row .v{ font-weight:800; }
+
+  .ir-table{ width:100%; border-collapse:collapse; font-size:13px; }
+  .ir-table thead th{ text-align:left; padding:8px 6px; border-bottom:2px solid rgba(2,6,23,.10); font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--hme-text-soft,#64748b); }
+  .ir-table tbody td{ padding:10px 6px; border-bottom:1px solid rgba(2,6,23,.06); vertical-align:top; }
+  .ir-table tbody tr:last-child td{ border-bottom:0; }
+  .ir-table .desc{ font-size:12px; color:var(--hme-text-soft,#64748b); margin-top:4px; white-space:pre-wrap; }
+
+  .ir-status{ display:inline-block; padding:2px 8px; border-radius:8px; color:#fff; font-size:11px; font-weight:700; }
+  .ir-status.pendiente{ background:#dc2626; }
+  .ir-status.leido    { background:#0ea5e9; }
+  .ir-status.atendido { background:#16a34a; }
+  .ir-status.reportado{ background:#9333ea; }
+
+  .ir-empty{ padding:24px; text-align:center; color:var(--hme-text-soft,#64748b); }
+
+  body.dark .ir-toolbar, body.dark .ir-card, body.dark .ir-kpi{
+    background:rgba(15,23,42,.6); border-color:rgba(255,255,255,.08);
+  }
+
+  @media (max-width:900px){
+    .ir-kpis{ grid-template-columns:repeat(2,1fr); }
+    .ir-summary-grid{ grid-template-columns:1fr; }
+  }
+</style>
+{% endblock %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Reporte mensual de incidencias</h1>
+    <div class="sub">Resumen por estación del mes seleccionado.</div>
+  </div>
+</div>
+
+<div class="ir-wrap">
+  <div class="ir-toolbar">
+    <div class="group">
+      <label class="tiny" for="irStation">Estación</label>
+      <select id="irStation" class="input"></select>
+    </div>
+    <div class="group">
+      <label class="tiny" for="irYear">Año</label>
+      <select id="irYear" class="input"></select>
+    </div>
+    <div class="group">
+      <label class="tiny" for="irMonth">Mes</label>
+      <select id="irMonth" class="input"></select>
+    </div>
+    <div class="group" style="margin-left:auto;">
+      <button id="irReload" class="btn">Ver reporte</button>
+      <button id="irPdf" class="btn primary">Descargar PDF</button>
+    </div>
+  </div>
+
+  <div id="irKpis" class="ir-kpis">
+    <div class="ir-kpi tone-red"><div class="label">Pendientes</div><div class="num" data-k="pendiente">—</div><div class="sub">Sin marcar</div></div>
+    <div class="ir-kpi tone-blue"><div class="label">Leídas</div><div class="num" data-k="leido">—</div><div class="sub">Reconocidas</div></div>
+    <div class="ir-kpi tone-green"><div class="label">Atendidas</div><div class="num" data-k="atendido">—</div><div class="sub">Resueltas en sitio</div></div>
+    <div class="ir-kpi tone-purple"><div class="label">Reportadas</div><div class="num" data-k="reportado">—</div><div class="sub">Escaladas</div></div>
+  </div>
+
+  <div class="ir-summary-grid">
+    <div class="ir-card">
+      <h3>Resumen del mes</h3>
+      <div class="ir-row"><span class="k">Total de incidencias</span><span class="v" id="irTotal">—</span></div>
+      <div class="ir-row"><span class="k">Tiempo promedio hasta lectura</span><span class="v" id="irAvg">—</span></div>
+      <div class="ir-row"><span class="k">Rango del período</span><span class="v" id="irRange">—</span></div>
+    </div>
+    <div class="ir-card">
+      <h3>Por severidad</h3>
+      <div class="ir-row"><span class="k">Crítica</span><span class="v" data-sev="critical">—</span></div>
+      <div class="ir-row"><span class="k">Alta</span><span class="v" data-sev="high">—</span></div>
+      <div class="ir-row"><span class="k">Media</span><span class="v" data-sev="medium">—</span></div>
+      <div class="ir-row"><span class="k">Baja</span><span class="v" data-sev="low">—</span></div>
+    </div>
+  </div>
+
+  <div class="ir-card">
+    <h3 style="margin:0 0 10px;font-size:15px;font-weight:800;">Detalle de incidencias</h3>
+    <div id="irDetailBox">
+      <div class="ir-empty">Selecciona estación y período, luego presiona <b>Ver reporte</b>.</div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const STATUS_LABEL = {pendiente:'Pendiente', leido:'Leída', atendido:'Atendida', reportado:'Reportada'};
+const SEVERITY_LABEL = {low:'Baja', medium:'Media', high:'Alta', critical:'Crítica'};
+const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+
+function fmtDate(s){ if(!s) return '—'; return String(s).replace('T',' ').slice(0,16); }
+
+function buildYearOptions(){
+  const sel = qs('#irYear');
+  const now = new Date().getFullYear();
+  for (let y = now; y >= now - 4; y--){
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    sel.appendChild(opt);
+  }
+}
+
+function buildMonthOptions(){
+  const sel = qs('#irMonth');
+  const now = new Date().getMonth() + 1;
+  MONTHS.forEach((name, i) => {
+    const opt = document.createElement('option');
+    opt.value = String(i+1).padStart(2,'0');
+    opt.textContent = name;
+    if (i+1 === now) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
+async function loadStations(){
+  const r = await api('/api/stations');
+  const sel = qs('#irStation');
+  (r.stations || []).forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = `${s.code} — ${s.name}`;
+    sel.appendChild(opt);
+  });
+}
+
+function setKpi(key, value){
+  qsa(`#irKpis [data-k="${key}"]`).forEach(el => el.textContent = String(value));
+}
+
+function setSev(key, value){
+  qsa(`[data-sev="${key}"]`).forEach(el => el.textContent = String(value));
+}
+
+function renderDetail(items){
+  const box = qs('#irDetailBox');
+  if (!items.length){
+    box.innerHTML = '<div class="ir-empty">Sin incidencias registradas en el período.</div>';
+    return;
+  }
+  const rows = items.map(it => {
+    const folio = it.folio || ('#' + it.id);
+    const sev = SEVERITY_LABEL[it.severity] || it.severity || '';
+    const status = STATUS_LABEL[it.status] || it.status || '';
+    return `
+      <tr>
+        <td>${_esc(fmtDate(it.created_at))}</td>
+        <td>${_esc(folio)}</td>
+        <td>${_esc(sev)}</td>
+        <td><span class="ir-status ${_esc(it.status||'')}">${_esc(status)}</span></td>
+        <td>
+          <div><b>${_esc(it.title || '')}</b></div>
+          ${it.description ? `<div class="desc">${_esc(it.description)}</div>` : ''}
+          <div class="desc">
+            Creó: ${_esc(it.created_by_name || '—')}
+            ${it.acknowledged_by_name ? ` · Leyó: ${_esc(it.acknowledged_by_name)} (${_esc(fmtDate(it.acknowledged_at))})` : ''}
+            ${it.resolved_by_name ? ` · Cerró: ${_esc(it.resolved_by_name)} (${_esc(fmtDate(it.resolved_at))})` : ''}
+          </div>
+        </td>
+      </tr>`;
+  }).join('');
+  box.innerHTML = `
+    <table class="ir-table">
+      <thead>
+        <tr><th>Fecha</th><th>Folio</th><th>Severidad</th><th>Estado</th><th>Detalle</th></tr>
+      </thead>
+      <tbody>${rows}</tbody>
+    </table>`;
+}
+
+async function loadReport(){
+  const station_id = qs('#irStation').value;
+  const year = qs('#irYear').value;
+  const month = qs('#irMonth').value;
+  if (!station_id){ toast('Selecciona una estación'); return; }
+  const r = await api(`/api/admin/incidents-report?year=${year}&month=${month}&station_id=${station_id}`);
+  if (!r.ok){ toast(r.message || 'No se pudo cargar el reporte'); return; }
+  const t = r.totals || {};
+  setKpi('pendiente', t.pendiente || 0);
+  setKpi('leido', t.leido || 0);
+  setKpi('atendido', t.atendido || 0);
+  setKpi('reportado', t.reportado || 0);
+  qs('#irTotal').textContent = t.total || 0;
+  qs('#irAvg').textContent = r.avg_response_hours != null ? `${r.avg_response_hours} h` : 'Sin datos';
+  qs('#irRange').textContent = `${r.period.from} a ${r.period.to}`;
+  const sev = r.by_severity || {};
+  setSev('low', sev.low || 0);
+  setSev('medium', sev.medium || 0);
+  setSev('high', sev.high || 0);
+  setSev('critical', sev.critical || 0);
+  renderDetail(r.items || []);
+}
+
+function downloadPdf(){
+  const station_id = qs('#irStation').value;
+  const year = qs('#irYear').value;
+  const month = qs('#irMonth').value;
+  if (!station_id){ toast('Selecciona una estación'); return; }
+  window.open(`/admin/incidents-report.pdf?year=${year}&month=${month}&station_id=${station_id}`, '_blank');
+}
+
+(async () => {
+  buildYearOptions();
+  buildMonthOptions();
+  await loadStations();
+  qs('#irReload').addEventListener('click', () => loadReport().catch(e => toast('Error: '+e.message)));
+  qs('#irPdf').addEventListener('click', downloadPdf);
+  if (qs('#irStation').options.length > 0){
+    await loadReport().catch(()=>{});
+  }
+})();
+</script>
+{% endblock %}

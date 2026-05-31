@@ -1,0 +1,452 @@
+================================================================================
+REPORTE DE CAMBIOS — MODULO DOCUMENTAL (Plantillas y Programacion)
+Fecha: 2026-05-18
+Sistema: worklog general (Consulting Oil & Gas / SGM)
+================================================================================
+
+
+1. RESUMEN EJECUTIVO
+--------------------------------------------------------------------------------
+Durante la sesion se intervino el modulo "Plantillas y programacion" del area
+documental (SGM). Los cambios cubren tres frentes:
+
+  A. UX del admin: simplificacion de la pantalla principal de plantillas y
+     herramientas mas potentes para definir los campos editables de cada
+     plantilla PDF (editor visual con drag-to-place, multi-seleccion,
+     generador de cuadricula y etiquetas inteligentes).
+
+  B. UX del jefe de estacion: la vista de edicion de partes permitidas ahora
+     muestra el PDF original con los inputs flotando ENCIMA del documento,
+     en lugar de una lista abstracta de "celda F1C1".
+
+  C. Backend: deteccion automatica de la celda del encabezado para insertar el
+     logo del cliente en el PDF, soporte para el nuevo tipo de campo "casilla"
+     (checkbox) en el render del PDF final, y arreglo de un bug latente en
+     el ejemplo de schema (true/false en Python).
+
+
+
+2. CAMBIOS POR FEATURE
+--------------------------------------------------------------------------------
+
+2.1 Pagina principal de plantillas — drawer lateral para formularios
+-------------------------------------------------------------------------
+Archivo: templates/documental_docs/templates.html
+
+Problema original:
+  La pagina mostraba la tabla "Plantillas cargadas" en una columna lateral
+  (~57% del ancho) compitiendo con dos formularios largos (Nueva plantilla y
+  Programar documento). La columna de Acciones (Ver / Editar / Campos /
+  Generar / Publicar) se desbordaba fuera del viewport.
+
+Solucion:
+  - Se reorganizo el layout: los dos formularios se sacaron a paneles
+    laterales (drawers) que se deslizan desde la derecha al pulsar los
+    botones "+ Nueva plantilla" y "+ Programar documento" en la cabecera.
+  - La tabla "Plantillas cargadas" ahora ocupa el ancho completo.
+  - La columna de acciones se reorganizo en una sola fila con todas las
+    opciones visibles.
+  - Drawer con backdrop oscuro, cierre por ESC, click fuera o boton "x".
+  - Bloqueo de scroll del body mientras un drawer este abierto.
+
+Tecnologias: HTML/CSS3 puro (position: fixed, transform: translateX,
+transition, sticky headers) + JavaScript vanilla para los handlers de
+apertura/cierre (atributos data-open-drawer / data-close-drawer).
+
+
+2.2 Insercion automatica del logo en el PDF
+-------------------------------------------------------------------------
+Archivo: modules/compliance/documental_docs.py
+Funcion: _apply_logo_to_pdf
+
+Problema original:
+  El logo se colocaba en una zona estimada por porcentaje fijo del tamano de
+  pagina (18% ancho x 10% alto desde la esquina sup-izq). Eso causaba que el
+  logo cayera fuera del recuadro blanco real del encabezado, porque la celda
+  del header no siempre coincide con esos porcentajes.
+
+Solucion (tres niveles de fallback):
+  1) Deteccion de tablas con PyMuPDF page.find_tables() — toma la tabla mas
+     alta de la pagina (la cabecera) y usa el bbox de la primera celda.
+  2) Si no hay tabla detectable, busca rectangulos dibujados con
+     page.get_drawings() en el tercio superior y elige el mas cercano a la
+     esquina sup-izq.
+  3) Si las dos anteriores fallan, estimacion conservadora ajustada
+     (4-18% ancho, 1.2-8.5% alto).
+
+Ademas se agrego un padding interno (8% horizontal, 10% vertical) para que
+el logo no toque los bordes de la celda. Se mantiene keep_proportion=True
+para que la imagen no se deforme.
+
+Libreria: PyMuPDF (modulo fitz / pymupdf). Funciones usadas:
+  - fitz.open(), page.find_tables(), page.get_drawings(),
+    page.insert_image(rect, filename=..., keep_proportion=True),
+    fitz.Rect()
+
+
+2.3 Soporte de tipo "checkbox" en el schema
+-------------------------------------------------------------------------
+Archivos:
+  - modules/compliance/documental_docs.py (_parse_schema_input, _render_pdf,
+    _example_schema)
+  - templates/documental_docs/capture.html
+  - templates/documental_docs/record_capture.html
+  - templates/documental_docs/staff_record_edit.html
+
+Problema original:
+  El schema solo admitia text/textarea/date/number. Para formatos con grids
+  de casillas (calendarios, checklists), no habia forma de definir
+  marcadores tipo checkbox.
+
+Solucion backend:
+  - _parse_schema_input acepta ahora "type": "checkbox".
+  - Default de tamano: 14x14 pt para checkbox (220x18 pt para otros).
+  - _render_pdf dibuja una palomita (dos lineas formando una ✓) dentro del
+    rect cuando el valor es truthy ("1", "true", "on", "yes", "x", "✓").
+    Si el valor es vacio o falsy, no dibuja nada.
+  - El grosor de la linea se calcula como max(1.0, min(w,h) * 0.12) para
+    que se vea proporcional en casillas grandes o pequenas.
+
+Solucion frontend:
+  - Las tres vistas de captura (capture, record_capture, staff_record_edit)
+    ahora renderizan <input type="checkbox" name=... value="1"> cuando el
+    campo es de tipo checkbox.
+  - record_capture y staff_record_edit pre-marcan los checkboxes leyendo el
+    valor guardado (cualquier truthy hace `checked`).
+  - El submit funciona transparente: navegador envia "1" si marcado, nada
+    si desmarcado; ambos casos los maneja _render_pdf correctamente.
+
+Bug colateral arreglado:
+  En _example_schema habia `true` y `false` (literales JavaScript) dentro
+  de un dict de Python — eso provocaba NameError al abrir la pagina de
+  edicion de campos. Se cambio a True/False (literales Python).
+
+Libreria: PyMuPDF para el dibujo de las palomitas via page.draw_line().
+
+
+2.4 Editor visual de campos (drag-to-place)
+-------------------------------------------------------------------------
+Archivo: templates/documental_docs/edit_fields.html (reescrito)
+
+Problema original:
+  La pagina de edicion mostraba solo un <textarea> con el JSON crudo del
+  schema. El admin tenia que escribir x/y/w/h a mano mirando el preview del
+  PDF. Para una plantilla con 70 casillas era inviable.
+
+Solucion: editor visual completo.
+
+  - Toolbar con botones de herramienta: Seleccionar, Texto, Area de texto,
+    Fecha, Numero, Casilla, Cuadricula.
+  - Preview de cada pagina del PDF como imagen (servida desde
+    _ensure_template_previews, generada con PyMuPDF a zoom 1.3x).
+  - Capa overlay transparente encima de cada imagen captura los gestos de
+    mouse.
+  - Drag con una herramienta de creacion activa → genera un campo con las
+    coordenadas en puntos PDF, calculadas como:
+        pdf_x = display_x * (img.naturalWidth / img.clientWidth) / 1.3
+  - Click simple (sin arrastre) → campo con tamano default (80x18 pt para
+    texto, 14x14 pt para casilla).
+  - Panel lateral derecho con:
+      * Lista de campos existentes (con tipo, label, pagina, boton borrar).
+      * Editor de propiedades del campo seleccionado: key, tipo, label,
+        font-size, alineacion, staff_editable.
+      * Coordenadas en vivo (Pagina N • x: y: • W×H pt).
+      * Botones Duplicar y Eliminar.
+      * Modo avanzado colapsable con el JSON crudo (solo lectura, se
+        actualiza solo).
+  - Form de guardado postea a la misma URL (sin cambios en la ruta backend).
+
+Tecnologias: HTML5 + CSS Grid + JavaScript vanilla. Sin librerias
+externas. Coordenadas en puntos PDF (mismo sistema que PyMuPDF, origen
+arriba-izquierda). Re-render automatico en window resize.
+
+Seguridad: el JSON inicial se inyecta con `JSON.parse({{ schema_json|tojson }})`
+para evitar XSS en caso de que una etiqueta contenga `</script>` u otros
+caracteres especiales.
+
+
+2.5 Generador de cuadricula (grid)
+-------------------------------------------------------------------------
+Archivo: templates/documental_docs/edit_fields.html
+
+Problema original:
+  Aun con el editor visual, crear 72 casillas (12 meses x 6 actividades)
+  era tedioso porque habia que dibujar cada una.
+
+Solucion: herramienta "▦ Cuadricula".
+
+  - Al activarla, el admin dibuja UN solo rectangulo exterior que cubre
+    toda el area de la grilla (esquina sup-izq de la primera casilla a
+    esquina inf-der de la ultima).
+  - Al soltar se abre un modal pidiendo:
+      * Filas y columnas (default 6 x 12).
+      * Prefijo del key (ej. "actividad_mes").
+      * Tipo de campo en cada celda (casilla, texto, numero, fecha).
+      * Si son editables por el jefe de estacion.
+      * Etiquetas de fila (opcional, separadas por coma:
+        "Mensual, Trimestral, Anual").
+      * Etiquetas de columna (opcional: "E, F, M, A, M, J, J, A, S, O, N, D").
+  - Preview en vivo del conteo: "Se crearan N campos".
+  - Al confirmar se crean N×M campos:
+      * Casillas: cuadrado centrado en cada celda con tamano 55% del lado
+        menor (min 8 pt, max 20 pt). Eso evita desbordes.
+      * Texto/etc: cada campo ocupa la celda completa con ~2 pt de padding.
+      * Keys auto-generados estables: `{prefijo}_r1c1`, `{prefijo}_r1c2`...
+      * Labels inteligentes si se proporcionaron: "Mensual · Enero",
+        "Mensual · Febrero"... Si no, fallback a "{prefijo} F1C1".
+  - Cancelar o Esc descarta sin crear nada.
+
+Beneficio: lo que antes tomaba 70 acciones manuales ahora son 3 clicks +
+escribir las etiquetas.
+
+
+2.6 Mover, redimensionar y multi-seleccion en el editor
+-------------------------------------------------------------------------
+Archivo: templates/documental_docs/edit_fields.html
+
+Problema observado:
+  La cuadricula generada distribuye celdas equidistantes, pero las celdas
+  reales del PDF no son perfectamente equidistantes. Resultado: las
+  palomitas caian dentro de la celda equivocada. Ademas, no habia forma de
+  reajustar manualmente.
+
+Solucion completa:
+
+  Mover una celda:
+    - Arrastrar el cuadro entero (cursor "move").
+    - Actualizacion en tiempo real del panel de coordenadas.
+
+  Redimensionar:
+    - 8 manijas (4 esquinas + 4 puntos medios) que aparecen al seleccionar
+      un solo campo.
+    - Arrastrar cualquier manija → redimensiona desde el lado opuesto.
+    - Tamano minimo 4 pt para evitar campos invisibles.
+
+  Multi-seleccion (rubber-band):
+    - Herramienta "↖ Seleccionar" como default.
+    - Arrastre en zona vacia con esta herramienta → rectangulo azul
+      semitransparente. Al soltar, todos los campos cuyo bbox intersecte
+      quedan seleccionados.
+    - Shift + arrastre → SUMA a la seleccion en lugar de reemplazar.
+    - Shift + click sobre un campo → alterna su pertenencia a la seleccion.
+    - Click en zona vacia → limpia la seleccion.
+
+  Acciones con multi-seleccion:
+    - Arrastrar cualquier campo seleccionado → mueve TODOS los seleccionados
+      con el mismo delta. Util para corregir un calendario que quedo
+      desfasado N pt.
+    - Flechas del teclado → mueven 1 pt. Shift+flecha → 10 pt. Aplican a
+      todos los seleccionados.
+    - Delete / Backspace → borra todos los seleccionados (con confirmacion
+      mostrando el conteo).
+    - Ctrl+D / Cmd+D → duplica todos los seleccionados con key
+      auto-incrementado y desplazamiento de 10 pt.
+    - Esc → limpia la seleccion (o cierra el modal de grilla si esta abierto).
+
+  Resize con multi:
+    - Si haces click en una manija de resize con varios seleccionados,
+      la seleccion colapsa automaticamente a ese solo campo (resize
+      multiple no esta soportado por complejidad de logica).
+
+  Panel de propiedades:
+    - 0 seleccionados → panel oculto.
+    - 1 seleccionado → edicion individual completa.
+    - N seleccionados → mensaje "N campos seleccionados" + botones
+      Duplicar / Eliminar.
+
+
+2.7 Vista del jefe de estacion — overlay editable sobre el PDF
+-------------------------------------------------------------------------
+Archivos:
+  - modules/compliance/documental_docs.py (handler staff_record_edit)
+  - templates/documental_docs/staff_record_edit.html (reescrito)
+
+Problema original (visto en captura del cliente):
+  El jefe de estacion veia una lista de cards con etiquetas crudas
+  ("celda F1C1", "celda F1C2"...) y checkboxes sueltos. No tenia forma de
+  saber que casilla del documento original estaba marcando.
+
+Solucion: overlay editable.
+
+  Backend:
+    - El handler ahora pasa al template el SCHEMA COMPLETO (no solo los
+      editables), un set con los keys editables, los valores actuales y
+      las paths de las previews del PDF.
+    - El handler de SAVE no cambio: sigue iterando solo sobre los campos
+      editables. Los no editables nunca se sobreescriben.
+
+  Frontend:
+    - El template muestra cada pagina del PDF como una imagen.
+    - JavaScript posiciona absolutamente sobre la imagen un overlay por
+      cada campo del schema, usando la misma conversion de coordenadas
+      del editor visual (PDF point → display px).
+    - Tipos de overlay:
+      * Casilla editable: cuadro azul clickable. Al marcar muestra ✓
+        proporcional al tamano de la casilla. El input HTML real es
+        invisible pero capturable por el form.
+      * Texto editable: <input> con borde azul ajustado al rectangulo.
+      * Casilla NO editable: cuadro gris punteado, muestra el valor
+        actual ("✓" si esta marcada).
+      * Texto NO editable: cuadro gris con el valor como referencia.
+    - Tooltip al pasar el cursor / hacer focus: muestra el label del
+      campo (ahi brilla la opcion de etiquetas inteligentes: "Mensual ·
+      Enero" en vez de "celda F1C1").
+    - Toolbar pegajosa arriba con leyenda visual (azul = editable,
+      gris = referencia) y boton Guardar siempre accesible.
+    - Re-render automatico en resize de ventana.
+
+  Beneficio: el jefe de estacion ya no esta "adivinando" — ve el PDF
+  original con los marcadores en su sitio exacto. Es como rellenar el
+  papel directamente con el mouse.
+
+
+2.8 Bug fix — CSRF token faltante en staff_record_edit
+-------------------------------------------------------------------------
+Archivo: templates/documental_docs/staff_record_edit.html
+
+Al implementar el flujo se descubrio que el formulario original no
+incluia el <input type="hidden" name="csrf_token" ...>, lo que causaba
+"CSRF token invalido" al guardar. Se agrego (ya estaba en el resto de
+forms, era una omision historica).
+
+
+
+3. ARCHIVOS MODIFICADOS
+--------------------------------------------------------------------------------
+
+Python (backend):
+  - modules/compliance/documental_docs.py
+      * _apply_logo_to_pdf — deteccion dinamica de celda del encabezado
+      * _parse_schema_input — soporte de tipo "checkbox"
+      * _render_pdf — dibujo de palomita ✓ con draw_line
+      * _example_schema — arreglo de literales true/false → True/False
+      * staff_record_edit — pasa schema completo + previews + editable_keys
+
+Templates Jinja2 (frontend):
+  - templates/documental_docs/templates.html — drawer lateral
+  - templates/documental_docs/edit_fields.html — reescrito completo
+    (editor visual con drag, multi-select, generador de grilla, etc.)
+  - templates/documental_docs/capture.html — render checkbox input
+  - templates/documental_docs/record_capture.html — render checkbox
+    input con prefill de valor existente
+  - templates/documental_docs/staff_record_edit.html — reescrito completo
+    (overlay editable sobre PDF) + arreglo CSRF
+
+
+
+4. LIBRERIAS Y TECNOLOGIAS UTILIZADAS
+--------------------------------------------------------------------------------
+
+Backend (Python):
+  - Flask — framework web, sesiones, render_template, request, redirect, abort
+  - Jinja2 — sistema de templates (incluido en Flask)
+  - PyMuPDF (fitz / pymupdf) — manipulacion de PDF:
+      * fitz.open() — abrir documento
+      * page.rect, page.load_page() — geometria de pagina
+      * page.find_tables() — deteccion de tablas (PyMuPDF >= 1.23)
+      * page.get_drawings() — extraccion de rectangulos dibujados
+      * page.insert_image(rect, filename, keep_proportion) — insertar logo
+      * page.insert_textbox(rect, text, fontsize, fontname, align, color) — texto
+      * page.draw_line(p1, p2, color, width) — dibujar palomitas
+      * page.get_pixmap(matrix) — generar imagenes preview
+  - python-docx — manipulacion de DOCX (logo en plantillas Word)
+  - sqlite3 — persistencia (a traves de get_conn())
+  - json, pathlib, datetime, re — utilidades estandar
+
+Frontend (Templates):
+  - HTML5 — semantica de formularios, input types (date, number, checkbox)
+  - CSS3:
+      * CSS Grid y Flexbox para layouts responsivos
+      * position: absolute/fixed/sticky para overlays y drawers
+      * transform: translateX(), transition para animaciones
+      * Variables CSS (--hme-green, --hme-border, etc.) heredadas del
+        sistema de branding
+  - JavaScript Vanilla (sin framework, sin librerias externas):
+      * Manipulacion del DOM (createElement, appendChild, classList)
+      * Eventos de mouse (mousedown / mousemove / mouseup) para drag-drop
+      * Eventos de teclado (keydown) para atajos
+      * Conversion de coordenadas display ↔ PDF en tiempo real
+      * Re-render en window.resize
+      * Serializacion JSON.stringify para enviar el schema al backend
+  - Jinja2 filter `tojson` — escapado seguro de datos Python a literales
+    JS (previene XSS por inyeccion de </script> en labels)
+
+Almacenamiento:
+  - SQLite a traves de db.py (tablas doc_templates, doc_template_versions,
+    doc_template_fields, doc_generated_documents, doc_records, etc.)
+  - field_schema_json: columna TEXT con el array JSON de campos
+  - field_values_json: columna TEXT con las respuestas guardadas
+  - Storage adapter (modules/core/uploads.py): abstraccion sobre
+    filesystem local + posiblemente S3, sirve uploads como /uploads/*.
+
+
+
+5. SISTEMA DE COORDENADAS
+--------------------------------------------------------------------------------
+
+Es importante para entender como el editor y el overlay alinean campos
+con el PDF:
+
+  - PDF: puntos (pt), 1 pt = 1/72 pulgadas. Origen arriba-izquierda.
+  - Preview rendering: PyMuPDF genera PNGs con zoom 1.3x
+        pix.get_pixmap(matrix=fitz.Matrix(1.3, 1.3))
+    Por tanto:  image_natural_pixel = pdf_point * 1.3
+  - Display en navegador: el <img> puede escalarse por CSS (max-width: 100%)
+        display_pixel = image_natural_pixel * (clientWidth / naturalWidth)
+
+Conversion completa:
+  display_x = pdf_x * 1.3 * (img.clientWidth / img.naturalWidth)
+  pdf_x     = display_x * (img.naturalWidth / img.clientWidth) / 1.3
+
+Tanto el editor visual (edit_fields.html) como el overlay del staff
+(staff_record_edit.html) usan exactamente esta conversion para garantizar
+que un campo definido a x=380 pt aparezca SIEMPRE en el mismo lugar
+visual independientemente del tamano de ventana del navegador.
+
+
+
+6. FLUJO COMPLETO DE PRINCIPIO A FIN
+--------------------------------------------------------------------------------
+
+  1) Admin sube una plantilla PDF (boton "+ Nueva plantilla" en el drawer).
+  2) Admin pulsa "Campos" en la fila de la plantilla → entra al editor visual.
+  3) Admin define los campos:
+       - Click+arrastre con la herramienta "Casilla" para casillas sueltas.
+       - O herramienta "Cuadricula" para grids grandes (calendarios, tablas).
+       - Marca cuales son editables por el jefe de estacion.
+       - Asigna labels inteligentes.
+  4) Admin Guarda. El schema queda en doc_templates.field_schema_json.
+  5) (Opcional) Admin sube un logo para el encabezado: se detecta la celda
+     automaticamente y se incrusta sin romper el layout.
+  6) Admin pulsa "Generar" o programa un documento para una estacion
+     (boton "+ Programar documento").
+  7) El jefe de estacion ve el documento en /staff/.../docs/records.
+  8) Si hay campos editables, ve un boton "Editar partes permitidas".
+  9) Al entrar ve el PDF con los campos en azul flotando encima. Marca/llena.
+ 10) Al guardar, _render_pdf vuelve a generar el PDF con los nuevos valores
+     (palomitas, texto, etc.) y actualiza doc_records.
+
+
+
+7. PENDIENTES / FUTURAS MEJORAS
+--------------------------------------------------------------------------------
+
+  - capture.html (flujo de captura por requirement) no se actualizo con
+    el overlay porque actualmente esta deshabilitado (capture_submit
+    aborta con 403). Si se reactiva, el codigo de overlay del staff_edit
+    es directamente reutilizable.
+  - El generador de cuadricula distribuye celdas equidistantes. Las
+    plantillas con celdas de tamano variable requieren ajuste manual
+    (lo cual ya es posible con drag/resize/multi-seleccion).
+  - Para plantillas EXISTENTES creadas antes de esta sesion, los labels
+    seguiran siendo "celda F1C1" etc. Para mejorarlos hay que regenerar
+    la grilla o editar manualmente cada label desde el panel de
+    propiedades.
+  - Snap-to-grid o snap-to-other-fields no esta implementado. Si se
+    necesita alineacion perfecta entre celdas de diferentes grids, hoy
+    se hace a ojo o con teclas de flecha.
+
+
+================================================================================
+FIN DEL REPORTE
+================================================================================

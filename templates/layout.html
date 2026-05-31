@@ -64,7 +64,7 @@
               <a href="/mod/operational-calendar">Calendario operativo</a>
               {% if session.get('brand','consulting') == 'petroleum' %}<a href="/mod/document-renewals-calendar">Vencimientos y renovaciones</a>{% endif %}
               <a href="/mod/evidencias">Evidencias</a>
-              <a href="/mod/incidents">Incidencias</a>
+              <a href="/mod/incidents" data-not-admin hidden>Incidencias <span id="incidentsBadge" class="badge" style="display:none;margin-left:6px;background:#dc2626;color:white;">0</span></a>
               <a href="/mod/corrections">Tareas / Correcciones</a>
             </nav>
           </details>
@@ -125,6 +125,7 @@
               <a href="/admin/executive">Ejecutivo</a>
 {% if session.get('brand','consulting') == 'petroleum' %}              <a href="/admin/document-deadlines">Control maestro (admin)</a>
 {% endif %}              <a href="/admin/audit">Auditoría</a>
+              <a href="/admin/incidents-report">Reporte de incidencias</a>
               <a href="/admin/docs/compare">Comparador documental</a>
               <a href="/admin/reports/print/consolidated" target="_blank" rel="noopener">Impresión pro</a>
             </nav>

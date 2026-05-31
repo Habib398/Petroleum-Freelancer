@@ -1,31 +1,234 @@
 {% extends "layout.html" %}
-{% block head %}{% endblock %}
+{% block head %}
+<style>
+  .rep-wrap{ display:flex; flex-direction:column; gap:14px; margin-top:14px; }
+  .rep-toolbar{
+    display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+    padding:12px 14px; border-radius:14px;
+    background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55));
+    border:1px solid var(--hme-border, rgba(2,6,23,.08));
+    box-shadow:0 1px 2px rgba(2,6,23,.04);
+  }
+  .rep-toolbar .group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .rep-toolbar .group + .group{ border-left:1px solid rgba(2,6,23,.06); padding-left:12px; }
+  .rep-toolbar label.tiny{ font-size:11px; font-weight:700; color:var(--hme-text-soft,#64748b); text-transform:uppercase; letter-spacing:.04em; }
+  .rep-toolbar .input{ padding:8px 10px; font-size:13px; min-width:140px; }
+
+  .rep-card{
+    padding:18px; border-radius:16px; background:#fff;
+    border:1px solid var(--hme-border, rgba(2,6,23,.08));
+    box-shadow:0 1px 3px rgba(2,6,23,.04);
+  }
+
+  /* Tarjetas de KPI */
+  .rep-kpis{ display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; }
+  .rep-kpi{
+    padding:18px; border-radius:14px;
+    background:#fff;
+    border:1px solid var(--hme-border, rgba(2,6,23,.08));
+    position:relative; overflow:hidden;
+    transition:transform .12s, box-shadow .12s;
+  }
+  .rep-kpi:hover{ transform:translateY(-1px); box-shadow:0 4px 12px rgba(2,6,23,.10); }
+  .rep-kpi .label{
+    font-size:11px; font-weight:800; color:var(--hme-text-soft,#64748b);
+    text-transform:uppercase; letter-spacing:.06em;
+  }
+  .rep-kpi .pct{
+    font-size:36px; font-weight:900; line-height:1.1;
+    margin:8px 0 4px; letter-spacing:-.02em;
+  }
+  .rep-kpi .ratio{
+    font-size:13px; font-weight:700; color:var(--hme-text-soft,#64748b);
+  }
+  .rep-kpi .bar{
+    margin-top:12px; height:6px; border-radius:999px;
+    background:rgba(2,6,23,.06); overflow:hidden;
+  }
+  .rep-kpi .bar > span{
+    display:block; height:100%; border-radius:999px;
+    transition:width .4s ease;
+  }
+  .rep-kpi.tone-red .pct{ color:#b91c1c; }
+  .rep-kpi.tone-red .bar > span{ background:#dc2626; }
+  .rep-kpi.tone-red{ background:linear-gradient(180deg, rgba(220,38,38,.05), #fff); border-color:rgba(220,38,38,.20); }
+  .rep-kpi.tone-amber .pct{ color:#b45309; }
+  .rep-kpi.tone-amber .bar > span{ background:#f59e0b; }
+  .rep-kpi.tone-amber{ background:linear-gradient(180deg, rgba(245,158,11,.05), #fff); border-color:rgba(245,158,11,.20); }
+  .rep-kpi.tone-green .pct{ color:#15803d; }
+  .rep-kpi.tone-green .bar > span{ background:#22c55e; }
+  .rep-kpi.tone-green{ background:linear-gradient(180deg, rgba(34,197,94,.05), #fff); border-color:rgba(34,197,94,.22); }
+  .rep-kpi.tone-zero .pct{ color:#94a3b8; }
+  .rep-kpi.tone-zero .bar > span{ background:#cbd5e1; }
+
+  .rep-chart-head{
+    display:flex; align-items:baseline; justify-content:space-between;
+    margin-bottom:10px;
+  }
+  .rep-chart-head h3{ margin:0; font-size:15px; font-weight:800; }
+  .rep-chart-head .sub{ font-size:12px; color:var(--hme-text-soft,#64748b); }
+  .rep-chart-wrap{ position:relative; height:280px; }
+
+  /* Charts en dos columnas en desktop */
+  .rep-charts-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+
+  /* Ranking por estación */
+  .rep-rank-row{
+    display:grid; grid-template-columns:1.4fr 80px 1fr 90px; gap:12px;
+    align-items:center; padding:8px 4px;
+    border-bottom:1px solid rgba(2,6,23,.06);
+    font-size:13px;
+  }
+  .rep-rank-row:last-child{ border-bottom:0; }
+  .rep-rank-row .name{ font-weight:700; }
+  .rep-rank-row .code{ font-size:11px; color:var(--hme-text-soft,#64748b); font-weight:700; }
+  .rep-rank-row .bar{
+    height:8px; border-radius:999px; background:rgba(2,6,23,.06); overflow:hidden;
+  }
+  .rep-rank-row .bar > span{
+    display:block; height:100%; border-radius:999px;
+    transition:width .4s ease;
+  }
+  .rep-rank-row .pct{
+    font-weight:800; font-size:13px; text-align:right;
+  }
+  .rep-rank-row.tone-red .bar > span{ background:#dc2626; }
+  .rep-rank-row.tone-amber .bar > span{ background:#f59e0b; }
+  .rep-rank-row.tone-green .bar > span{ background:#22c55e; }
+  .rep-rank-row.tone-zero .bar > span{ background:#cbd5e1; }
+  .rep-rank-row.tone-red .pct{ color:#b91c1c; }
+  .rep-rank-row.tone-amber .pct{ color:#b45309; }
+  .rep-rank-row.tone-green .pct{ color:#15803d; }
+
+  .rep-forbidden{
+    padding:24px; text-align:center;
+    color:var(--hme-text-soft,#64748b);
+  }
+
+  /* Descargas (sección original) */
+  .rep-downloads{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .rep-downloads h3{ margin:0 0 6px 0; font-size:15px; font-weight:800; }
+
+  body.dark .rep-toolbar,
+  body.dark .rep-card,
+  body.dark .rep-kpi{
+    background:rgba(15,23,42,.6); border-color:rgba(255,255,255,.08);
+  }
+
+  @media (max-width:900px){
+    .rep-kpis{ grid-template-columns:repeat(2, 1fr); }
+    .rep-charts-grid{ grid-template-columns:1fr; }
+    .rep-downloads{ grid-template-columns:1fr; }
+    .rep-rank-row{ grid-template-columns:1fr 60px 80px; }
+    .rep-rank-row .bar{ display:none; }
+  }
+</style>
+{% endblock %}
 {% block content %}
 <div class="pagehead">
   <div>
     <h1 class="h1">Reportes</h1>
-    <div class="sub">Descargas mensuales y anuales (con FIEL para anual según rol).</div>
+    <div class="sub">Cumplimiento de actividades y descargas mensuales/anuales.</div>
   </div>
 </div>
 
-<div class="grid cols-2">
-  <div class="card">
-    <div style="font-weight:900;">Reporte mensual</div>
-    <div class="formrow" style="margin-top:10px;">
-      <div><div class="help">Año</div><input id="rmYear" class="input" value="2026"></div>
-      <div><div class="help">Mes</div><input id="rmMonth" class="input" value="02"></div>
+<div id="repForbidden" class="rep-forbidden card" hidden style="margin-top:14px;">
+  Esta vista está disponible para <b>Administradores</b> y <b>Jefes de estación</b>.
+</div>
+
+<div id="repAnalytics" class="rep-wrap" hidden>
+
+  <!-- Toolbar: año + estación -->
+  <div class="rep-toolbar">
+    <div class="group">
+      <label class="tiny" for="repYear">Año</label>
+      <select id="repYear" class="input"></select>
     </div>
-    <div class="formactions">
-      <button id="rmBtn" class="btn primary">Descargar PDF</button>
+    <div class="group" id="repStationGroup">
+      <label class="tiny" for="repStation">Estación</label>
+      <select id="repStation" class="input"></select>
     </div>
-    <div class="help">Admin puede pasar station_id en la URL si lo necesita.</div>
+    <div class="group" style="margin-left:auto;">
+      <span class="help" id="repTodayLabel" style="font-size:12px;"></span>
+    </div>
   </div>
 
-  <div class="card">
-    <div style="font-weight:900;">Reporte anual</div>
-    <div style="display:grid;gap:10px;margin-top:10px;">
+  <!-- KPIs -->
+  <div class="rep-kpis" id="repKpis">
+    <div class="rep-kpi tone-zero" data-kpi="daily">
+      <div class="label">Hoy</div>
+      <div class="pct">—</div>
+      <div class="ratio">0 / 0</div>
+      <div class="bar"><span style="width:0"></span></div>
+    </div>
+    <div class="rep-kpi tone-zero" data-kpi="weekly">
+      <div class="label">Semana</div>
+      <div class="pct">—</div>
+      <div class="ratio">0 / 0</div>
+      <div class="bar"><span style="width:0"></span></div>
+    </div>
+    <div class="rep-kpi tone-zero" data-kpi="monthly">
+      <div class="label">Mes</div>
+      <div class="pct">—</div>
+      <div class="ratio">0 / 0</div>
+      <div class="bar"><span style="width:0"></span></div>
+    </div>
+    <div class="rep-kpi tone-zero" data-kpi="yearly">
+      <div class="label">Año</div>
+      <div class="pct">—</div>
+      <div class="ratio">0 / 0</div>
+      <div class="bar"><span style="width:0"></span></div>
+    </div>
+  </div>
+
+  <!-- Gráficas mensuales y semanales -->
+  <div class="rep-charts-grid">
+    <div class="rep-card">
+      <div class="rep-chart-head">
+        <h3>Cumplimiento mensual</h3>
+        <span class="sub" id="repMonthlySub">Año seleccionado</span>
+      </div>
+      <div class="rep-chart-wrap"><canvas id="repChartMonthly"></canvas></div>
+    </div>
+    <div class="rep-card">
+      <div class="rep-chart-head">
+        <h3>Cumplimiento semanal</h3>
+        <span class="sub">Últimas 8 semanas</span>
+      </div>
+      <div class="rep-chart-wrap"><canvas id="repChartWeekly"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Ranking por estación (solo admin) -->
+  <div class="rep-card" id="repRankCard" hidden>
+    <div class="rep-chart-head">
+      <h3>Ranking por estación</h3>
+      <span class="sub">% del mes actual</span>
+    </div>
+    <div id="repRankList"></div>
+  </div>
+
+</div>
+
+<!-- Descargas (mantenido) -->
+<div class="rep-card" style="margin-top:14px;">
+  <div class="rep-chart-head">
+    <h3>Descargas</h3>
+    <span class="sub">Reporte mensual y anual (PDF)</span>
+  </div>
+  <div class="rep-downloads" style="margin-top:8px;">
+    <div>
+      <div class="formrow">
+        <div><div class="help">Año</div><input id="rmYear" class="input" value="2026"></div>
+        <div><div class="help">Mes</div><input id="rmMonth" class="input" value="02"></div>
+      </div>
+      <div class="formactions">
+        <button id="rmBtn" class="btn primary">Descargar PDF mensual</button>
+      </div>
+    </div>
+    <div>
       <div><div class="help">Año</div><input id="raYear" class="input" value="2026"></div>
-      <div class="formactions"><button id="raBtn" class="btn primary">Descargar PDF</button></div>
+      <div class="formactions"><button id="raBtn" class="btn primary">Descargar PDF anual</button></div>
       <div class="help">Jefe de estación requiere perfil fiscal + FIEL actualizada para descargar anual.</div>
     </div>
   </div>
@@ -33,5 +236,6 @@
 
 {% endblock %}
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="/static/js/reports.js"></script>
 {% endblock %}
