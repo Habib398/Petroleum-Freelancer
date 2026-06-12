@@ -1,97 +1,184 @@
 {% extends "layout.html" %}
 {% block head %}
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
-  <style>#stationMap{height:360px;border-radius:12px;border:1px solid var(--hme-border);}</style>
+  <style>
+    #stationMap { height: 360px; border-radius: 12px; border: 1px solid var(--hme-border); }
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-content { background: white; border-radius: 12px; max-width: 600px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 24px; border-bottom: 1px solid var(--hme-border); position: sticky; top: 0; background: white; z-index: 1000; }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--hme-border); display: flex; gap: 12px; justify-content: flex-end; }
+    .station-table { width: 100%; }
+    .station-row { display: grid; grid-template-columns: auto 1fr auto; gap: 16px; padding: 16px; border: 1px solid var(--hme-border); border-radius: 8px; background: white; align-items: center; }
+    .station-row:hover { background: var(--hme-bg); }
+    .station-info { display: flex; flex-direction: column; gap: 6px; }
+    .station-name { font-weight: 900; font-size: 16px; color: var(--hme-text); }
+    .station-meta { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+    .station-meta-item { font-size: 13px; color: var(--hme-text-soft); }
+    .station-actions { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+    .station-grid { display: flex; flex-direction: column; gap: 12px; }
+    .empty-state { text-align: center; padding: 48px 24px; color: var(--hme-text-soft); }
+    .empty-state-icon { font-size: 48px; margin-bottom: 16px; }
+    @media (max-width: 768px) {
+      .station-row { grid-template-columns: 1fr; gap: 12px; }
+      .station-actions { justify-content: flex-start; }
+      .modal-content { width: 95%; }
+    }
+  </style>
 {% endblock %}
 {% block content %}
 <div class="pagehead">
-  <div>
-    <h1 class="h1">Estaciones</h1>
-    <div class="sub">Alta, edición y bloqueo por mensualidad.</div>
+  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <h1 class="h1">Estaciones</h1>
+      <div class="sub">Gestiona tus estaciones de trabajo</div>
+    </div>
+    <button id="btnNewStation" class="btn primary" style="padding: 12px 24px; font-weight: 600;">
+      + Nueva estación
+    </button>
   </div>
 </div>
 
-<div class="grid cols-2">
-  <div class="card">
-    <div style="font-weight:900;">Crear / editar estación</div>
-    <div style="display:grid;gap:10px;margin-top:10px;">
-      <div class="formrow">
-        <div><div class="help">Nombre</div><input id="sName" class="input"></div>
-        <div><div class="help">Código</div><input id="sCode" class="input" placeholder="EST-002"></div>
+<div class="card" style="margin-bottom: 16px;">
+  <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+    <input id="searchStations" type="text" class="input" placeholder="Buscar estaciones..." style="flex: 1; min-width: 250px;">
+    <button id="btnToggleFilters" class="btn ghost" style="white-space: nowrap; padding: 10px 14px;">Filtros</button>
+  </div>
+  
+  <div id="filtersPanel" style="display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hme-border); display: flex; gap: 12px; flex-wrap: wrap; align-items: center;">
+    <div style="display: flex; gap: 12px; flex-wrap: wrap; align-items: center; flex: 1;">
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <label style="font-size: 13px; color: var(--hme-text-soft); white-space: nowrap;">Empresa:</label>
+        <select id="filterBrand" class="input" style="min-width: 130px; padding: 8px 10px; font-size: 13px;">
+          <option value="">Todas</option>
+          <option value="consulting">Consulting</option>
+          <option value="petroleum">Petroleum</option>
+        </select>
       </div>
-      <div class="formrow">
-        <div>
-          <div class="help">Empresa</div>
-          <select id="sBrand" class="input">
-            <option value="consulting">Consulting</option>
-            <option value="petroleum">Petroleum</option>
-          </select>
-        </div>
-        <div>
-          <div class="help">Mensualidad fin</div>
-          <input id="sMonthlyEnd" class="input" type="date">
-        </div>
+      <div style="display: flex; gap: 8px; align-items: center;">
+        <label style="font-size: 13px; color: var(--hme-text-soft); white-space: nowrap;">Estado:</label>
+        <select id="filterStatus" class="input" style="min-width: 130px; padding: 8px 10px; font-size: 13px;">
+          <option value="">Todos</option>
+          <option value="active">Activas</option>
+          <option value="view_only">Solo vista</option>
+          <option value="expired">Expiradas</option>
+        </select>
       </div>
-      <div class="formrow">
-        <div><div class="help">Número de estación</div><input id="sNum" class="input" type="number" step="1" placeholder="Ej. 12"></div>
-        <div><div class="help">Grupo</div><input id="sGroup" class="input" placeholder="Ej. Grupo López / Marca X"></div>
-      </div>
-      <div class="formrow">
-        <div><div class="help">Estado</div><input id="sState" class="input"></div>
-        <div><div class="help">Ciudad</div><input id="sCity" class="input"></div>
-      </div>
-      <div><div class="help">Dirección</div><input id="sAddr" class="input"></div>
+    </div>
+    <button id="btnClearFilters" class="btn ghost small" style="white-space: nowrap;">Limpiar</button>
+  </div>
+  
+  <div id="filterInfo" class="help" style="display: none; margin-top: 8px;"></div>
+</div>
+
+<div class="card">
+  <div id="stationsList" class="station-grid"></div>
+</div>
+
+<!-- Modal para crear/editar estación -->
+<div id="stationModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
       <div>
-        <div class="help">Coordenada (pega en DMS o decimal)</div>
-        <input id="sCoord" class="input" placeholder="Ej. 25°40'11.97&quot;N 100°18'05.72&quot;W  ó  25.66999,-100.30158">
-        <div class="help">Se convierte automáticamente a Lat/Lng al guardar.</div>
+        <div style="font-weight: 900; font-size: 18px;" id="modalTitle">Nueva estación</div>
+        <div class="help" style="margin-top: 4px;">Completa los datos de la estación</div>
       </div>
-      <div class="formrow">
-        <div><div class="help">Lat (auto)</div><input id="sLat" class="input" type="number" step="0.000001" readonly></div>
-        <div><div class="help">Lng (auto)</div><input id="sLng" class="input" type="number" step="0.000001" readonly></div>
-      </div>
-      <div class="formactions" style="justify-content:space-between;">
-        <button id="sPreview" type="button" class="btn">Probar en mapa</button>
-        <button id="sAdd" class="btn primary">Crear</button>
-      </div>
-      <dialog id="dlgStationMap">
-        <div class="card" style="border:none;box-shadow:none;">
-          <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
-            <div>
-              <div style="font-weight:900;">Vista previa en mapa</div>
-              <div class="help">Verifica que el marcador caiga donde corresponde antes de crear.</div>
-            </div>
-            <button type="button" id="sMapClose" class="btn ghost small">Cerrar</button>
-          </div>
-          <div id="stationMap" style="margin-top:12px;"></div>
-        </div>
-      </dialog>
-<input type="hidden" id="sId">
-      <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:8px;">
-        <button class="btn ghost small" id="sCancelEdit" type="button" hidden>Cancelar edición</button>
-      </div>
-      <div id="sErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
-      <div style="margin-top:14px;border-top:1px solid var(--hme-border);padding-top:14px;">
-        <div style="font-weight:900;">Importar estaciones (KML)</div>
-        <div class="help">Sube un archivo .kml (Google Earth). Se importan puntos (Placemark/Point) en la empresa actual.</div>
-        <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:10px;">
-          <input id="kmlFile" type="file" accept=".kml" class="input" style="max-width:320px;">
-          <button id="kmlImport" type="button" class="btn">Importar KML</button>
-        </div>
-        <div id="kmlMsg" class="help" style="margin-top:8px;" hidden></div>
-      </div>
-
+      <button id="modalClose" class="btn ghost small" style="margin: 0;">×</button>
     </div>
-  </div>
+    <div class="modal-body">
+      <div style="display: grid; gap: 16px;">
+        <!-- Datos básicos -->
+        <div class="formrow">
+          <div><div class="help">Nombre</div><input id="sName" class="input" placeholder="Ej. Estación Xalapa"></div>
+          <div><div class="help">Código</div><input id="sCode" class="input" placeholder="EST-002"></div>
+        </div>
+        <div class="formrow">
+          <div>
+            <div class="help">Empresa</div>
+            <select id="sBrand" class="input">
+              <option value="consulting">Consulting</option>
+              <option value="petroleum">Petroleum</option>
+            </select>
+          </div>
+          <div><div class="help">Mensualidad fin</div><input id="sMonthlyEnd" class="input" type="date"></div>
+        </div>
+        
+        <!-- Ubicación -->
+        <div style="border-top: 1px solid var(--hme-border); padding-top: 12px; margin-top: 4px;">
+          <div style="font-weight: 600; margin-bottom: 12px;">Ubicación</div>
+          <div class="formrow">
+            <div><div class="help">Estado</div><input id="sState" class="input" placeholder="Ej. Veracruz"></div>
+            <div><div class="help">Ciudad</div><input id="sCity" class="input" placeholder="Ej. Xalapa"></div>
+          </div>
+          <div><div class="help">Dirección</div><input id="sAddr" class="input" placeholder="Ej. Calle 5 de Mayo #123"></div>
+        </div>
 
-  <div class="card">
-    <div style="font-weight:900;">Listado</div>
-    <div class="help">Puedes cambiar el estado de mensualidad para bloquear/desbloquear.</div>
-    <div class="tablewrap" style="margin-top:10px;">
-      <table><thead><tr><th>#</th><th>Nombre</th><th>Empresa</th><th>Grupo</th><th>Código</th><th>Status</th><th>Acción</th></tr></thead><tbody id="sT"></tbody></table>
+        <!-- Datos adicionales -->
+        <div style="border-top: 1px solid var(--hme-border); padding-top: 12px; margin-top: 4px;">
+          <div style="font-weight: 600; margin-bottom: 12px;">Información adicional</div>
+          <div class="formrow">
+            <div><div class="help">Número de estación</div><input id="sNum" class="input" type="number" step="1" placeholder="Ej. 12"></div>
+            <div><div class="help">Grupo</div><input id="sGroup" class="input" placeholder="Ej. Grupo López"></div>
+          </div>
+        </div>
+
+        <!-- Coordenadas -->
+        <div style="border-top: 1px solid var(--hme-border); padding-top: 12px; margin-top: 4px;">
+          <div style="font-weight: 600; margin-bottom: 12px;">Ubicación geográfica</div>
+          <div><div class="help">Coordenada (DMS o decimal)</div><input id="sCoord" class="input" placeholder="Ej. 25°40'11.97&quot;N 100°18'05.72&quot;W  ó  25.66999,-100.30158"><div class="help" style="font-size: 12px; margin-top: 4px;">Se convierte automáticamente a Lat/Lng</div></div>
+          <div class="formrow" style="margin-top: 12px;">
+            <div><div class="help">Lat</div><input id="sLat" class="input" type="number" step="0.000001" readonly></div>
+            <div><div class="help">Lng</div><input id="sLng" class="input" type="number" step="0.000001" readonly></div>
+          </div>
+          <button id="sPreview" type="button" class="btn" style="margin-top: 12px; width: 100%;">Probar en mapa</button>
+        </div>
+
+        <input type="hidden" id="sId">
+        <div id="sErr" class="help" style="color: var(--hme-danger); font-weight: 900;" hidden></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="sCancelEdit" class="btn ghost" type="button" hidden>Cancelar edición</button>
+      <button id="sAdd" class="btn primary" style="flex: 1;">Crear estación</button>
     </div>
   </div>
 </div>
+
+<!-- Modal para importar KML -->
+<div id="kmlModal" class="modal-overlay">
+  <div class="modal-content" style="max-width: 400px;">
+    <div class="modal-header">
+      <div>
+        <div style="font-weight: 900; font-size: 18px;">Importar desde KML</div>
+        <div class="help" style="margin-top: 4px;">Google Earth</div>
+      </div>
+      <button id="kmlModalClose" class="btn ghost small" style="margin: 0;">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="help" style="margin-bottom: 16px;">Sube un archivo .kml (Google Earth). Se importan puntos (Placemark/Point).</div>
+      <input id="kmlFile" type="file" accept=".kml" class="input">
+      <div id="kmlMsg" class="help" style="margin-top: 12px;" hidden></div>
+    </div>
+    <div class="modal-footer">
+      <button id="kmlImport" type="button" class="btn primary" style="flex: 1;">Importar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal para mapa preview -->
+<dialog id="dlgStationMap">
+  <div class="card" style="border:none;box-shadow:none;margin:0;">
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+      <div>
+        <div style="font-weight:900;">Vista previa en mapa</div>
+        <div class="help">Verifica que el marcador caiga donde corresponde</div>
+      </div>
+      <button type="button" id="sMapClose" class="btn ghost small">Cerrar</button>
+    </div>
+    <div id="stationMap" style="margin-top:12px;"></div>
+  </div>
+</dialog>
 
 {% endblock %}
 {% block scripts %}

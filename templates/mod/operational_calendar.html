@@ -71,8 +71,77 @@
       <input id="dFrom" class="input" type="date" />
       <input id="dTo" class="input" type="date" />
       <button id="btnReload" class="btn ghost" type="button">Actualizar</button>
+      <button id="btnNewActivity" class="btn primary" type="button">Crear actividad</button>
+      <a class="btn" href="/mod/station-evidence">Ver evidencias</a>
     </div>
   </div>
+
+  <dialog id="dlgNewActivity">
+    <form id="formNewActivity" class="dlgform" enctype="multipart/form-data" style="min-width:min(560px,92vw);">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;">
+        <div>
+          <div style="font-weight:900;font-size:16px;">Crear actividad</div>
+          <div class="help">Define frecuencia y la estación a la que se asigna.</div>
+        </div>
+        <button type="button" id="naClose" class="btn ghost small">Cerrar</button>
+      </div>
+      <div style="display:grid;gap:10px;margin-top:10px;">
+        <div class="formrow" style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:160px;">
+            <div class="help">Fecha de inicio</div>
+            <input class="input" type="date" name="start_date" id="naStart" required/>
+          </div>
+          <div style="flex:1;min-width:160px;">
+            <div class="help">Repetición</div>
+            <select class="input" name="repeat" id="naRepeat">
+              <option value="once">Una vez</option>
+              <option value="daily">Diaria</option>
+              <option value="weekly">Semanal</option>
+              <option value="monthly">Mensual</option>
+              <option value="bimonthly">Bimestral</option>
+              <option value="quarterly">Trimestral</option>
+              <option value="fourmonthly">Cada 4 meses</option>
+              <option value="semiannual">Semestral</option>
+              <option value="yearly">Anual</option>
+              <option value="fiveyearly">Cada 5 años</option>
+            </select>
+          </div>
+        </div>
+        <div class="formrow" style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:160px;">
+            <div class="help">Hasta (opcional)</div>
+            <input class="input" type="date" name="until" id="naUntil"/>
+          </div>
+          <div style="flex:1;min-width:160px;" id="naStationWrap">
+            <div class="help">Estación</div>
+            <select class="input" name="station_id" id="naStation"></select>
+          </div>
+        </div>
+        <div>
+          <div class="help">Nombre de la actividad</div>
+          <input class="input" name="title" id="naTitle" placeholder="Ej. Limpieza de área" required/>
+        </div>
+        <div>
+          <div class="help">Descripción / instrucciones</div>
+          <textarea class="input" name="description" id="naDesc" rows="3" placeholder="Describe qué se debe hacer..."></textarea>
+        </div>
+        <div class="formrow" style="display:flex;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:160px;">
+            <div class="help">Manual / Formato (PDF) (opcional)</div>
+            <input class="input" type="file" name="manual_pdf" accept="application/pdf">
+          </div>
+          <div style="flex:1;min-width:160px;">
+            <div class="help">Documento adicional (PDF) (opcional)</div>
+            <input class="input" type="file" name="extra_pdf" accept="application/pdf">
+          </div>
+        </div>
+        <div class="formactions" style="display:flex;justify-content:flex-end;gap:10px;">
+          <button class="btn primary" type="submit">Crear actividad</button>
+        </div>
+        <div id="naErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
+      </div>
+    </form>
+  </dialog>
 
   <div class="opcal-wrap" style="margin-top:14px;">
 

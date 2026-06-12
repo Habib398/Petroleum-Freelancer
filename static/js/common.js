@@ -61,6 +61,15 @@ async function loadMe(){
     a.hidden = me.role === "admin";
   });
 
+  // Classroom: el calendario de actividades es solo del operador.
+  qsa("[data-operador-only]").forEach(a=>{
+    a.hidden = me.role !== "operador";
+  });
+  // Supervisores (admin/jefe): calendario operativo + evidencias por estación.
+  qsa("[data-supervisor-only]").forEach(a=>{
+    a.hidden = !["admin","jefe_estacion"].includes(me.role);
+  });
+
   // privileged-only links (admin/contador/auditor)
   qsa("[data-map-privileged]").forEach(a=>{
     a.hidden = !["admin","contador","auditor"].includes(me.role);

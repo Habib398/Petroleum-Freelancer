@@ -1133,6 +1133,11 @@ def register(app):
             return redirect("/mod/dashboard")
         if name in {"payments","reports"} and role == "operador":
             return redirect("/mod/dashboard")
+        # Modelo "classroom": el calendario de actividades es exclusivo del
+        # operador (solo completar subiendo evidencia). Admin y jefe crean y
+        # supervisan desde el calendario operativo.
+        if name == "activities" and role in {"admin","jefe_estacion"}:
+            return redirect("/mod/operational-calendar")
 
         allowed = {
             "dashboard","analytics","activities","pipas","maintenance","alerts","payments","reports","profile","notifications"

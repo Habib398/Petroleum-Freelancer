@@ -759,6 +759,23 @@ def _apply_versioned_migrations(conn):
             pass
         _mark_migration(conn, mid, "Incidents v2: status model + acknowledged_by/at")
 
+    # M11: Actividades "Classroom" — unificamos el "completado" reutilizando el
+    # estado 'submitted' (sin tocar el esquema). Remapeamos entregas históricas
+    # 'approved'/'reviewed' -> 'submitted'. 'rejected' se conserva (cuenta como
+    # no completada hasta que se vuelva a subir evidencia). Aplica a ambas marcas.
+    mid = "2026-05-30_01_activities_classroom_remap"
+    if not _migration_applied(conn, mid):
+        for _tbl in ("submissions", "agenda_submissions"):
+            try:
+                conn.execute(
+                    f"UPDATE {_tbl} SET status='submitted' "
+                    f"WHERE status IN ('approved','reviewed')"
+                )
+            except Exception:
+                pass
+        conn.commit()
+        _mark_migration(conn, mid, "Classroom: remap approved/reviewed -> submitted")
+
 
 def init_db():
     os.makedirs(os.path.join(BASE_DIR, "data"), exist_ok=True)

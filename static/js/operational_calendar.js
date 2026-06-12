@@ -9,6 +9,10 @@
   const popoverEl = qs('#opcalPopover');
   const popoverBackdropEl = qs('#opcalPopoverBackdrop');
 
+  // Rol del usuario (necesario para el botón de crear y el selector de estación).
+  let me = null;
+  try { me = (await api('/api/me')).me; } catch (e) { me = null; }
+
   const today = new Date();
   const first = new Date(today.getFullYear(), today.getMonth(), 1);
   const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
@@ -34,8 +38,8 @@
     plantilla: 'Plantilla del mes',
   };
   const STATUS_LABEL = {
-    open: 'Abierto', pending: 'Pendiente', submitted: 'Entregado',
-    approved: 'Aprobado', rejected: 'Rechazado', closed: 'Cerrado',
+    open: 'Abierto', pending: 'Pendiente', submitted: 'Completada',
+    approved: 'Completada', rejected: 'Rechazado', closed: 'Cerrado',
   };
 
   function fmtDate(s) {
@@ -57,6 +61,14 @@
     headerToolbar: { left: 'prev,next today', center: 'title', right: '' },
     buttonText: { today: 'Hoy' },
     eventDisplay: 'block',
+    datesSet(info) {
+      // Sincroniza los inputs de fecha con el mes visible y recarga datos.
+      fromEl.value = info.view.currentStart.toISOString().slice(0, 10);
+      const endD = new Date(info.view.currentEnd);
+      endD.setDate(endD.getDate() - 1);
+      toEl.value = endD.toISOString().slice(0, 10);
+      load().catch(() => {});
+    },
     eventClick(info) {
       info.jsEvent.preventDefault();
       openPopover({
@@ -68,7 +80,9 @@
         status: info.event.extendedProps.status,
         module: info.event.extendedProps.module,
         overdue: info.event.extendedProps.overdue,
+        completed: info.event.extendedProps.completed,
         color: info.event.backgroundColor,
+        url: info.event.extendedProps.url,
       });
     },
     events: [],
@@ -106,12 +120,13 @@
           endVal = d.toISOString().slice(0, 10);
         } catch (e) {}
       }
+      const prefix = it.overdue ? '⚠ ' : (it.completed ? '✓ ' : '');
       cal.addEvent({
-        title: (it.overdue ? '⚠ ' : '') + it.title,
+        title: prefix + it.title,
         start: it.date,
         end: endVal,
         color: it.color || KIND_COLOR[it.kind] || '#64748b',
-        classNames: it.overdue ? ['is-overdue'] : [],
+        classNames: it.overdue ? ['is-overdue'] : (it.completed ? ['is-completed'] : []),
         extendedProps: {
           kind: it.kind,
           rawTitle: it.title,
@@ -121,6 +136,8 @@
           status: it.status,
           module: it.module,
           overdue: !!it.overdue,
+          completed: !!it.completed,
+          url: it.url,
         },
       });
     });
@@ -220,7 +237,7 @@
         ${fileRow}
         ${statusRow}
       </div>
-      <div class="cal-pop-hint">Vista informativa — sin acciones disponibles.</div>
+      ${d.kind === 'actividad' && d.url ? `<div style="margin-top:12px;"><a class="btn primary small" href="${d.url}">Abrir actividad</a></div>` : `<div class="cal-pop-hint">Vista informativa — sin acciones disponibles.</div>`}
     `;
     popoverEl.classList.add('open');
     popoverBackdropEl.classList.add('open');
@@ -249,5 +266,54 @@
   }
 
   qs('#btnReload').addEventListener('click', load);
-  await load();
+
+  // ===== Crear actividad (admin / jefe) =====
+  const dlgNew = qs('#dlgNewActivity');
+  const btnNew = qs('#btnNewActivity');
+  const formNew = qs('#formNewActivity');
+  const naStation = qs('#naStation');
+  const naStationWrap = qs('#naStationWrap');
+  const naErr = qs('#naErr');
+  const isAdmin = me && me.role === 'admin';
+
+  async function loadStationsForCreate() {
+    if (isAdmin) {
+      try {
+        const st = (await api('/api/stations')).stations || [];
+        naStation.innerHTML = `<option value="">(Todas las estaciones)</option>` +
+          st.map(s => `<option value="${s.id}">${_esc(s.code || '')} • ${_esc(s.name || '')}</option>`).join('');
+      } catch (e) { naStation.innerHTML = `<option value="">(Todas las estaciones)</option>`; }
+    } else {
+      // jefe: la estación queda fija a la suya (el backend la fuerza igualmente).
+      naStation.innerHTML = `<option value="">Mi estación</option>`;
+      if (naStationWrap) naStationWrap.style.display = 'none';
+    }
+  }
+
+  if (btnNew && dlgNew && formNew) {
+    btnNew.addEventListener('click', async () => {
+      await loadStationsForCreate();
+      formNew.reset();
+      qs('#naStart').value = new Date().toISOString().slice(0, 10);
+      if (naErr) { naErr.hidden = true; naErr.textContent = ''; }
+      dlgNew.showModal();
+    });
+    qs('#naClose')?.addEventListener('click', () => dlgNew.close());
+    formNew.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      if (naErr) { naErr.hidden = true; naErr.textContent = ''; }
+      try {
+        const fd = new FormData(formNew);
+        await api('/api/activity-templates', { method: 'POST', body: fd, headers: {} });
+        dlgNew.close();
+        toast('Creada', 'Actividad creada y programada.');
+        await load();
+      } catch (e) {
+        const msg = (e && e.message) ? e.message : 'No se pudo crear';
+        if (naErr) { naErr.textContent = 'Error: ' + msg; naErr.hidden = false; }
+        else toast('Error', msg);
+      }
+    });
+  }
+  // La carga inicial la dispara datesSet al renderizar el calendario.
 })();

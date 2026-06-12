@@ -123,19 +123,25 @@ def register(app):
                 pass
         conn.close()
 
+        rp_norm = (relpath or "").replace("\\", "/")
         if me["role"] != "admin":
-            if relpath.startswith("sasisopa_submissions/") or relpath.startswith("sgm_submissions/"):
+            # Evidencias de actividades (modelo "classroom"): SOLO admin/jefe pueden
+            # verlas; el operador nunca, ni siquiera las de su propia estación.
+            if rp_norm.startswith("submissions/"):
+                if me.get("role") != "jefe_estacion" or owner_station_id is None or not ctx.can_access_station(me, int(owner_station_id)):
+                    return jsonify({"error": "forbidden"}), 403
+            elif relpath.startswith("sasisopa_submissions/") or relpath.startswith("sgm_submissions/"):
                 return jsonify({"error":"forbidden"}), 403
             # Calibraciones documents are admin-only for now
-            if "/docs/calibraciones/" in (relpath or ""):
+            elif "/docs/calibraciones/" in (relpath or ""):
                 return jsonify({"error":"forbidden"}), 403
 
             # Calibraciones tank docs are admin-only
-            if owner_doc_module == "calibraciones":
+            elif owner_doc_module == "calibraciones":
                 return jsonify({"error":"forbidden"}), 403
 
             # Petroleum norms/compliance allow delegated station scope.
-            if owner_doc_module in {"petroleum_norms", "compliance"}:
+            elif owner_doc_module in {"petroleum_norms", "compliance"}:
                 if owner_station_id is None or not ctx.can_access_station(me, int(owner_station_id)):
                     return jsonify({"error":"forbidden"}), 403
             # Shared-folder docs respect delegated station scope; other library docs stay local to the station.

@@ -4,7 +4,7 @@ import datetime
 import json
 from pathlib import Path
 
-from flask import Blueprint, request, jsonify, current_app
+from flask import Blueprint, request, jsonify, current_app, render_template
 from werkzeug.utils import secure_filename
 
 from db import get_conn
@@ -107,6 +107,8 @@ def _event_obj(row: dict) -> dict:
             "activity_id": row.get("activity_id"),
             "station_id": row.get("station_id"),
             "submission_status": row.get("submission_status"),
+            "created_by": row.get("created_by"),
+            "owner_role": row.get("owner_role"),
         },
     }
 
@@ -117,22 +119,92 @@ def register(app):
     login_required = ctx.login_required
     role_required = ctx.role_required
 
+    # ---------------- classroom permissions helpers ----------------
+    def _jefe_can_manage(me, creator_role, station_id) -> bool:
+        """Quién puede editar/borrar una actividad o evento.
+
+        - admin: todo.
+        - jefe_estacion: solo lo que NO creó un admin y que cae en su estación
+          (los eventos globales -station_id NULL- son territorio del admin).
+        - otros roles: nada.
+        """
+        role = me.get("role")
+        if role == "admin":
+            return True
+        if role != "jefe_estacion":
+            return False
+        if (creator_role or "") == "admin":
+            return False
+        if station_id is None:
+            return False
+        try:
+            return ctx.can_access_station(me, int(station_id))
+        except Exception:
+            return False
+
+    def _resolve_create_station(me, requested):
+        """Resuelve el station_id al crear.
+
+        - admin: libre (None = todas, o cualquier id).
+        - jefe_estacion: forzado a su estación; nunca 'todas' (None).
+        """
+        if me.get("role") == "admin":
+            return requested
+        sid_me = me.get("station_id")
+        try:
+            if requested is not None and ctx.can_access_station(me, int(requested)):
+                return int(requested)
+        except Exception:
+            pass
+        return int(sid_me) if sid_me else None
+
     # ---------------- activity templates ----------------
     @activities_bp.get("/api/activities")
     @login_required
-    @role_required("admin")
+    @role_required("admin", "jefe_estacion")
     def api_activities():
+        me = ctx.get_me()
         conn = get_conn()
         cur = conn.cursor()
         brand = get_brand()
-        cur.execute("SELECT * FROM activities WHERE brand=? ORDER BY id DESC",(brand,))
-        activities = [dict(r) for r in cur.fetchall()]
+        if me["role"] == "admin":
+            cur.execute(
+                "SELECT a.*, u.role AS creator_role FROM activities a "
+                "LEFT JOIN users u ON u.id=a.created_by "
+                "WHERE a.brand=? ORDER BY a.id DESC",
+                (brand,),
+            )
+        else:
+            # jefe: ve las de su estación + las globales, pero solo puede gestionar
+            # las propias (creator_role != 'admin'); el frontend usa can_edit.
+            scope = sorted(list(ctx.station_scope_ids(me)))
+            if scope:
+                q = ",".join(["?"] * len(scope))
+                cur.execute(
+                    "SELECT a.*, u.role AS creator_role FROM activities a "
+                    "LEFT JOIN users u ON u.id=a.created_by "
+                    f"WHERE a.brand=? AND (a.target_station_id IS NULL OR a.target_station_id IN ({q})) "
+                    "ORDER BY a.id DESC",
+                    tuple([brand] + scope),
+                )
+            else:
+                cur.execute(
+                    "SELECT a.*, u.role AS creator_role FROM activities a "
+                    "LEFT JOIN users u ON u.id=a.created_by "
+                    "WHERE a.brand=? AND a.target_station_id IS NULL ORDER BY a.id DESC",
+                    (brand,),
+                )
+        activities = []
+        for r in cur.fetchall():
+            a = dict(r)
+            a["can_edit"] = _jefe_can_manage(me, a.get("creator_role"), a.get("target_station_id"))
+            activities.append(a)
         conn.close()
         return jsonify({"activities": activities})
 
     @activities_bp.post("/api/activities")
     @login_required
-    @role_required("admin")
+    @role_required("admin", "jefe_estacion")
     def api_activity_create():
         me = ctx.get_me()
         payload = request.get_json(silent=True) or {}
@@ -144,22 +216,29 @@ def register(app):
         if not title:
             return jsonify({"error": "missing_title"}), 400
 
+        raw_station = payload.get("station_id") if payload.get("station_id") not in ("", "null", "None") else None
+        try:
+            raw_station = int(raw_station) if raw_station is not None else None
+        except Exception:
+            raw_station = None
+        station_id = _resolve_create_station(me, raw_station)
+
         conn = get_conn()
         cur = conn.cursor()
         brand = get_brand()
         cur.execute(
-            "INSERT INTO activities (brand, title, description, evidence_required, is_active, created_by) VALUES (?,?,?,?,?,?)",
-            (brand, title, description, evidence_required, is_active, me["id"]),
+            "INSERT INTO activities (brand, title, description, evidence_required, is_active, created_by, target_station_id) VALUES (?,?,?,?,?,?,?)",
+            (brand, title, description, evidence_required, is_active, me["id"], station_id),
         )
         conn.commit()
         aid = cur.lastrowid
         conn.close()
-        ctx.log_action(me, "create_activity", "activities", str(aid))
+        ctx.log_action(me, "create_activity", "activities", str(aid), {"station_id": station_id})
         return jsonify({"ok": True, "id": aid})
 
     @activities_bp.put("/api/activities/<int:activity_id>")
     @login_required
-    @role_required("admin")
+    @role_required("admin", "jefe_estacion")
     def api_activity_update(activity_id: int):
         me = ctx.get_me()
         payload = request.get_json(silent=True) or {}
@@ -171,6 +250,18 @@ def register(app):
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
+            "SELECT a.target_station_id, u.role AS creator_role FROM activities a "
+            "LEFT JOIN users u ON u.id=a.created_by WHERE a.id=? AND a.brand=?",
+            (activity_id, get_brand()),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "not_found"}), 404
+        if not _jefe_can_manage(me, row.get("creator_role"), row.get("target_station_id")):
+            conn.close()
+            return jsonify({"error": "forbidden"}), 403
+        cur.execute(
             "UPDATE activities SET title=?, description=?, evidence_required=?, is_active=? WHERE id=? AND brand=?",
             (title, description, evidence_required, is_active, activity_id, get_brand()),
         )
@@ -181,12 +272,24 @@ def register(app):
 
     @activities_bp.delete("/api/activities/<int:activity_id>")
     @login_required
-    @role_required("admin")
+    @role_required("admin", "jefe_estacion")
     def api_activity_delete(activity_id: int):
         """Soft delete: deactivate template to avoid breaking historical events."""
         me = ctx.get_me()
         conn = get_conn()
         cur = conn.cursor()
+        cur.execute(
+            "SELECT a.target_station_id, u.role AS creator_role FROM activities a "
+            "LEFT JOIN users u ON u.id=a.created_by WHERE a.id=? AND a.brand=?",
+            (activity_id, get_brand()),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "not_found"}), 404
+        if not _jefe_can_manage(me, row.get("creator_role"), row.get("target_station_id")):
+            conn.close()
+            return jsonify({"error": "forbidden"}), 403
         cur.execute("UPDATE activities SET is_active=0 WHERE id=? AND brand=?", (activity_id, get_brand()))
         conn.commit()
         conn.close()
@@ -195,7 +298,7 @@ def register(app):
 
     @activities_bp.post("/api/activity-templates")
     @login_required
-    @role_required("admin")
+    @role_required("admin", "jefe_estacion")
     def api_activity_template_create():
         """Create an activity template + generate recurring calendar events (optionally by station)."""
         me = ctx.get_me()
@@ -208,6 +311,8 @@ def register(app):
         until = (request.form.get("until") or "").strip() or None
         station_id_raw = (request.form.get("station_id") or "").strip()
         station_id = None if (not station_id_raw or station_id_raw in ("0", "null", "None")) else int(station_id_raw)
+        # jefe_estacion solo puede crear en su estación; admin elige (incluye 'todas').
+        station_id = _resolve_create_station(me, station_id)
 
         if not title or not start_date:
             return jsonify({"error": "missing_fields"}), 400
@@ -520,8 +625,12 @@ def register(app):
     @login_required
     def api_calendar_events():
         me = ctx.get_me()
-        start = request.args.get("start", "")
-        end = request.args.get("end", "")
+        # FullCalendar puede enviar ISO timestamps ("2026-06-01T00:00:00") en lugar
+        # de solo fechas. SQLite compara strings lexicograficamente y considera
+        # "2026-06-01" < "2026-06-01T..." (el string corto es "menor"), por lo que
+        # eventos en el primer día del rango quedaban excluidos. Cortamos a 10 chars.
+        start = (request.args.get("start", "") or "")[:10]
+        end = (request.args.get("end", "") or "")[:10]
 
         conn = get_conn()
         cur = conn.cursor()
@@ -529,8 +638,9 @@ def register(app):
         brand = get_brand()
         if me["role"] == "admin":
             cur.execute(
-                "SELECT e.*, a.title AS activity_title FROM calendar_events e "
+                "SELECT e.*, a.title AS activity_title, uo.role AS owner_role FROM calendar_events e "
                 "LEFT JOIN activities a ON a.id=e.activity_id AND a.brand=e.brand AND a.brand=e.brand "
+                "LEFT JOIN users uo ON uo.id=e.created_by "
                 "WHERE e.brand=? AND (?='' OR e.start_date>=?) AND (?='' OR e.start_date<=?) "
                 "ORDER BY e.start_date ASC",
                 (brand, start, start, end, end),
@@ -542,8 +652,9 @@ def register(app):
         # Non-admin: station scope + submission status join
         sid = ctx.require_station(me)
         cur.execute(
-            "SELECT e.*, a.title AS activity_title FROM calendar_events e "
+            "SELECT e.*, a.title AS activity_title, uo.role AS owner_role FROM calendar_events e "
             "LEFT JOIN activities a ON a.id=e.activity_id AND a.brand=e.brand AND a.brand=e.brand "
+            "LEFT JOIN users uo ON uo.id=e.created_by "
             "WHERE e.brand=? AND (e.station_id IS NULL OR e.station_id=?) "
             "AND (?='' OR e.start_date>=?) AND (?='' OR e.start_date<=?) "
             "ORDER BY e.start_date ASC",
@@ -570,8 +681,10 @@ def register(app):
         cur = conn.cursor()
 
         cur.execute(
-            "SELECT e.*, a.title AS activity_title, a.description AS activity_description, a.manual_path, a.manual_name, a.extra_path, a.extra_name, a.evidence_required "
-            "FROM calendar_events e LEFT JOIN activities a ON a.id=e.activity_id AND a.brand=e.brand AND a.brand=e.brand WHERE e.brand=? AND e.id=?",
+            "SELECT e.*, a.title AS activity_title, a.description AS activity_description, a.manual_path, a.manual_name, a.extra_path, a.extra_name, a.evidence_required, "
+            "uo.role AS owner_role "
+            "FROM calendar_events e LEFT JOIN activities a ON a.id=e.activity_id AND a.brand=e.brand AND a.brand=e.brand "
+            "LEFT JOIN users uo ON uo.id=e.created_by WHERE e.brand=? AND e.id=?",
             (get_brand(), event_id),
         )
         row = cur.fetchone()
@@ -579,6 +692,7 @@ def register(app):
             conn.close()
             return jsonify({"error": "not_found"}), 404
         ev = dict(row)
+        ev["can_manage"] = _jefe_can_manage(me, ev.get("owner_role"), ev.get("station_id"))
 
         # enforce station visibility for non-admin
         if me["role"] != "admin":
@@ -588,20 +702,30 @@ def register(app):
                 return jsonify({"error": "forbidden"}), 403
 
             cur.execute(
-                "SELECT * FROM submissions WHERE brand=? AND station_id=? AND event_id=? ORDER BY id DESC LIMIT 1",
+                "SELECT s.*, u.username AS submitter_name FROM submissions s "
+                "LEFT JOIN users u ON u.id=s.user_id "
+                "WHERE s.brand=? AND s.station_id=? AND s.event_id=? ORDER BY s.id DESC LIMIT 1",
                 (get_brand(), sid, event_id),
             )
             sub = cur.fetchone()
             ev["submission"] = dict(sub) if sub else None
         else:
-            ev["submission"] = None
+            # Admin: entrega más reciente de cualquier estación para este evento
+            cur.execute(
+                "SELECT s.*, u.username AS submitter_name FROM submissions s "
+                "LEFT JOIN users u ON u.id=s.user_id "
+                "WHERE s.brand=? AND s.event_id=? ORDER BY s.id DESC LIMIT 1",
+                (get_brand(), event_id),
+            )
+            sub = cur.fetchone()
+            ev["submission"] = dict(sub) if sub else None
 
         conn.close()
         return jsonify({"event": ev})
 
     @activities_bp.post("/api/calendar/events")
     @login_required
-    @role_required("admin")
+    @role_required("admin", "jefe_estacion")
     def api_calendar_event_create():
         me = ctx.get_me()
         brand = get_brand()
@@ -616,6 +740,8 @@ def register(app):
             station_id = None
         else:
             station_id = int(station_id)
+        # jefe_estacion solo crea en su estación; admin libre.
+        station_id = _resolve_create_station(me, station_id)
 
         if not title or not start_date:
             return jsonify({"error": "missing_fields"}), 400
@@ -634,7 +760,7 @@ def register(app):
 
     @activities_bp.put("/api/calendar/events/<int:event_id>")
     @login_required
-    @role_required("admin")
+    @role_required("admin", "jefe_estacion")
     def api_calendar_event_update(event_id: int):
         me = ctx.get_me()
         payload = request.get_json(silent=True) or {}
@@ -650,6 +776,20 @@ def register(app):
         conn = get_conn()
         cur = conn.cursor()
         cur.execute(
+            "SELECT e.station_id, u.role AS creator_role FROM calendar_events e "
+            "LEFT JOIN users u ON u.id=e.created_by WHERE e.id=? AND e.brand=?",
+            (event_id, get_brand()),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "not_found"}), 404
+        if not _jefe_can_manage(me, row.get("creator_role"), row.get("station_id")):
+            conn.close()
+            return jsonify({"error": "forbidden"}), 403
+        # jefe no puede reasignar el evento a otra estación fuera de su scope.
+        station_id = _resolve_create_station(me, station_id)
+        cur.execute(
             "UPDATE calendar_events SET title=?, start_date=?, repeat_kind=?, station_id=? WHERE id=? AND brand=?",
             (title, start_date, repeat_kind, station_id, event_id, get_brand()),
         )
@@ -661,7 +801,7 @@ def register(app):
     
     @activities_bp.post("/api/calendar/events/<int:event_id>/move")
     @login_required
-    @role_required("admin")
+    @role_required("admin", "jefe_estacion")
     def api_calendar_event_move(event_id: int):
         """Move a calendar event (single) or shift the remaining events of the same template (series)."""
         me = ctx.get_me()
@@ -681,12 +821,20 @@ def register(app):
 
         conn = get_conn()
         cur = conn.cursor()
-        cur.execute("SELECT id, activity_id, station_id, repeat_kind, start_date, title, brand FROM calendar_events WHERE id=? AND brand=?", (event_id, get_brand()))
+        cur.execute(
+            "SELECT e.id, e.activity_id, e.station_id, e.repeat_kind, e.start_date, e.title, e.brand, "
+            "u.role AS creator_role FROM calendar_events e "
+            "LEFT JOIN users u ON u.id=e.created_by WHERE e.id=? AND e.brand=?",
+            (event_id, get_brand()),
+        )
         row = cur.fetchone()
         if not row:
             conn.close()
             return jsonify({"error": "not_found"}), 404
         ev = dict(row)
+        if not _jefe_can_manage(me, ev.get("creator_role"), ev.get("station_id")):
+            conn.close()
+            return jsonify({"error": "forbidden"}), 403
 
         # determine old date
         base_old = old_date or (ev.get("start_date") or "")
@@ -737,11 +885,23 @@ def register(app):
 
     @activities_bp.delete("/api/calendar/events/<int:event_id>")
     @login_required
-    @role_required("admin")
+    @role_required("admin", "jefe_estacion")
     def api_calendar_event_delete(event_id: int):
         me = ctx.get_me()
         conn = get_conn()
         cur = conn.cursor()
+        cur.execute(
+            "SELECT e.station_id, u.role AS creator_role FROM calendar_events e "
+            "LEFT JOIN users u ON u.id=e.created_by WHERE e.id=? AND e.brand=?",
+            (event_id, get_brand()),
+        )
+        row = cur.fetchone()
+        if not row:
+            conn.close()
+            return jsonify({"error": "not_found"}), 404
+        if not _jefe_can_manage(me, row.get("creator_role"), row.get("station_id")):
+            conn.close()
+            return jsonify({"error": "forbidden"}), 403
         cur.execute("DELETE FROM submissions WHERE event_id=? AND brand=?", (event_id, get_brand()))
         cur.execute("DELETE FROM calendar_events WHERE id=? AND brand=?", (event_id, get_brand()))
         conn.commit()
@@ -872,26 +1032,41 @@ def register(app):
 
         ctx.log_action(me, "create_submission", "submissions", str(sub_id), {"event_id": event_id})
         ctx.sign_entity(me, "submission", str(sub_id), "submitted", {"event_id": event_id, "station_id": sid, "signature_name": signature_name})
-        # Activity submissions must be visible to admins only.
+        # Modelo "classroom": completar = subir evidencia. La evidencia solo la
+        # ven admin y jefe de estación; les avisamos para que puedan consultarla.
         ctx.notify_admins(
-            "Nueva entrega",
+            "Actividad completada",
             f"Evento #{event_id} (Estación {sid})",
-            "/admin/inbox",
+            "/mod/station-evidence",
             station_id=sid,
             exclude_user_id=me.get("id"),
             ntype="submission",
         )
+        try:
+            ctx.notify_station_chiefs(
+                int(sid),
+                "Actividad completada",
+                f"Evento #{event_id}",
+                "/mod/station-evidence",
+                exclude_user_id=me.get("id"),
+                ntype="submission",
+                brand=get_brand(),
+            )
+        except Exception:
+            pass
         return jsonify({"ok": True, "id": sub_id})
 
     @activities_bp.post("/api/submissions/<int:submission_id>/review")
     @login_required
     @role_required("admin", "jefe_estacion")
     def api_submission_review(submission_id: int):
-        """Review workflow: set status (reviewed/approved/rejected) + notes/score.
+        """OBSOLETO en el modelo "classroom": completar = subir evidencia.
 
-        - admin can review any station.
-        - jefe_estacion can only review their own station (or group).
+        Se mantiene la ruta por compatibilidad pero ya no se expone en la UI;
+        no hay flujo de aprobación/rechazo de actividades.
         """
+        return jsonify({"error": "review_disabled", "message": "El flujo de revisión fue retirado: las actividades se completan al subir evidencia."}), 410
+
         me = ctx.get_me()
         payload = request.get_json(silent=True) or {}
         status = (payload.get("status") or "").strip().lower()
@@ -994,14 +1169,14 @@ def register(app):
             if range_end:
                 cur.execute(
                     "SELECT COUNT(DISTINCT s.event_id) AS c FROM submissions s "
-                    "WHERE s.brand=? AND s.station_id=? AND s.status IN ('submitted','approved') "
+                    "WHERE s.brand=? AND s.station_id=? AND s.status<>'rejected' "
                     "AND s.event_id IN (SELECT id FROM calendar_events WHERE brand=? AND (station_id IS NULL OR station_id=?) AND start_date>=? AND start_date<=?)",
                     (get_brand(), sid, get_brand(), sid, range_start, range_end),
                 )
             else:
                 cur.execute(
                     "SELECT COUNT(DISTINCT s.event_id) AS c FROM submissions s "
-                    "WHERE s.brand=? AND s.station_id=? AND s.status IN ('submitted','approved') "
+                    "WHERE s.brand=? AND s.station_id=? AND s.status<>'rejected' "
                     "AND s.event_id IN (SELECT id FROM calendar_events WHERE brand=? AND (station_id IS NULL OR station_id=?) AND start_date>=?)",
                     (get_brand(), sid, get_brand(), sid, range_start),
                 )
@@ -1072,13 +1247,13 @@ def register(app):
 
             if range_end:
                 cur.execute(
-                    "SELECT COUNT(DISTINCT event_id) AS c FROM submissions WHERE brand=? AND station_id=? AND status IN ('submitted','approved') "
+                    "SELECT COUNT(DISTINCT event_id) AS c FROM submissions WHERE brand=? AND station_id=? AND status<>'rejected' "
                     "AND event_id IN (SELECT id FROM calendar_events WHERE brand=? AND (station_id IS NULL OR station_id=?) AND start_date>=? AND start_date<=?)",
                     (get_brand(), sid, get_brand(), sid, range_start, range_end),
                 )
             else:
                 cur.execute(
-                    "SELECT COUNT(DISTINCT event_id) AS c FROM submissions WHERE brand=? AND station_id=? AND status IN ('submitted','approved') "
+                    "SELECT COUNT(DISTINCT event_id) AS c FROM submissions WHERE brand=? AND station_id=? AND status<>'rejected' "
                     "AND event_id IN (SELECT id FROM calendar_events WHERE brand=? AND (station_id IS NULL OR station_id=?) AND start_date>=?)",
                     (get_brand(), sid, get_brand(), sid, range_start),
                 )
@@ -1097,7 +1272,7 @@ def register(app):
         )
         total_past = int(cur.fetchone()["c"])
         cur.execute(
-            "SELECT COUNT(DISTINCT event_id) AS c FROM submissions WHERE brand=? AND station_id=? AND status IN ('submitted','approved') "
+            "SELECT COUNT(DISTINCT event_id) AS c FROM submissions WHERE brand=? AND station_id=? AND status<>'rejected' "
             "AND event_id IN (SELECT id FROM calendar_events WHERE brand=? AND (station_id IS NULL OR station_id=?) AND start_date < ?)",
             (get_brand(), sid, get_brand(), sid, today_str),
         )
@@ -1106,5 +1281,79 @@ def register(app):
 
         conn.close()
         return jsonify({"station_id": sid, "today": today_str, "daily": daily, "monthly": monthly, "yearly": yearly, "overdue": overdue})
+
+    # ---------------- evidencias por estación (admin + jefe) ----------------
+    @activities_bp.get("/mod/station-evidence")
+    @login_required
+    @role_required("admin", "jefe_estacion")
+    def station_evidence_page():
+        return render_template("mod/station_evidence.html", me=ctx.get_me())
+
+    @activities_bp.get("/api/station-evidence")
+    @login_required
+    @role_required("admin", "jefe_estacion")
+    def api_station_evidence():
+        """Evidencias de actividades completadas, visibles solo para admin/jefe."""
+        me = ctx.get_me()
+        brand = get_brand()
+        raw_st = request.args.get("station_id")
+        d_from = (request.args.get("from") or "").strip()
+        d_to = (request.args.get("to") or "").strip()
+        term = (request.args.get("q") or "").strip().lower()
+
+        conn = get_conn(); cur = conn.cursor()
+
+        if me["role"] == "admin":
+            scope = None
+        else:
+            scope = sorted(list(ctx.station_scope_ids(me)))
+            if not scope:
+                conn.close()
+                return jsonify({"ok": True, "items": [], "stations": []})
+
+        where = ["s.brand=?", "s.status<>'rejected'", "s.evidence_path IS NOT NULL"]
+        params: list = [brand]
+        if scope is not None:
+            where.append("s.station_id IN (%s)" % ",".join(["?"] * len(scope)))
+            params.extend(scope)
+        try:
+            sfil = int(raw_st) if raw_st not in (None, "", "0", "all") else None
+        except Exception:
+            sfil = None
+        if sfil:
+            where.append("s.station_id=?"); params.append(sfil)
+        if d_from:
+            where.append("date(s.created_at)>=date(?)"); params.append(d_from)
+        if d_to:
+            where.append("date(s.created_at)<=date(?)"); params.append(d_to)
+
+        cur.execute(
+            "SELECT s.id, s.event_id, s.station_id, s.notes, s.evidence_path, s.status, s.created_at, "
+            "COALESCE(a.title, ce.title) AS activity_title, ce.start_date AS event_date, "
+            "u.username AS user_name, st.code AS station_code, st.name AS station_name "
+            "FROM submissions s "
+            "LEFT JOIN calendar_events ce ON ce.id=s.event_id AND ce.brand=s.brand "
+            "LEFT JOIN activities a ON a.id=s.activity_id AND a.brand=s.brand "
+            "LEFT JOIN users u ON u.id=s.user_id "
+            "LEFT JOIN stations st ON st.id=s.station_id "
+            "WHERE " + " AND ".join(where) + " ORDER BY s.id DESC LIMIT 500",
+            tuple(params),
+        )
+        rows = [dict(r) for r in cur.fetchall()]
+        if term:
+            rows = [
+                r for r in rows
+                if term in ((r.get("activity_title") or "") + " " + (r.get("user_name") or "") + " " + (r.get("station_name") or "")).lower()
+            ]
+
+        if me["role"] == "admin":
+            cur.execute("SELECT id, code, name FROM stations WHERE brand=? ORDER BY code, id", (brand,))
+        else:
+            q2 = ",".join(["?"] * len(scope))
+            cur.execute(f"SELECT id, code, name FROM stations WHERE brand=? AND id IN ({q2}) ORDER BY code, id", tuple([brand] + scope))
+        stations = [dict(r) for r in cur.fetchall()]
+        conn.close()
+        return jsonify({"ok": True, "items": rows, "stations": stations})
+
     # Blueprint registration
     app.register_blueprint(activities_bp)

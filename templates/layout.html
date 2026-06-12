@@ -60,8 +60,9 @@
           <details open>
             <summary>Operación</summary>
             <nav class="nav">
-              <a href="/mod/activities">{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividades" }}</a>
-              <a href="/mod/operational-calendar">Calendario operativo</a>
+              <a href="/mod/activities" data-operador-only hidden>{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividades" }}</a>
+              <a href="/mod/operational-calendar" data-supervisor-only hidden>{{ "Agenda (calendario)" if session.get('brand','consulting') == 'petroleum' else "Calendario operativo" }}</a>
+              <a href="/mod/station-evidence" data-supervisor-only hidden>Evidencias por estación</a>
               {% if session.get('brand','consulting') == 'petroleum' %}<a href="/mod/document-renewals-calendar">Vencimientos y renovaciones</a>{% endif %}
               <a href="/mod/evidencias">Evidencias</a>
               <a href="/mod/incidents" data-not-admin hidden>Incidencias <span id="incidentsBadge" class="badge" style="display:none;margin-left:6px;background:#dc2626;color:white;">0</span></a>

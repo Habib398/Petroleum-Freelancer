@@ -120,7 +120,7 @@ def register(app):
             f"""
             SELECT ce.id, ce.title, ce.start_date
             FROM calendar_events ce
-            LEFT JOIN submissions s ON s.brand=ce.brand AND s.event_id=ce.id AND s.station_id=? AND s.status IN ('submitted','reviewed','approved')
+            LEFT JOIN submissions s ON s.brand=ce.brand AND s.event_id=ce.id AND s.station_id=? AND s.status<>'rejected'
             WHERE ce.brand=? AND (ce.station_id IS NULL OR ce.station_id IN ({in_clause}))
               AND date(ce.start_date) BETWEEN date(?) AND date(?)
               AND s.id IS NULL
@@ -170,11 +170,13 @@ def register(app):
 
     @app.get("/mod/operational-calendar")
     @login_required
+    @role_required("admin", "jefe_estacion")
     def operational_calendar_page():
         return render_template("mod/operational_calendar.html", me=ctx.get_me())
 
     @app.get("/api/operational-calendar")
     @login_required
+    @role_required("admin", "jefe_estacion")
     def api_operational_calendar():
         me = ctx.get_me() or {}
         brand = get_brand()
@@ -227,7 +229,7 @@ def register(app):
             cur.execute(
                 f"SELECT DISTINCT event_id, station_id FROM submissions "
                 f"WHERE brand=? AND event_id IN ({q}) "
-                f"AND status IN ('submitted','reviewed','approved')",
+                f"AND status<>'rejected'",
                 tuple([brand] + ev_ids),
             )
             for sr in cur.fetchall():
@@ -238,24 +240,27 @@ def register(app):
             eid = r["id"]
             sid = r["station_id"]
             is_past = r["start_date"] < today_iso
-            if not is_past:
-                overdue = False
-            elif sid is None:
-                # Evento global: para admin alcanza con cualquier entrega; para staff con la suya.
+            # ¿La actividad ya fue completada (operador subió evidencia)?
+            # Evento global: admin -> cualquier entrega; staff -> alguna de su scope.
+            # Evento por estación: entrega de esa estación.
+            if sid is None:
                 if me.get("role") == "admin":
-                    overdue = eid not in delivered_event_any
+                    completed = eid in delivered_event_any
                 else:
-                    overdue = not any((eid, st) in delivered_event_station for st in verify_stations)
+                    completed = any((eid, st) in delivered_event_station for st in verify_stations)
             else:
-                overdue = (eid, sid) not in delivered_event_station
+                completed = (eid, sid) in delivered_event_station
+            overdue = is_past and not completed
             items.append({
                 "kind": "actividad",
                 "title": r["title"],
                 "date": r["start_date"],
                 "station_id": sid,
                 "station_name": _resolve_station(sid),
-                "color": "#2563eb",
+                "color": "#16a34a" if completed else "#2563eb",
                 "overdue": overdue,
+                "completed": completed,
+                "status": "submitted" if completed else "pending",
                 "url": f"/mod/activities/event/{eid}",
             })
 
@@ -490,7 +495,7 @@ def register(app):
             m1 = _add_months(m0, 1)
             cur.execute("SELECT COUNT(*) AS c FROM alerts WHERE brand=? AND date(created_at)>=date(?) AND date(created_at)<date(?)", (brand, m0.isoformat(), m1.isoformat()))
             alerts = int(cur.fetchone()["c"] or 0)
-            cur.execute("SELECT COUNT(*) AS c FROM submissions WHERE brand=? AND date(created_at)>=date(?) AND date(created_at)<date(?) AND status IN ('approved','reviewed','submitted')", (brand, m0.isoformat(), m1.isoformat()))
+            cur.execute("SELECT COUNT(*) AS c FROM submissions WHERE brand=? AND date(created_at)>=date(?) AND date(created_at)<date(?) AND status<>'rejected'", (brand, m0.isoformat(), m1.isoformat()))
             submissions = int(cur.fetchone()["c"] or 0)
             cur.execute("SELECT COUNT(*) AS c FROM doc_submissions WHERE brand=? AND date(submitted_at)>=date(?) AND date(submitted_at)<date(?)", (brand, m0.isoformat(), m1.isoformat()))
             docs = int(cur.fetchone()["c"] or 0)

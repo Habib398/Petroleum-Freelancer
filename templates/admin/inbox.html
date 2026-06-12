@@ -78,7 +78,11 @@
 
 <div class="grid cols-2" style="margin-top:14px;">
   <div class="card">
-    <div style="font-weight:900;">Entregas pendientes</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+      <div style="font-weight:900;">Evidencias completadas (recientes)</div>
+      <a class="btn ghost small" href="/mod/station-evidence">Ver todas las evidencias</a>
+    </div>
+    <div class="help">Las actividades se completan al subir evidencia. Para revisarlas a detalle usa la pantalla de evidencias por estación.</div>
     <div class="tablewrap" style="margin-top:10px;">
       <table><thead><tr><th>ID</th><th>Fecha</th><th>Estación</th><th>{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividad" }}</th><th>Usuario</th><th>Status</th><th>Archivo</th><th></th></tr></thead><tbody id="subT"></tbody></table>
     </div>
@@ -97,43 +101,6 @@
     <table><thead><tr><th>ID</th><th>Estación</th><th>Severidad</th><th>Título</th><th>Status</th></tr></thead><tbody id="alertT"></tbody></table>
   </div>
 </div>
-
-
-<!-- Review dialog (admin) -->
-<dialog id="dlgReview">
-  <form method="dialog" class="dlgform">
-    <h3 style="margin:0 0 10px 0;">Revisión de entrega</h3>
-    <input type="hidden" id="rvId">
-    <div style="display:grid;gap:10px;">
-      <div>
-        <div class="help">Acción</div>
-        <select id="rvStatus" class="input">
-          <option value="approved">Aprobar</option>
-          <option value="reviewed">Requiere corrección</option>
-          <option value="rejected">Rechazar</option>
-        </select>
-      </div>
-      <div>
-        <div class="help">Comentario / Motivo (visible para el operador)</div>
-        <textarea id="rvNotes" class="input" rows="4" placeholder="Ej. Falta firma, documento incompleto, subir PDF legible…"></textarea>
-      </div>
-      <div class="grid cols-2" style="gap:10px;">
-        <div>
-          <div class="help">Score (opcional)</div>
-          <input id="rvScore" type="number" class="input" min="0" max="100" step="1" placeholder="0-100">
-        </div>
-        <div>
-          <div class="help">Acceso rápido</div>
-          <div class="help">Tip: “Corrección” mantiene la entrega visible como pendiente.</div>
-        </div>
-      </div>
-    </div>
-    <div class="formactions" style="margin-top:12px;">
-      <button class="btn" value="cancel">Cancelar</button>
-      <button id="rvSave" class="btn primary" value="ok">Guardar</button>
-    </div>
-  </form>
-</dialog>
 
 
 {% endblock %}

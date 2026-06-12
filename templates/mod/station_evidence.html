@@ -1,0 +1,130 @@
+{% extends "layout.html" %}
+{% block content %}
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Evidencias por estación</h1>
+    <div class="sub">Actividades completadas y su evidencia. Vista exclusiva de administrador y jefe de estación.</div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:12px;">
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+    <div>
+      <div class="help">Estación</div>
+      <select id="evStation" class="input" style="min-width:200px;"></select>
+    </div>
+    <div>
+      <div class="help">Desde</div>
+      <input id="evFrom" type="date" class="input">
+    </div>
+    <div>
+      <div class="help">Hasta</div>
+      <input id="evTo" type="date" class="input">
+    </div>
+    <div>
+      <div class="help">Buscar</div>
+      <input id="evQ" class="input" placeholder="Actividad / usuario / estación…" style="min-width:240px;">
+    </div>
+    <button id="evApply" class="btn primary" type="button">Aplicar</button>
+    <button id="evClear" class="btn" type="button">Limpiar</button>
+  </div>
+</div>
+
+<div class="card" style="margin-top:14px;">
+  <div style="font-weight:900;">Evidencias <span class="help" id="evCount"></span></div>
+  <div class="tablewrap" style="margin-top:10px;overflow:auto;">
+    <table class="table">
+      <thead>
+        <tr>
+          <th>Fecha</th>
+          <th>Estación</th>
+          <th>Actividad</th>
+          <th>Completó</th>
+          <th>Notas</th>
+          <th>Evidencia</th>
+        </tr>
+      </thead>
+      <tbody id="evRows"></tbody>
+    </table>
+    <div id="evEmpty" class="empty-inline" hidden style="margin-top:12px;">No hay evidencias para los filtros seleccionados.</div>
+  </div>
+</div>
+
+{% endblock %}
+{% block scripts %}
+<script>
+(async () => {
+  const stSel = qs("#evStation");
+  const fromEl = qs("#evFrom");
+  const toEl = qs("#evTo");
+  const qEl = qs("#evQ");
+  const rowsEl = qs("#evRows");
+  const emptyEl = qs("#evEmpty");
+  const countEl = qs("#evCount");
+
+  // Rango por defecto: mes actual
+  const now = new Date();
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  fromEl.value = first.toISOString().slice(0, 10);
+  toEl.value = now.toISOString().slice(0, 10);
+
+  let stationsLoaded = false;
+
+  function fmtDate(s) {
+    if (!s) return "—";
+    return String(s).slice(0, 10);
+  }
+
+  async function load() {
+    const p = new URLSearchParams();
+    if (stSel.value) p.set("station_id", stSel.value);
+    if (fromEl.value) p.set("from", fromEl.value);
+    if (toEl.value) p.set("to", toEl.value);
+    if (qEl.value.trim()) p.set("q", qEl.value.trim());
+
+    const data = await api("/api/station-evidence?" + p.toString());
+
+    if (!stationsLoaded) {
+      const opts = [`<option value="">Todas</option>`].concat(
+        (data.stations || []).map(s => `<option value="${s.id}">${_esc(s.code || "")} • ${_esc(s.name || "")}</option>`)
+      );
+      stSel.innerHTML = opts.join("");
+      stationsLoaded = true;
+    }
+
+    const items = data.items || [];
+    countEl.textContent = items.length ? `(${items.length})` : "";
+    rowsEl.innerHTML = items.map(it => {
+      const file = it.evidence_path
+        ? `<a class="btn ghost small" href="/uploads/${encodeURIComponent(it.evidence_path)}?inline=1" target="_blank" rel="noopener">Ver</a>
+           <a class="btn small" href="/uploads/${encodeURIComponent(it.evidence_path)}">Descargar</a>`
+        : "—";
+      const eventLink = it.event_id
+        ? `<a href="/mod/activities/event/${it.event_id}">${_esc(it.activity_title || "Actividad")}</a>`
+        : _esc(it.activity_title || "Actividad");
+      return `<tr>
+        <td>${fmtDate(it.event_date || it.created_at)}</td>
+        <td><b>${_esc(it.station_code || "")}</b>${it.station_name ? " • " + _esc(it.station_name) : ""}</td>
+        <td>${eventLink}</td>
+        <td>${_esc(it.user_name || "—")}</td>
+        <td>${_esc((it.notes || "").slice(0, 120))}</td>
+        <td style="white-space:nowrap;">${file}</td>
+      </tr>`;
+    }).join("");
+    emptyEl.hidden = items.length > 0;
+  }
+
+  qs("#evApply").addEventListener("click", load);
+  qs("#evClear").addEventListener("click", () => {
+    stSel.value = "";
+    fromEl.value = first.toISOString().slice(0, 10);
+    toEl.value = now.toISOString().slice(0, 10);
+    qEl.value = "";
+    load();
+  });
+  qEl.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); load(); } });
+
+  await load();
+})();
+</script>
+{% endblock %}

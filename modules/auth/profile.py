@@ -146,7 +146,7 @@ def register(app):
 
         def approved_events(d1: str, d2: str):
             cur.execute(
-                "SELECT COUNT(DISTINCT event_id) AS c FROM submissions WHERE brand=? AND station_id=? AND status='approved' AND date(created_at)>=date(?) AND date(created_at)<=date(?)",
+                "SELECT COUNT(DISTINCT event_id) AS c FROM submissions WHERE brand=? AND station_id=? AND status<>'rejected' AND date(created_at)>=date(?) AND date(created_at)<=date(?)",
                 (get_brand(), sid, d1, d2),
             )
             return int(cur.fetchone()["c"] or 0)

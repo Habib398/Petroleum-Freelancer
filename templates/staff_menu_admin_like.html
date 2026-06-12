@@ -7,8 +7,220 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/static/css/theme-hme.css"/>
   <style>
-    :root{--acc:{% if brand=='petroleum' %}#D6AF45{% else %}#22c55e{% endif %};--soft:{% if brand=='petroleum' %}rgba(214,175,69,.14){% else %}rgba(34,197,94,.10){% endif %};--line:{% if brand=='petroleum' %}rgba(214,175,69,.26){% else %}rgba(34,197,94,.20){% endif %};--surface:{% if brand=='petroleum' %}rgba(255,255,255,.06){% else %}rgba(255,255,255,.86){% endif %};--surface2:{% if brand=='petroleum' %}rgba(255,255,255,.04){% else %}rgba(255,255,255,.72){% endif %};--text:{% if brand=='petroleum' %}#F8FAFC{% else %}#0f172a{% endif %};--softtext:{% if brand=='petroleum' %}rgba(226,232,240,.74){% else %}#475569{% endif %};--border:{% if brand=='petroleum' %}rgba(255,255,255,.12){% else %}rgba(15,23,42,.10){% endif %};}
-    *{box-sizing:border-box} body{margin:0;font-family:Inter,system-ui,sans-serif;color:var(--text);background:{% if brand=='petroleum' %}linear-gradient(180deg,#040914 0%,#07111f 55%,#050b14 100%){% else %}linear-gradient(180deg,#ffffff 0%,#f8fafc 55%,#ffffff 100%){% endif %};min-height:100vh} .topbar{position:sticky;top:0;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 18px;background:{% if brand=='petroleum' %}rgba(4,9,20,.62){% else %}rgba(255,255,255,.72){% endif %};backdrop-filter:blur(12px);border-bottom:1px solid var(--border)} .brand{display:flex;align-items:center;gap:12px}.logo{width:50px;height:50px;border-radius:16px;border:1px solid var(--border);background:var(--surface);display:grid;place-items:center}.logo img{width:78%;height:78%;object-fit:contain}.eyebrow{font-size:11px;font-weight:900;letter-spacing:.18em;color:var(--acc);text-transform:uppercase}.title{font-size:18px;font-weight:1000}.subtitle{font-size:12px;color:var(--softtext);font-weight:700}.pill,.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:14px;border:1px solid var(--border);background:var(--surface);text-decoration:none;color:var(--text);font-weight:800}.wrap{max-width:1240px;margin:0 auto;padding:18px}.hero{display:grid;grid-template-columns:1.15fr .85fr;gap:16px}.card{border-radius:28px;border:1px solid var(--border);background:var(--surface);padding:22px;box-shadow:0 18px 50px rgba(2,6,23,.12)} .kicker{display:inline-flex;align-items:center;gap:8px;padding:8px 12px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:12px;font-weight:900;color:{% if brand=='petroleum' %}#f5deb3{% else %}#166534{% endif %};text-transform:uppercase;letter-spacing:.14em}.hero h1{font-size:clamp(28px,4vw,46px);line-height:1.02;letter-spacing:-.04em;margin:14px 0 10px;max-width:12ch}.hero p{margin:0;color:var(--softtext);line-height:1.5;font-weight:650}.actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}.stats{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}.stat{padding:16px;border-radius:20px;border:1px solid var(--border);background:var(--surface2)} .stat .k{font-size:11px;font-weight:900;letter-spacing:.14em;text-transform:uppercase;color:var(--softtext)} .stat .v{font-size:24px;font-weight:1000;margin-top:6px}.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin-top:18px}.tile{display:flex;flex-direction:column;gap:10px;border-radius:22px;border:1px solid var(--border);background:var(--surface);padding:18px;text-decoration:none;color:var(--text);min-height:170px;box-shadow:0 14px 36px rgba(2,6,23,.10)} .tile:hover{transform:translateY(-2px);border-color:var(--line)} .tag{display:inline-flex;width:max-content;padding:6px 10px;border-radius:999px;background:var(--soft);border:1px solid var(--line);font-size:11px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:{% if brand=='petroleum' %}#f5deb3{% else %}#166534{% endif %}} .tile h3{margin:0;font-size:18px;letter-spacing:-.02em}.tile p{margin:0;color:var(--softtext);line-height:1.4;font-size:13px}.footer{display:flex;justify-content:center;gap:12px;align-items:center;margin-top:18px;font-size:12px;font-weight:900;letter-spacing:.20em;color:var(--softtext);text-transform:uppercase}.footer span{width:54px;height:1px;background:var(--border)} @media (max-width:980px){.hero{grid-template-columns:1fr}.grid{grid-template-columns:1fr 1fr}} @media (max-width:680px){.grid,.stats{grid-template-columns:1fr}.wrap{padding:14px}}
+    :root{
+      --acc:{% if brand=='petroleum' %}#D6AF45{% else %}#22c55e{% endif %};
+      --acc-soft:{% if brand=='petroleum' %}rgba(214,175,69,.14){% else %}rgba(34,197,94,.10){% endif %};
+      --acc-line:{% if brand=='petroleum' %}rgba(214,175,69,.30){% else %}rgba(34,197,94,.22){% endif %};
+      --acc-text:{% if brand=='petroleum' %}#f5deb3{% else %}#166534{% endif %};
+      --acc-contrast:{% if brand=='petroleum' %}#1F2937{% else %}#ffffff{% endif %};
+      --surface:{% if brand=='petroleum' %}rgba(255,255,255,.055){% else %}#ffffff{% endif %};
+      --surface-2:{% if brand=='petroleum' %}rgba(255,255,255,.035){% else %}rgba(15,23,42,.025){% endif %};
+      --text:{% if brand=='petroleum' %}#F8FAFC{% else %}#0f172a{% endif %};
+      --soft:{% if brand=='petroleum' %}rgba(226,232,240,.70){% else %}#64748b{% endif %};
+      --border:{% if brand=='petroleum' %}rgba(255,255,255,.12){% else %}rgba(15,23,42,.09){% endif %};
+      --shadow:{% if brand=='petroleum' %}0 18px 50px rgba(0,0,0,.40){% else %}0 14px 40px rgba(2,6,23,.07){% endif %};
+      --bg:{% if brand=='petroleum' %}
+        radial-gradient(900px 520px at 14% 0%, rgba(214,175,69,.16), transparent 56%),
+        radial-gradient(820px 480px at 92% 8%, rgba(18,63,126,.28), transparent 58%),
+        linear-gradient(180deg,#040914 0%,#07111f 55%,#050b14 100%)
+      {% else %}
+        radial-gradient(900px 520px at 14% 0%, rgba(34,197,94,.10), transparent 55%),
+        radial-gradient(820px 480px at 92% 8%, rgba(234,179,8,.08), transparent 60%),
+        linear-gradient(180deg,#ffffff 0%,#f8fafc 55%,#ffffff 100%)
+      {% endif %};
+      --hero-bg:{% if brand=='petroleum' %}
+        linear-gradient(135deg, rgba(214,175,69,.16), rgba(255,255,255,.02) 60%)
+      {% else %}
+        linear-gradient(135deg, rgba(34,197,94,.10), rgba(255,255,255,.6) 60%)
+      {% endif %};
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0;
+      font-family:Inter,system-ui,sans-serif;
+      color:var(--text);
+      background:var(--bg);
+      min-height:100vh;
+    }
+
+    /* ── Topbar ─────────────────────────────────────────────────────────── */
+    .topbar{
+      position:sticky; top:0; z-index:10;
+      display:flex; justify-content:space-between; align-items:center;
+      gap:14px; flex-wrap:wrap;
+      padding:14px 22px;
+      background:{% if brand=='petroleum' %}rgba(4,9,20,.62){% else %}rgba(255,255,255,.78){% endif %};
+      backdrop-filter:blur(12px);
+      border-bottom:1px solid var(--border);
+    }
+    .brand{display:flex;align-items:center;gap:12px}
+    .logo{
+      width:48px;height:48px;border-radius:14px;
+      border:1px solid var(--border); background:var(--surface);
+      display:grid;place-items:center; flex-shrink:0;
+    }
+    .logo img{width:76%;height:76%;object-fit:contain}
+    .eyebrow{font-size:11px;font-weight:900;letter-spacing:.18em;color:var(--acc-text);text-transform:uppercase}
+    .title{font-size:17px;font-weight:1000;line-height:1.25}
+    .subtitle{font-size:12px;color:var(--soft);font-weight:650}
+
+    .top-actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+    .pill{
+      display:inline-flex;align-items:center;gap:6px;
+      padding:8px 13px;border-radius:999px;
+      border:1px solid var(--acc-line); background:var(--acc-soft);
+      color:var(--acc-text); font-size:11px; font-weight:900;
+      letter-spacing:.10em; text-transform:uppercase;
+    }
+    .btn{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:9px 14px;border-radius:12px;
+      border:1px solid var(--border); background:var(--surface);
+      text-decoration:none;color:var(--text);font-weight:800;font-size:13px;
+      transition:transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+    .btn:hover{ border-color:var(--acc-line); transform:translateY(-1px); }
+    .btn.ghost{ background:transparent; }
+    .btn.primary{
+      background:var(--acc); color:var(--acc-contrast); border-color:transparent;
+      box-shadow:0 10px 24px {% if brand=='petroleum' %}rgba(214,175,69,.25){% else %}rgba(34,197,94,.25){% endif %};
+    }
+    .btn.primary:hover{ filter:brightness(1.05); }
+    .btn svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+    /* ── Layout ─────────────────────────────────────────────────────────── */
+    .wrap{max-width:1240px;margin:0 auto;padding:22px 18px 60px}
+
+    /* ── Hero ───────────────────────────────────────────────────────────── */
+    .hero{
+      position:relative; overflow:hidden;
+      border-radius:28px; border:1px solid var(--border);
+      background:var(--hero-bg), var(--surface);
+      padding:30px 32px;
+      box-shadow:var(--shadow);
+    }
+    .hero-kicker{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:7px 14px;border-radius:999px;
+      background:var(--acc-soft); border:1px solid var(--acc-line);
+      font-size:11px;font-weight:900;color:var(--acc-text);
+      text-transform:uppercase;letter-spacing:.16em;
+    }
+    .hero h1{
+      font-size:clamp(26px,3.6vw,40px); line-height:1.12;
+      letter-spacing:-.02em; margin:14px 0 8px; max-width:24ch;
+      font-weight:1000;
+    }
+    .hero p{ margin:0; max-width:62ch; color:var(--soft); line-height:1.6; font-weight:550; font-size:14.5px; }
+
+    .hero-meta{ display:flex; gap:10px; flex-wrap:wrap; margin-top:18px; }
+    .meta-chip{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:9px 14px;border-radius:14px;
+      background:var(--surface-2); border:1px solid var(--border);
+      font-size:12.5px;font-weight:800; color:var(--text);
+    }
+    .meta-chip .k{ color:var(--soft); font-weight:650; }
+    .meta-chip svg{width:15px;height:15px;stroke:var(--acc);fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
+
+    .hero .actions{ display:flex; gap:10px; flex-wrap:wrap; margin-top:22px; }
+
+    /* ── Sections ───────────────────────────────────────────────────────── */
+    .section{ margin-top:30px; }
+    .section-head{
+      display:flex; align-items:baseline; justify-content:space-between;
+      gap:12px; margin-bottom:14px;
+    }
+    .section-title{
+      font-size:12px; font-weight:900; letter-spacing:.18em;
+      text-transform:uppercase; color:var(--soft);
+    }
+    .section-hint{ font-size:12.5px; color:var(--soft); font-weight:600; }
+
+    /* ── Featured grid (módulos principales) ───────────────────────────── */
+    .grid-featured{
+      display:grid; grid-template-columns:repeat(auto-fit, minmax(250px,1fr));
+      gap:16px;
+    }
+    .tile-featured{
+      display:flex; flex-direction:column; gap:14px;
+      border-radius:22px; border:1px solid var(--border);
+      background:var(--surface); padding:22px;
+      text-decoration:none; color:var(--text);
+      box-shadow:var(--shadow);
+      transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease;
+      min-height:178px;
+    }
+    .tile-featured:hover{
+      transform:translateY(-4px);
+      border-color:var(--acc-line);
+    }
+    .tile-featured__top{ display:flex; align-items:flex-start; justify-content:space-between; gap:10px; }
+    .tile-featured__body{ flex:1; }
+    .tile-featured h3{ margin:0 0 6px; font-size:18px; letter-spacing:-.01em; font-weight:900; }
+    .tile-featured p{ margin:0; font-size:13px; color:var(--soft); line-height:1.5; font-weight:550; }
+    .tile-featured__foot{
+      display:flex; align-items:center; gap:6px;
+      font-size:12.5px; font-weight:900; color:var(--acc-text);
+    }
+    .tile-featured:hover .tile-featured__foot svg{ transform:translateX(3px); }
+    .tile-featured__foot svg{ width:14px;height:14px; stroke:currentColor; fill:none; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; transition:transform .18s ease; }
+
+    /* ── Tools grid (accesos y herramientas) ───────────────────────────── */
+    .grid-tools{
+      display:grid; grid-template-columns:repeat(auto-fill, minmax(230px,1fr));
+      gap:12px;
+    }
+    .tile-tool{
+      display:flex; align-items:flex-start; gap:13px;
+      border-radius:18px; border:1px solid var(--border);
+      background:var(--surface-2); padding:15px 16px;
+      text-decoration:none; color:var(--text);
+      transition:transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+    .tile-tool:hover{
+      transform:translateY(-2px);
+      border-color:var(--acc-line);
+      background:var(--surface);
+    }
+    .tile-tool__body h4{ margin:0 0 3px; font-size:14.5px; font-weight:850; letter-spacing:-.005em; }
+    .tile-tool__body p{ margin:0; font-size:12px; color:var(--soft); line-height:1.45; font-weight:550; }
+
+    /* ── Icon badge ─────────────────────────────────────────────────────── */
+    .icon-badge{
+      flex-shrink:0; display:grid; place-items:center;
+      border-radius:14px;
+      background:var(--acc-soft); border:1px solid var(--acc-line);
+      color:var(--acc-text);
+    }
+    .icon-badge.lg{ width:46px; height:46px; }
+    .icon-badge.sm{ width:38px; height:38px; border-radius:12px; }
+    .icon-badge svg{ stroke:currentColor; fill:none; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+    .icon-badge.lg svg{ width:23px; height:23px; }
+    .icon-badge.sm svg{ width:19px; height:19px; }
+
+    .tag{
+      display:inline-flex; align-items:center;
+      padding:5px 10px; border-radius:999px;
+      background:var(--acc-soft); border:1px solid var(--acc-line);
+      font-size:10px; font-weight:900; letter-spacing:.12em; text-transform:uppercase;
+      color:var(--acc-text);
+    }
+
+    /* ── Footer ─────────────────────────────────────────────────────────── */
+    .footer{
+      display:flex; justify-content:center; align-items:center; gap:12px;
+      margin-top:36px; font-size:11px; font-weight:900; letter-spacing:.24em;
+      color:var(--soft); text-transform:uppercase;
+    }
+    .footer span.line{ width:48px; height:1px; background:var(--border); }
+
+    /* ── Responsive ─────────────────────────────────────────────────────── */
+    @media (max-width:680px){
+      .wrap{padding:16px}
+      .hero{padding:22px}
+      .topbar{padding:12px 16px}
+    }
   </style>
 </head>
 <body>
@@ -17,45 +229,107 @@
       <div class="logo"><img src="{{ '/static/img/petroleum-logo.png' if brand=='petroleum' else '/static/img/logo.png' }}" alt="logo"></div>
       <div>
         <div class="eyebrow">{{ 'Petroleum' if brand=='petroleum' else 'Consulting' }} • {{ me.role|replace('_',' ')|title }}</div>
-        <div class="title">Centro operativo restringido</div>
-        <div class="subtitle">Mismo estilo del menú principal, con accesos limitados a tu rol.</div>
+        <div class="title">Centro operativo</div>
+        <div class="subtitle">Accesos limitados a tu rol</div>
       </div>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div class="top-actions">
       <div class="pill">{{ 'PETROLEUM' if brand=='petroleum' else 'CONSULTING' }}</div>
-      <a class="btn" href="/select-system">Cambiar sistema</a>
-      <a class="btn" href="/logout">Cerrar sesión</a>
+      <a class="btn ghost" href="/select-system">Cambiar sistema</a>
+      <a class="btn ghost" href="/logout">
+        <svg viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="M16 17l5-5-5-5"/><path d="M21 12H9"/></svg>
+        Cerrar sesión
+      </a>
     </div>
   </header>
+
   <main class="wrap">
+
+    {# ── Hero ──────────────────────────────────────────────────────────── #}
     <section class="hero">
-      <article class="card">
-        <div class="kicker">Acceso operativo</div>
-        <h1>Consulta, seguimiento y edición limitada.</h1>
-        <p>Desde aquí entras a SASISOPA, SGM, documentos faltantes, carpeta compartida, organigrama y paneles operativos. El administrador mantiene el control completo y tu rol solo ve o edita lo permitido.</p>
-        <div class="actions">
-          <a class="btn" href="/mod/dashboard">Dashboard</a>
-          <a class="btn" href="/mod/notifications">Notificaciones</a>
-          <a class="btn" href="/mod/profile">Perfil / FIEL</a>
-        </div>
-      </article>
-      <aside class="stats">
-        <div class="stat"><div><div class="k">Rol activo</div><div class="v">{{ me.role|replace('_',' ')|title }}</div></div></div>
-        <div class="stat"><div><div class="k">Sistema</div><div class="v">{{ 'Petroleum' if brand=='petroleum' else 'Consulting' }}</div></div></div>
-        <div class="stat"><div><div class="k">Documental</div><div class="v">Parcial</div></div></div>
-        <div class="stat"><div><div class="k">Acceso</div><div class="v">Restringido</div></div></div>
-      </aside>
+      <div class="hero-kicker">Acceso operativo</div>
+      <h1>Consulta, seguimiento y edición limitada</h1>
+      <p>Desde aquí entras a tus módulos asignados: documentos SASISOPA y SGM, validación de pendientes, carpeta compartida, organigrama y paneles operativos. El administrador conserva el control completo; tu rol solo ve o edita lo permitido.</p>
+
+      <div class="hero-meta">
+        <span class="meta-chip"><svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.5-6 8-6s8 2 8 6"/></svg><span class="k">Rol:</span> {{ me.role|replace('_',' ')|title }}</span>
+        <span class="meta-chip"><svg viewBox="0 0 24 24"><path d="M3 21V8l9-5 9 5v13"/><path d="M9 21v-6h6v6"/></svg><span class="k">Sistema:</span> {{ 'Petroleum' if brand=='petroleum' else 'Consulting' }}</span>
+        <span class="meta-chip"><svg viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg><span class="k">Acceso:</span> Restringido</span>
+      </div>
+
+      <div class="actions">
+        <a class="btn primary" href="/mod/dashboard">Ir al Dashboard</a>
+        <a class="btn" href="/mod/notifications">Notificaciones</a>
+        <a class="btn" href="/mod/profile">Perfil / FIEL</a>
+      </div>
     </section>
-    <section class="grid">
-      {% for c in cards %}
-      <a class="tile" href="{{ c.href }}">
-        <span class="tag">{{ c.tag }}</span>
-        <h3>{{ c.title }}</h3>
-        <p>{{ c.subtitle }}</p>
-      </a>
-      {% endfor %}
+
+    {# ── Featured modules ─────────────────────────────────────────────── #}
+    {% set icon_paths = {
+      'SASISOPA': '<path d="M12 6v6l3.5 2"/><path d="M20.5 12a8.5 8.5 0 1 1-17 0 8.5 8.5 0 0 1 17 0z"/>',
+      'SGM': '<path d="M12 2 20 12 12 22 4 12 12 2z"/>',
+      'Documentos faltantes': '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M12 11v4"/><path d="M12 17.5h.01"/>',
+      'Carpeta compartida': '<path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z"/>',
+      'Organigrama': '<circle cx="12" cy="5" r="2.2"/><circle cx="5" cy="19" r="2.2"/><circle cx="19" cy="19" r="2.2"/><path d="M12 7.2V11M12 11 5 16.8M12 11l7 5.8"/>',
+      'Dashboard': '<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>',
+      'Notificaciones': '<path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/>',
+      'Mensualidad / Pagos': '<rect x="2" y="5" width="20" height="14" rx="2"/><path d="M2 10h20"/>',
+      'Mapa / Estaciones': '<path d="M12 21s-7-5.69-7-11a7 7 0 0 1 14 0c0 5.31-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/>',
+    } %}
+    {% set default_icon = '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M9 9h6v6H9z"/>' %}
+    {% set featured_tags = ['Módulo', 'Validación'] %}
+    {% set featured = cards|selectattr('tag', 'in', featured_tags)|list %}
+    {% set tools = cards|rejectattr('tag', 'in', featured_tags)|list %}
+
+    {% if featured %}
+    <section class="section">
+      <div class="section-head">
+        <div class="section-title">Módulos principales</div>
+        <div class="section-hint">Documentos y validaciones de tu estación</div>
+      </div>
+      <div class="grid-featured">
+        {% for c in featured %}
+        <a class="tile-featured" href="{{ c.href }}">
+          <div class="tile-featured__top">
+            <div class="icon-badge lg"><svg viewBox="0 0 24 24">{{ (icon_paths.get(c.title) or default_icon)|safe }}</svg></div>
+            <span class="tag">{{ c.tag }}</span>
+          </div>
+          <div class="tile-featured__body">
+            <h3>{{ c.title }}</h3>
+            <p>{{ c.subtitle }}</p>
+          </div>
+          <div class="tile-featured__foot">
+            Abrir
+            <svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></svg>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
     </section>
-    <div class="footer"><span></span>COG WORK LOG<span></span></div>
+    {% endif %}
+
+    {# ── Tools / quick access ─────────────────────────────────────────── #}
+    {% if tools %}
+    <section class="section">
+      <div class="section-head">
+        <div class="section-title">Accesos y herramientas</div>
+        <div class="section-hint">Consulta, panel y seguimiento operativo</div>
+      </div>
+      <div class="grid-tools">
+        {% for c in tools %}
+        <a class="tile-tool" href="{{ c.href }}">
+          <div class="icon-badge sm"><svg viewBox="0 0 24 24">{{ (icon_paths.get(c.title) or default_icon)|safe }}</svg></div>
+          <div class="tile-tool__body">
+            <h4>{{ c.title }}</h4>
+            <p>{{ c.subtitle }}</p>
+          </div>
+        </a>
+        {% endfor %}
+      </div>
+    </section>
+    {% endif %}
+
+    <div class="footer"><span class="line"></span>COG WORK LOG<span class="line"></span></div>
   </main>
 </body>
 </html>

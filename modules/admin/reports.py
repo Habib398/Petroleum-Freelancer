@@ -755,8 +755,8 @@ def register(app):
                 batch = event_ids[i:i + BATCH]
                 eph = ",".join(["?"] * len(batch))
                 cur.execute(
-                    f"SELECT event_id, station_id FROM submissions "
-                    f"WHERE brand=? AND status='approved' AND station_id IN ({ph_scope}) "
+                    f"SELECT DISTINCT event_id, station_id FROM submissions "
+                    f"WHERE brand=? AND status<>'rejected' AND station_id IN ({ph_scope}) "
                     f"AND event_id IN ({eph})",
                     tuple([brand] + scope_ids + batch),
                 )

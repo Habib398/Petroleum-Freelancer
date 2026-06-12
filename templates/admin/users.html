@@ -1,93 +1,152 @@
 {% extends "layout.html" %}
+{% block head %}
+  <style>
+    .modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 999; align-items: center; justify-content: center; }
+    .modal-overlay.active { display: flex; }
+    .modal-content { background: white; border-radius: 12px; max-width: 550px; width: 90%; max-height: 90vh; overflow-y: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.3); }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; padding: 24px; border-bottom: 1px solid var(--hme-border); position: sticky; top: 0; background: white; z-index: 1000; }
+    .modal-body { padding: 24px; }
+    .modal-footer { padding: 16px 24px; border-top: 1px solid var(--hme-border); display: flex; gap: 12px; justify-content: flex-end; }
+    .search-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+    .filters-panel { display: none; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--hme-border); flex-wrap: wrap; gap: 12px; align-items: center; }
+    .filters-panel.active { display: flex; }
+    .tablewrap { margin-top: 16px; overflow-x: auto; }
+    .empty-message { text-align: center; padding: 32px; color: var(--hme-text-soft); }
+    @media (max-width: 768px) {
+      .modal-content { width: 95%; }
+      .search-bar { flex-direction: column; }
+    }
+  </style>
+{% endblock %}
 {% block content %}
 <div class="pagehead">
-  <div>
-    <h1 class="h1">Usuarios</h1>
-    <div class="sub">El administrador crea usuarios por rol y estación. Los accesos por estación se asignan desde aquí.</div>
-    <div class="help" style="margin-top:8px;">Si necesitas cambiar nombres globales de NOM o anexos en Petroleum, entra a <a href="/admin/setup-wizard">Configuración</a>.</div>
+  <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 16px;">
+    <div>
+      <h1 class="h1">Usuarios</h1>
+      <div class="sub">Gestiona usuarios, roles y accesos por estación</div>
+    </div>
+    <button id="btnNewUser" class="btn primary" style="padding: 12px 24px; font-weight: 600; white-space: nowrap;">
+      + Nuevo usuario
+    </button>
   </div>
 </div>
 
-<div class="grid cols-2">
-  <div class="card">
-    <div style="font-weight:900;">Crear usuario</div>
-    <div style="display:grid;gap:10px;margin-top:10px;">
-      <div class="formrow">
-        <div>
-          <div class="help">Usuario</div>
-          <input id="uName" class="input">
-        </div>
-        <div>
-          <div class="help">Contraseña</div>
-          <input id="uPass" class="input" type="password">
-        </div>
-      </div>
-
-      <div class="formrow">
-        <div>
-          <div class="help">Correo</div>
-          <input id="uEmail" class="input" type="email" placeholder="usuario@dominio.com">
-        </div>
-        <div></div>
-      </div>
-
-      <div class="formrow">
-        <div>
-          <div class="help">Rol</div>
-          <select id="uRole" class="input">
-            <option value="operador">Operador</option>
-            <option value="jefe_estacion">Jefe de estación</option>
-            <option value="contador">Contador</option>
-            <option value="auditor">Auditor</option>
-            <option value="admin">Administrador</option>
-          </select>
-        </div>
-        <div>
-          <div class="help">Estación (si aplica)</div>
-          <select id="uStation" class="input"></select>
-        </div>
-      </div>
-
-      <div class="formrow">
-        <div>
-          <div class="help">Sistema</div>
-          <select id="uBrands" class="input">
-            <option value="{{ session.get('brand','consulting') }}">{{ 'Petroleum' if session.get('brand')=='petroleum' else 'Consulting' }} (actual)</option>
-            <option value="consulting,petroleum">Ambos (Consulting + Petroleum)</option>
-            <option value="consulting">Solo Consulting</option>
-            <option value="petroleum">Solo Petroleum</option>
-          </select>
-        </div>
-        <div></div>
-      </div>
-
-      <div class="formactions">
-        <button id="uAdd" class="btn primary" type="button">Crear</button>
-      </div>
-      <div id="uErr" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
-    </div>
+<div class="card" style="margin-bottom: 16px;">
+  <div class="search-bar">
+    <input id="searchUsers" type="text" class="input" placeholder="Buscar por nombre, correo o estación..." style="flex: 1; min-width: 250px;">
+    <button id="btnToggleFilters" class="btn ghost" style="white-space: nowrap; padding: 10px 14px;">Filtros</button>
   </div>
+  
+  <div id="filtersPanel" class="filters-panel">
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <label style="font-size: 13px; color: var(--hme-text-soft); white-space: nowrap;">Rol:</label>
+      <select id="filterRole" class="input" style="min-width: 130px; padding: 8px 10px; font-size: 13px;">
+        <option value="">Todos</option>
+        <option value="admin">Administrador</option>
+        <option value="operador">Operador</option>
+        <option value="jefe_estacion">Jefe de estación</option>
+        <option value="contador">Contador</option>
+        <option value="auditor">Auditor</option>
+      </select>
+    </div>
+    <div style="display: flex; gap: 8px; align-items: center;">
+      <label style="font-size: 13px; color: var(--hme-text-soft); white-space: nowrap;">Estado:</label>
+      <select id="filterActive" class="input" style="min-width: 110px; padding: 8px 10px; font-size: 13px;">
+        <option value="">Todos</option>
+        <option value="true">Activos</option>
+        <option value="false">Inactivos</option>
+      </select>
+    </div>
+    <button id="btnClearFilters" class="btn ghost small" style="white-space: nowrap;">Limpiar</button>
+  </div>
+  
+  <div id="filterInfo" class="help" style="display: none; margin-top: 8px;"></div>
+</div>
 
-  <div class="card">
-    <div style="font-weight:900;">Listado</div>
-    <div class="tablewrap" style="margin-top:10px;">
-      <table>
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Usuario</th>
-            <th>Correo</th>
-            <th>Rol</th>
-            <th>Estación</th>
-            <th>Activo</th>
-            <th>Acciones</th>
-          </tr>
-        </thead>
-        <tbody id="uT"></tbody>
-      </table>
+<div class="card">
+  <div id="usersContainer"></div>
+</div>
+
+<!-- Modal para crear/editar usuario -->
+<div id="userModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <div>
+        <div style="font-weight: 900; font-size: 18px;" id="modalTitle">Nuevo usuario</div>
+        <div class="help" style="margin-top: 4px;">Completa los datos del usuario</div>
+      </div>
+      <button id="modalClose" class="btn ghost small" style="margin: 0;">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="display: grid; gap: 16px;">
+        <div class="formrow">
+          <div><div class="help">Usuario</div><input id="uName" class="input" placeholder="nombre.usuario"></div>
+          <div><div class="help">Contraseña</div><input id="uPass" class="input" type="password"></div>
+        </div>
+        <div class="formrow">
+          <div><div class="help">Correo</div><input id="uEmail" class="input" type="email" placeholder="usuario@dominio.com"></div>
+          <div></div>
+        </div>
+        <div style="border-top: 1px solid var(--hme-border); padding-top: 12px; margin-top: 4px;">
+          <div style="font-weight: 600; margin-bottom: 12px;">Acceso y Permisos</div>
+          <div class="formrow">
+            <div><div class="help">Rol</div>
+              <select id="uRole" class="input">
+                <option value="operador">Operador</option>
+                <option value="jefe_estacion">Jefe de estación</option>
+                <option value="contador">Contador</option>
+                <option value="auditor">Auditor</option>
+                <option value="admin">Administrador</option>
+              </select>
+            </div>
+            <div><div class="help">Estación</div><select id="uStation" class="input"></select></div>
+          </div>
+          <div class="formrow">
+            <div><div class="help">Sistemas</div>
+              <select id="uBrands" class="input">
+                <option value="consulting,petroleum">Ambos (Consulting + Petroleum)</option>
+                <option value="consulting">Solo Consulting</option>
+                <option value="petroleum">Solo Petroleum</option>
+              </select>
+            </div>
+            <div></div>
+          </div>
+        </div>
+        <input type="hidden" id="uId">
+        <div id="uErr" class="help" style="color: var(--hme-danger); font-weight: 900;" hidden></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="uAdd" class="btn primary" style="flex: 1;">Crear usuario</button>
     </div>
   </div>
 </div>
+
+<!-- Modal para accesos por estación -->
+<dialog id="dlgAccess">
+  <form method="dialog" class="dlgform" id="accessForm">
+    <h3 style="margin:0 0 10px 0;">Accesos por estación</h3>
+    <div class="help" id="accessMeta"></div>
+
+    <div class="card" style="margin-top:10px;">
+      <div style="display:flex;gap:10px;justify-content:space-between;align-items:center;flex-wrap:wrap;">
+        <div><b>Selecciona estaciones</b> <span class="help">(si está vacío, solo aplica la estación asignada)</span></div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn" type="button" id="accessAll">Todas</button>
+          <button class="btn" type="button" id="accessNone">Ninguna</button>
+        </div>
+      </div>
+      <div id="accessList" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:8px;margin-top:10px;"></div>
+    </div>
+
+    <div id="accessErr" class="help" style="color:var(--hme-danger);font-weight:900;margin-top:10px;" hidden></div>
+
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px;">
+      <button class="btn ghost" value="cancel">Cerrar</button>
+      <button class="btn primary" id="accessSave" value="ok">Guardar</button>
+    </div>
+  </form>
+</dialog>
 
 <dialog id="dlgAccess">
   <form method="dialog" class="dlgform" id="accessForm">

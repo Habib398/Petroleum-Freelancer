@@ -14,6 +14,7 @@
       <div class="sub">{{ "Agenda operativa por estación (entrega y revisión de evidencias)." if session.get('brand','consulting') == 'petroleum' else "Calendario operativo por estación (entrega y revisión de evidencias)." }}</div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
+      <button id="btnRefreshCal" class="btn ghost">Actualizar</button>
       <button id="btnPrint" class="btn">Imprimir calendario</button>
       <button id="btnPdf" class="btn ghost">Exportar PDF</button>
       <button id="btnImportProgram" class="btn" data-admin-only hidden>Importar Excel/CSV</button>

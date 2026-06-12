@@ -35,7 +35,7 @@ def run_for_user(me: dict):
       FROM calendar_events ce
       LEFT JOIN submissions s
         ON s.event_id = ce.id AND s.station_id = ?
-           AND s.status IN ('submitted','reviewed','approved')
+           AND s.status <> 'rejected'
       WHERE ce.brand=? AND ce.start_date < ?
         AND (ce.station_id IS NULL OR ce.station_id = ?)
         AND s.id IS NULL
@@ -59,9 +59,12 @@ def run_for_user(me: dict):
             (brand, me["id"], station_id, "reminder", title, body, url),
         )
 
+    # En el modelo "classroom" solo el operador completa actividades; el enlace
+    # del recordatorio lo lleva a su calendario para subir evidencia.
+    target_url = "/mod/activities" if role == "operador" else "/mod/operational-calendar"
     for r in upcoming:
-        _create("⏰ Actividad mañana", f'{r["title"]} ({r["start_date"]})', "/mod/activities")
+        _create("⏰ Actividad mañana", f'{r["title"]} ({r["start_date"]})', target_url)
     for r in overdue:
-        _create("🚨 Actividad vencida", f'{r["title"]} ({r["start_date"]})', "/mod/activities")
+        _create("🚨 Actividad vencida", f'{r["title"]} ({r["start_date"]})', target_url)
 
     conn.commit(); conn.close()

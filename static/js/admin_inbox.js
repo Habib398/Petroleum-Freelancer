@@ -11,44 +11,6 @@
   }
   setDefaultDates();
 
-  // Review dialog
-  const dlgReview = qs("#dlgReview");
-  const rvId = qs("#rvId"), rvStatus = qs("#rvStatus"), rvNotes = qs("#rvNotes"), rvScore = qs("#rvScore");
-  let _reviewReopen = null;
-
-  function openReview(id, presetStatus){
-    if(!dlgReview) return;
-    rvId.value = id;
-    rvStatus.value = presetStatus || "approved";
-    rvNotes.value = "";
-    rvScore.value = "";
-    dlgReview.showModal();
-  }
-
-  if (dlgReview){
-    dlgReview.addEventListener("close", async ()=>{
-      // no-op; handled by button click
-    });
-    qs("#rvSave")?.addEventListener("click", async (e)=>{
-      e.preventDefault();
-      const id = rvId.value;
-      const st = rvStatus.value;
-      const notes = (rvNotes.value||"").trim();
-      const scoreRaw = (rvScore.value||"").trim();
-      const score = scoreRaw? parseInt(scoreRaw,10): null;
-
-      await api(`/api/submissions/${id}/review`,{
-        method:"POST",
-        body: JSON.stringify({ status: st, review_notes: notes, score })
-      });
-
-      toast("Guardado", st==="approved"?"Entrega aprobada.":st==="rejected"?"Entrega rechazada.":"Se solicitó corrección.");
-      dlgReview.close();
-      await load();
-    });
-  }
-
-
   function buildQuery(){
     const q = new URLSearchParams();
     const sid = qs("#fStation").value;
@@ -87,8 +49,9 @@
     const subT = qs("#subT");
     subT.innerHTML = (k.submissions||[]).map(s=>{
       const st = s.status||"";
-      const tag = st==="approved"?"ok":st==="rejected"?"bad":st==="reviewed"?"warn":"warn";
-      const stLabel = st==="submitted"?"En revisión":st==="approved"?"Aprobada":st==="rejected"?"Rechazada":st==="reviewed"?"Corrección":"—";
+      const completed = st!=="rejected";
+      const tag = completed ? "ok" : "bad";
+      const stLabel = completed ? "Completada" : "Rechazada";
       const evLink = s.event_id ? `<a class="btn ghost small" href="/mod/activities/event/${s.event_id}">Ver</a>` : "";
       return `
       <tr>
@@ -99,19 +62,10 @@
         <td>${s.user_name||""}</td>
         <td><span class="tag ${tag}">${stLabel}</span></td>
         <td>${s.evidence_path? `<a href="/uploads/${s.evidence_path}">Descargar</a>`:"—"}</td>
-        <td>
-          ${evLink}
-          <button class="btn small primary" data-ap="${s.id}">Aprobar</button>
-          <button class="btn small" data-fx="${s.id}">Corrección</button>
-          <button class="btn small danger" data-rj="${s.id}">Rechazar</button>
-        </td>
+        <td>${evLink}</td>
       </tr>
     `;
     }).join("");
-
-    qsa("[data-ap]").forEach(b=>b.addEventListener("click", ()=> openReview(b.dataset.ap,"approved")));
-    qsa("[data-fx]").forEach(b=>b.addEventListener("click", ()=> openReview(b.dataset.fx,"reviewed")));
-    qsa("[data-rj]").forEach(b=>b.addEventListener("click", ()=> openReview(b.dataset.rj,"rejected")));
 
     const payT = qs("#payT");
     payT.innerHTML = (k.payments||[]).map(p=>`

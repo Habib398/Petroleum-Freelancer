@@ -1,145 +1,310 @@
 {% extends "layout.html" %}
+{% block head %}
+<style>
+  .ev-wrap { max-width: 780px; margin: 0 auto; display: grid; gap: 16px; }
+
+  /* Status badge */
+  .ev-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 5px 14px; border-radius: 999px; font-size: 13px; font-weight: 700;
+  }
+  .ev-badge.pending  { background: #fef9c3; color: #92400e; }
+  .ev-badge.done     { background: #dcfce7; color: #15803d; }
+  .ev-badge.rejected { background: #fee2e2; color: #dc2626; }
+
+  /* Evidence block (supervisor) */
+  .ev-evidence-wrap { display: grid; gap: 14px; }
+  .ev-who { display: flex; align-items: center; gap: 12px; }
+  .ev-avatar {
+    width: 40px; height: 40px; border-radius: 50%;
+    background: #2563eb18; color: #2563eb;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 900; font-size: 16px; flex-shrink: 0;
+  }
+  .ev-file-row {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; border: 1px solid var(--hme-border);
+    border-radius: 12px; padding: 12px 16px;
+  }
+  .ev-notes-box {
+    background: var(--hme-bg, #f8fafc); border-radius: 10px;
+    padding: 12px 14px; white-space: pre-wrap; line-height: 1.65;
+    font-size: 14px; border: 1px solid var(--hme-border);
+  }
+
+  /* Empty / success states */
+  .ev-empty, .ev-success {
+    text-align: center; padding: 36px 20px;
+    display: flex; flex-direction: column; align-items: center; gap: 8px;
+  }
+  .ev-state-icon { font-size: 44px; line-height: 1; }
+
+  /* Upload form */
+  .ev-form-note {
+    margin-top: 14px; padding-top: 14px;
+    border-top: 1px solid var(--hme-border);
+    font-size: 13px; color: var(--hme-muted, #64748b);
+  }
+
+  /* Divider */
+  .ev-divider { border: none; border-top: 1px solid var(--hme-border); margin: 14px 0 12px; }
+</style>
+{% endblock %}
+
 {% block content %}
-  <div class="pagehead">
-    <div>
-      <h1 class="h1">{{ "Entrega de agenda" if session.get('brand','consulting') == 'petroleum' else "Entrega de actividad" }}</h1>
-      <div class="sub" id="evSub">Cargando...</div>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <a class="btn ghost" href="/mod/activities">{{ "Volver a la agenda" if session.get('brand','consulting') == 'petroleum' else "Volver al calendario" }}</a>
-      <button id="btnDeleteEvent" class="btn danger" type="button" style="display:none;">{{ "Eliminar de agenda" if session.get('brand','consulting') == 'petroleum' else "Eliminar actividad" }}</button>
+<div class="pagehead">
+  <div>
+    <h1 class="h1" id="evTitle">{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividad" }}</h1>
+    <div class="sub" id="evSub">Cargando...</div>
+  </div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+    <a class="btn ghost" id="backLink" href="/mod/activities">Volver</a>
+    <button id="btnDeleteEvent" class="btn danger" type="button" style="display:none;">
+      {{ "Eliminar de agenda" if session.get('brand','consulting') == 'petroleum' else "Eliminar actividad" }}
+    </button>
+  </div>
+</div>
+
+<div class="ev-wrap">
+
+  <!-- Detalles de la actividad -->
+  <div class="card">
+    <div id="evMeta" class="help" style="margin-bottom:10px;"></div>
+    <div id="evDesc" style="line-height:1.65;color:var(--hme-text);"></div>
+    <div id="evDocs" style="margin-top:14px;display:grid;gap:8px;"></div>
+    <hr class="ev-divider">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+      <span id="evStatusBadge" class="ev-badge pending">Pendiente</span>
+      <span id="evReviewNotes" class="help" style="margin:0;"></span>
     </div>
   </div>
 
-  <div class="grid2">
-    <div class="card">
-      <h3 style="margin:0 0 10px 0;">Detalles</h3>
-      <div class="help" id="evMeta"></div>
-      <div id="evDesc" style="margin-top:10px;white-space:pre-wrap;"></div>
-      <div id="evDocs" style="margin-top:14px;display:grid;gap:8px;"></div>
-      <div id="evStatus" style="margin-top:14px;font-weight:900;"></div>
-      <div id="evReviewNotes" class="help" style="margin-top:6px;"></div>
-    </div>
-
-    <div class="card" id="deliverCard">
-      <h3 style="margin:0 0 10px 0;">Subir evidencia / documento</h3>
-      <form id="deliverForm">
-        <input type="hidden" name="event_id" value="{{ event_id }}">
-        <input type="hidden" name="activity_id" id="activityId">
-        <div style="display:grid;gap:10px;">
-          <div>
-            <div class="help">Observaciones / notas</div>
-            <textarea class="input" name="notes" rows="4" placeholder="Escribe aquí notas u observaciones..."></textarea>
-          </div>
-          <div>
-            <div class="help">Archivo (foto o PDF)</div>
-            <input class="input" type="file" name="evidence" required>
-          </div>
-          <div class="formactions">
-            <button class="btn primary" type="submit">Enviar entrega</button>
-          </div>
-          <div id="err" class="help" style="color:var(--hme-danger);font-weight:900;" hidden></div>
-        </div>
-      </form>
-      <div class="help" style="margin-top:10px;">Al enviar, el administrador recibirá una notificación para revisar tu entrega.</div>
+  <!-- Tarjeta de evidencia / entrega (poblada por JS) -->
+  <div class="card" id="deliverCard" style="min-height:120px;">
+    <div class="ev-empty" style="color:var(--hme-muted,#94a3b8);">
+      <div class="ev-state-icon">⏳</div>
+      <div class="help">Cargando...</div>
     </div>
   </div>
+
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script>
-(async ()=>{
+(async () => {
   const eventId = {{ event_id }};
-  let me=null;
   const isPetroleum = document.body.classList.contains("brand-petroleum");
-  try{ me=(await api("/api/me")).me; }catch(e){ return; }
+  const esc = s => String(s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
 
+  let me = null;
+  try { me = (await api("/api/me")).me; } catch(e) { return; }
 
-  // Admin: allow deleting this event (instance)
-  const btnDeleteEvent = document.getElementById("btnDeleteEvent");
-  if (btnDeleteEvent && me.role==="admin"){
-    btnDeleteEvent.style.display = "inline-flex";
-    btnDeleteEvent.addEventListener("click", async ()=>{
-      if(!confirm(isPetroleum ? "¿Eliminar este elemento de la agenda del calendario? Esto no se puede deshacer." : "¿Eliminar esta actividad del calendario? Esto no se puede deshacer.")) return;
-      try{
-        await api(`/api/calendar/events/${eventId}`, {method:"DELETE"});
-        toast("Eliminada", isPetroleum ? "Elemento eliminado de la agenda." : "Actividad eliminada del calendario.");
-        window.location.href = "/mod/activities";
-      }catch(e){
-        toast("Error","No se pudo eliminar.");
+  const isSupervisor = ["admin","jefe_estacion","auditor","contador"].includes(me.role);
+  const backUrl = isSupervisor ? "/mod/operational-calendar" : "/mod/activities";
+
+  // Back link
+  const backLinkEl = document.getElementById("backLink");
+  backLinkEl.href = backUrl;
+  backLinkEl.textContent = isSupervisor ? "Volver al calendario operativo" : "Volver al calendario";
+
+  // Delete button
+  const btnDelete = document.getElementById("btnDeleteEvent");
+  if (btnDelete && isSupervisor) {
+    btnDelete.addEventListener("click", async () => {
+      const msg = isPetroleum
+        ? "¿Eliminar este elemento de la agenda? Esta acción no se puede deshacer."
+        : "¿Eliminar esta actividad del calendario? Esta acción no se puede deshacer.";
+      if (!confirm(msg)) return;
+      try {
+        await api(`/api/calendar/events/${eventId}`, { method: "DELETE" });
+        toast("Eliminada", isPetroleum ? "Elemento eliminado." : "Actividad eliminada.");
+        window.location.href = backUrl;
+      } catch(e) {
+        toast("Error", /forbidden/i.test(e.message||"")
+          ? "No puedes eliminar una actividad creada por el administrador."
+          : "No se pudo eliminar.");
       }
     });
   }
 
-  // operators/jefes only; admin may still view but no upload requirement.
-  const deliverCard = document.getElementById("deliverCard");
-  if (me.role==="admin" || me.role==="auditor" || me.role==="contador"){
-    deliverCard.querySelector("h3").textContent = "Entrega / revisión";
-  }
-
+  // Fetch event
   const data = await api(`/api/calendar/events/${eventId}`);
   const ev = data.event;
-  document.getElementById("evSub").textContent = (ev.activity_title || ev.title || (isPetroleum ? "Agenda" : "Actividad")) + " • " + (ev.start_date || "");
-  document.getElementById("evMeta").textContent = `Evento #${ev.id} • Estación: ${ev.station_id ? ev.station_id : "Todas"} • Creado por: ${ev.created_by || "-"}`;
-  document.getElementById("evDesc").textContent = ev.activity_description || "";
-  document.getElementById("activityId").value = ev.activity_id || "";
 
+  // Show delete if allowed
+  if (btnDelete && isSupervisor && ev.can_manage) btnDelete.style.display = "inline-flex";
+
+  // Populate header
+  const title = ev.activity_title || ev.title || (isPetroleum ? "Agenda" : "Actividad");
+  document.getElementById("evTitle").textContent = title;
+  document.getElementById("evSub").textContent = ev.start_date || "";
+
+  // Meta info
+  const stationLabel = ev.station_id ? `Estación ${ev.station_id}` : "Todas las estaciones";
+  document.getElementById("evMeta").textContent = `${stationLabel} · Evento #${ev.id}`;
+
+  // Description
+  const descEl = document.getElementById("evDesc");
+  if (ev.activity_description) {
+    descEl.textContent = ev.activity_description;
+  } else {
+    descEl.style.display = "none";
+  }
+
+  // Reference documents
   const docs = [];
-  if (ev.manual_path){
-    docs.push({label:"Manual / Formato", path: ev.manual_path, name: ev.manual_name || "manual.pdf"});
-  }
-  if (ev.extra_path){
-    docs.push({label:"Documento adicional", path: ev.extra_path, name: ev.extra_name || "documento.pdf"});
-  }
+  if (ev.manual_path) docs.push({ label: "Manual / Formato", path: ev.manual_path, name: ev.manual_name || "manual.pdf" });
+  if (ev.extra_path)  docs.push({ label: "Documento adicional", path: ev.extra_path, name: ev.extra_name || "documento.pdf" });
   const docsEl = document.getElementById("evDocs");
-  if (docs.length){
-    docsEl.innerHTML = docs.map(d=>`
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid var(--hme-border);border-radius:12px;padding:10px;">
+  if (docs.length) {
+    docsEl.innerHTML = docs.map(d => `
+      <div class="ev-file-row">
         <div>
-          <div style="font-weight:900">${d.label}</div>
-          <div class="help">${d.name}</div>
+          <div style="font-weight:700;font-size:14px;">${esc(d.label)}</div>
+          <div class="help">${esc(d.name)}</div>
         </div>
         <a class="btn" href="/uploads/${encodeURIComponent(d.path)}" target="_blank" rel="noopener">Descargar</a>
-      </div>
-    `).join("");
+      </div>`).join("");
   } else {
-    docsEl.innerHTML = `<div class="help">${isPetroleum ? "No hay documentos adjuntos para esta agenda." : "No hay documentos adjuntos para esta actividad."}</div>`;
+    docsEl.style.display = "none";
   }
 
-  // Status mapping
-  const statusEl = document.getElementById("evStatus");
+  // Status badge
+  const sub = ev.submission || null;
+  const st  = sub?.status || null;
+  const badge = document.getElementById("evStatusBadge");
   const reviewEl = document.getElementById("evReviewNotes");
-  let st = ev.submission?.status || null;
-  let label = "Sin entrega";
-  if (st==="submitted") label="Entregado (en revisión)";
-  if (st==="reviewed") label="Falta / requiere corrección";
-  if (st==="approved") label="Completado";
-  if (st==="rejected") label="Incorrecto";
-  statusEl.textContent = "Estado: " + label;
-  reviewEl.textContent = ev.submission?.review_notes ? ("Comentario del administrador: " + ev.submission.review_notes) : "";
-
-  // If station blocked, disable form
-  if (me.monthly_status==="view_only" || me.monthly_status==="expired"){
-    deliverCard.querySelector("button[type=submit]").disabled = true;
-    deliverCard.querySelector("#err").hidden=false;
-    deliverCard.querySelector("#err").textContent = "Tu estación está en modo vista / vencida. Solo puedes subir comprobante en Mensualidad.";
+  if (st === "submitted" || st === "reviewed" || st === "approved") {
+    badge.className = "ev-badge done";
+    badge.textContent = "✓  Completada";
+  } else if (st === "rejected") {
+    badge.className = "ev-badge rejected";
+    badge.textContent = "✗  Rechazada";
+    if (sub?.review_notes) reviewEl.textContent = "Motivo: " + sub.review_notes;
+  } else {
+    badge.className = "ev-badge pending";
+    badge.textContent = "Pendiente";
   }
 
-  const form = document.getElementById("deliverForm");
-  form.addEventListener("submit", async (e)=>{
-    e.preventDefault();
-    const err=document.getElementById("err");
-    err.hidden=true;
-    try{
-      const fd=new FormData(form);
-      await api("/api/submissions", {method:"POST", body: fd, headers:{}});
-      toast("Enviado","Entrega enviada al administrador.");
-      location.reload();
-    }catch(ex){
-      err.textContent = "Error: " + ex.message;
-      err.hidden=false;
+  // ── Render deliver card ──────────────────────────────────────────────────
+  const card = document.getElementById("deliverCard");
+
+  if (isSupervisor) {
+    // ── Vista supervisor: muestra la evidencia entregada ──
+    if (sub) {
+      const who     = esc(sub.submitter_name || `Operador #${sub.user_id}`);
+      const initial = (sub.submitter_name || "?")[0].toUpperCase();
+      const when    = (sub.created_at || "").slice(0, 10);
+      const fname   = sub.evidence_path ? sub.evidence_path.split("/").pop() : null;
+
+      card.innerHTML = `
+        <div class="ev-evidence-wrap">
+          <div class="ev-who">
+            <div class="ev-avatar">${esc(initial)}</div>
+            <div>
+              <div style="font-weight:700;">${who}</div>
+              <div class="help">${when ? "Entregado el " + when : ""}</div>
+            </div>
+          </div>
+          ${sub.notes ? `
+          <div>
+            <div class="help" style="margin-bottom:6px;">Observaciones del operador</div>
+            <div class="ev-notes-box">${esc(sub.notes)}</div>
+          </div>` : ""}
+          ${fname ? `
+          <div class="ev-file-row">
+            <div>
+              <div style="font-weight:700;font-size:14px;">Archivo adjunto</div>
+              <div class="help" style="word-break:break-all;">${esc(fname)}</div>
+            </div>
+            <a class="btn primary" href="/uploads/${encodeURIComponent(sub.evidence_path)}" target="_blank" rel="noopener" style="white-space:nowrap;">
+              Ver / Descargar
+            </a>
+          </div>` : `
+          <div class="help" style="color:#d97706;">
+            El operador completó la actividad sin archivo adjunto.
+          </div>`}
+        </div>`;
+    } else {
+      card.innerHTML = `
+        <div class="ev-empty">
+          <div class="ev-state-icon">📋</div>
+          <div style="font-weight:700;margin-bottom:2px;">Sin entrega</div>
+          <div class="help">El operador aún no ha completado esta actividad.</div>
+        </div>`;
     }
-  });
+
+  } else {
+    // ── Vista operador ──
+    const alreadyDone = st !== null && st !== "rejected";
+
+    if (alreadyDone) {
+      card.innerHTML = `
+        <div class="ev-success">
+          <div class="ev-state-icon">✅</div>
+          <div style="font-weight:900;font-size:17px;">Actividad completada</div>
+          <div class="help">La evidencia fue registrada. El jefe de estación puede consultarla.</div>
+        </div>`;
+    } else {
+      // Formulario de entrega
+      card.innerHTML = `
+        <h3 style="margin:0 0 16px 0;">Subir evidencia</h3>
+        <form id="deliverForm">
+          <input type="hidden" name="event_id" value="${eventId}">
+          <input type="hidden" name="activity_id" id="activityId">
+          <div style="display:grid;gap:14px;">
+            <div>
+              <div class="help">Observaciones / notas</div>
+              <textarea class="input" name="notes" rows="4" placeholder="Escribe aquí notas u observaciones..."></textarea>
+            </div>
+            <div>
+              <div class="help">Archivo de evidencia <span style="color:var(--hme-danger);">*</span></div>
+              <input class="input" type="file" name="evidence" accept=".pdf,.jpg,.jpeg,.png" required>
+            </div>
+            <button class="btn primary" type="submit" style="width:100%;padding:13px;">Enviar entrega</button>
+            <div id="err" class="help" style="color:var(--hme-danger);font-weight:700;" hidden></div>
+          </div>
+        </form>
+        <div class="ev-form-note">
+          Al subir la evidencia, la actividad queda <b>completada</b> automáticamente.
+          Solo el jefe de estación y el administrador pueden ver las evidencias.
+        </div>`;
+
+      // Set activity_id
+      const actInput = card.querySelector("#activityId");
+      if (actInput) actInput.value = ev.activity_id || "";
+
+      // Station blocked
+      if (me.monthly_status === "view_only" || me.monthly_status === "expired") {
+        const btn = card.querySelector("button[type=submit]");
+        if (btn) btn.disabled = true;
+        const errEl = card.querySelector("#err");
+        if (errEl) { errEl.hidden = false; errEl.textContent = "Tu estación está en modo vista / vencida."; }
+      }
+
+      // Submit handler
+      card.querySelector("#deliverForm").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const err = card.querySelector("#err");
+        err.hidden = true;
+        const btn = card.querySelector("button[type=submit]");
+        btn.disabled = true;
+        btn.textContent = "Enviando...";
+        try {
+          const fd = new FormData(e.target);
+          await api("/api/submissions", { method: "POST", body: fd, headers: {} });
+          toast("Completada", "Actividad marcada como completada.");
+          location.reload();
+        } catch(ex) {
+          err.textContent = "Error: " + ex.message;
+          err.hidden = false;
+          btn.disabled = false;
+          btn.textContent = "Enviar entrega";
+        }
+      });
+    }
+  }
 })();
 </script>
 {% endblock %}

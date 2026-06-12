@@ -1,15 +1,23 @@
 (async ()=>{
   const err = qs("#sErr");
+  const stationModal = qs("#stationModal");
+  const modalClose = qs("#modalClose");
+  const btnNewStation = qs("#btnNewStation");
+  const kmlModal = qs("#kmlModal");
+  const kmlModalClose = qs("#kmlModalClose");
+  const searchInput = qs("#searchStations");
+  const filterBrand = qs("#filterBrand");
+  const filterStatus = qs("#filterStatus");
+  const btnClearFilters = qs("#btnClearFilters");
+  const btnToggleFilters = qs("#btnToggleFilters");
+  const filtersPanel = qs("#filtersPanel");
+  const filterInfo = qs("#filterInfo");
 
   function getCsrfToken(){
-    // Prefer meta tag if present, else cookie set by backend
     const meta = document.querySelector('meta[name="csrf-token"]');
     if(meta && meta.content) return meta.content;
-    // cookie parser
     const m = document.cookie.match(/(?:^|;\s*)csrf_token=([^;]+)/);
     if(m) return decodeURIComponent(m[1]);
-    // fallback: sometimes app sets window.__csrf
-    // @ts-ignore
     if(window.__csrf) return window.__csrf;
     return "";
   }
@@ -19,19 +27,16 @@
     if (dir === 'S' || dir === 'W') dec *= -1;
     return dec;
   }
+
   function parseCoord(raw){
     const s = (raw||"").trim();
     if(!s) return null;
-
-    // Decimal formats: "lat,lng" or "lat lng"
     const decMatch = s.match(/(-?\d+(?:\.\d+)?)\s*[,\s]\s*(-?\d+(?:\.\d+)?)/);
     if (decMatch){
       const lat = Number(decMatch[1]);
       const lng = Number(decMatch[2]);
       if(!Number.isNaN(lat) && !Number.isNaN(lng)) return {lat, lng};
     }
-
-    // DMS format: 25°40'11.97"N 100°18'05.72"W
     const r = /(\d+)°(\d+)'([\d.]+)\"?([NSEW])/gi;
     let m, vals=[];
     while((m=r.exec(s))!==null){
@@ -43,63 +48,173 @@
     return null;
   }
 
+  // Modal control
+  function openModal(isNew = true){
+    qs("#modalTitle").textContent = isNew ? "Nueva estación" : "Editar estación";
+    qs("#sAdd").textContent = isNew ? "Crear estación" : "Guardar cambios";
+    stationModal.classList.add("active");
+  }
+
+  function closeModal(){
+    stationModal.classList.remove("active");
+    resetForm();
+  }
+
+  function resetForm(){
+    qs("#sId").value="";
+    ["#sName","#sCode","#sNum","#sGroup","#sState","#sCity","#sAddr","#sCoord","#sLat","#sLng"].forEach(sel=>{ const el=qs(sel); if(el) el.value=""; });
+    qs("#sBrand").value = "consulting";
+    qs("#sMonthlyEnd").value = "";
+    err.hidden = true;
+    qs("#sCancelEdit").hidden = true;
+  }
+
+  // Filter logic
+  function getFilteredStations(){
+    const searchTerm = searchInput.value.toLowerCase().trim();
+    const brandFilter = filterBrand.value;
+    const statusFilter = filterStatus.value;
+    
+    return lastStations.filter(s => {
+      const matchSearch = !searchTerm || 
+        s.name.toLowerCase().includes(searchTerm) ||
+        s.code.toLowerCase().includes(searchTerm) ||
+        (s.city || '').toLowerCase().includes(searchTerm) ||
+        (s.state || '').toLowerCase().includes(searchTerm);
+      
+      const matchBrand = !brandFilter || (s.brand || 'consulting') === brandFilter;
+      const matchStatus = !statusFilter || s.monthly_status === statusFilter;
+      
+      return matchSearch && matchBrand && matchStatus;
+    });
+  }
+
+  function updateFilterInfo(){
+    const filtered = getFilteredStations();
+    const isFiltered = searchInput.value || filterBrand.value || filterStatus.value;
+    
+    if(isFiltered){
+      filterInfo.textContent = `Mostrando ${filtered.length} de ${lastStations.length} estaciones`;
+      filterInfo.style.display = 'block';
+    } else {
+      filterInfo.style.display = 'none';
+    }
+  }
+
+  function applyFilters(){
+    const filtered = getFilteredStations();
+    renderStations(filtered);
+    updateFilterInfo();
+  }
+
+  // Modal eventos
+  btnNewStation.addEventListener("click", ()=> openModal(true));
+  modalClose.addEventListener("click", ()=> closeModal());
+  kmlModalClose.addEventListener("click", ()=> kmlModal.classList.remove("active"));
+  stationModal.addEventListener("click", (e)=>{ if(e.target === stationModal) closeModal(); });
+  kmlModal.addEventListener("click", (e)=>{ if(e.target === kmlModal) kmlModal.classList.remove("active"); });
+  
+  // Filter eventos
+  btnToggleFilters.addEventListener("click", ()=>{
+    if(filtersPanel.style.display === 'none'){
+      filtersPanel.style.display = 'flex';
+      btnToggleFilters.style.backgroundColor = 'var(--hme-bg)';
+    } else {
+      filtersPanel.style.display = 'none';
+      btnToggleFilters.style.backgroundColor = '';
+    }
+  });
+  
+  searchInput.addEventListener("input", applyFilters);
+  filterBrand.addEventListener("change", applyFilters);
+  filterStatus.addEventListener("change", applyFilters);
+  btnClearFilters.addEventListener("click", ()=>{
+    searchInput.value = "";
+    filterBrand.value = "";
+    filterStatus.value = "";
+    applyFilters();
+  });
+
   let lastStations = [];
-  async function refresh(){
-    const st = (await api("/api/stations")).stations || [];
-    lastStations = st;
-    const tb = qs("#sT");
-    tb.innerHTML = st.map(s=>`
-      <tr>
-        <td>${(s.station_number ?? s.id)}</td>
-        <td><b>${s.name}</b><div class="muted">${s.city||""} ${s.state||""}</div></td>
-        <td>${(s.brand||"consulting")==="petroleum" ? `<span class="pill pill-petroleum">Petroleum</span>` : `<span class="pill pill-consulting">Consulting</span>`}</td>
-        <td>${s.group_name||""}</td>
-        <td>${s.code}</td>
-        <td>${s.monthly_status}</td>
-        <td style="display:flex;gap:8px;flex-wrap:wrap;">
+  
+  function renderStations(stations){
+    const container = qs("#stationsList");
+    
+    if(stations.length === 0){
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-state-icon" style="font-size: 32px; color: var(--hme-text-soft);">◆</div>
+          <div style="font-weight: 600; margin-bottom: 8px;">No hay estaciones que coincidan</div>
+          <div>Intenta ajustar los filtros de búsqueda</div>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = stations.map(s=>`
+      <div class="station-row" data-station-id="${s.id}">
+        <div style="display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; background: ${(s.brand||"consulting")==="petroleum" ? "var(--hme-petroleum-light, rgba(226, 113, 113, 0.1))" : "var(--hme-consulting-light, rgba(76, 159, 211, 0.1))"}; border-radius: 8px; font-size: 20px; flex-shrink: 0; font-weight: 600; color: var(--hme-text-soft);">
+          ◆
+        </div>
+        <div class="station-info">
+          <div class="station-name">${s.name}</div>
+          <div class="station-meta">
+            <span class="station-meta-item"><strong>${s.code}</strong></span>
+            <span class="station-meta-item">${s.city||""} ${s.state||""}</span>
+            <span class="pill ${(s.brand||"consulting")==="petroleum" ? "pill-petroleum" : "pill-consulting"}">${(s.brand||"consulting")==="petroleum" ? "Petroleum" : "Consulting"}</span>
+            <span class="pill" style="background: ${s.monthly_status === 'active' ? 'var(--hme-success, #10b981)' : s.monthly_status === 'expired' ? 'var(--hme-danger, #ef4444)' : 'var(--hme-warning, #f59e0b)'}; color: white; font-size: 12px;">${s.monthly_status === 'active' ? 'Activa' : s.monthly_status === 'expired' ? 'Expirada' : 'Solo vista'}</span>
+          </div>
+        </div>
+        <div class="station-actions">
           <button class="btn ghost small" data-edit="${s.id}">Editar</button>
-          <button class="btn danger small" data-del="${s.id}">Borrar</button>
-          <span style="width:100%;height:0;"></span>
+          <button class="btn danger small" data-del="${s.id}">Eliminar</button>
+          <div style="width: 100%; height: 0;"></div>
           <button class="btn ghost small" data-set="${s.id}" data-status="active">Activar</button>
-          <button class="btn ghost small" data-set="${s.id}" data-status="view_only">Vista</button>
+          <button class="btn ghost small" data-set="${s.id}" data-status="view_only">Solo vista</button>
           <button class="btn ghost small" data-set="${s.id}" data-status="expired">Expirada</button>
-        </td>
-      </tr>
+        </div>
+      </div>
     `).join("");
+
+    // Event listeners
     qsa("[data-set]").forEach(b=>b.addEventListener("click", async ()=>{
       await api(`/api/stations/${b.dataset.set}`,{method:"PUT",body:JSON.stringify({monthly_status:b.dataset.status})});
       toast("Actualizado","Status actualizado.");
       await refresh();
     }));
+
     qsa("[data-edit]").forEach(b=>b.addEventListener("click", ()=>{
-  const s = lastStations.find(x=>String(x.id)===String(b.dataset.edit));
-  if(!s) return;
-  qs("#sId").value = s.id;
-  qs("#sName").value = s.name||"";
-  qs("#sCode").value = s.code||"";
-  if(qs("#sBrand")) qs("#sBrand").value = (s.brand||"consulting");
-  if(qs("#sMonthlyEnd")) qs("#sMonthlyEnd").value = (s.monthly_end||"");
-  qs("#sNum").value = (s.station_number!=null? s.station_number: "");
-  qs("#sGroup").value = s.group_name||"";
-  qs("#sState").value = s.state||"";
-  qs("#sCity").value = s.city||"";
-  qs("#sAddr").value = s.address||"";
-  qs("#sCoord").value = (s.lat!=null && s.lng!=null) ? `${s.lat}, ${s.lng}` : "";
-  if (qs("#sCoord").value) syncLatLng();
-  qs("#sAdd").textContent = "Guardar cambios";
-  qs("#sCancelEdit").hidden = false;
-  window.scrollTo({top:0, behavior:"smooth"});
-}));
-qsa("[data-del]").forEach(b=>b.addEventListener("click", async ()=>{
-  const id = b.dataset.del;
-  if(!confirm("¿Borrar estación? Esto eliminará también sus eventos y entregas relacionadas.")) return;
-  await api(`/api/stations/${id}`, {method:"DELETE"});
-  toast("Eliminada","Estación borrada.");
-  await refresh();
-}));
+      const s = lastStations.find(x=>String(x.id)===String(b.dataset.edit));
+      if(!s) return;
+      qs("#sId").value = s.id;
+      qs("#sName").value = s.name||"";
+      qs("#sCode").value = s.code||"";
+      qs("#sBrand").value = (s.brand||"consulting");
+      qs("#sMonthlyEnd").value = (s.monthly_end||"");
+      qs("#sNum").value = (s.station_number!=null? s.station_number: "");
+      qs("#sGroup").value = s.group_name||"";
+      qs("#sState").value = s.state||"";
+      qs("#sCity").value = s.city||"";
+      qs("#sAddr").value = s.address||"";
+      qs("#sCoord").value = (s.lat!=null && s.lng!=null) ? `${s.lat}, ${s.lng}` : "";
+      if (qs("#sCoord").value) syncLatLng();
+      openModal(false);
+    }));
 
+    qsa("[data-del]").forEach(b=>b.addEventListener("click", async ()=>{
+      const id = b.dataset.del;
+      if(!confirm("¿Eliminar esta estación? Se eliminarán también sus eventos y entregas relacionadas.")) return;
+      await api(`/api/stations/${id}`, {method:"DELETE"});
+      toast("Eliminada","Estación eliminada correctamente.");
+      await refresh();
+    }));
   }
-
+  
+  async function refresh(){
+    const st = (await api("/api/stations")).stations || [];
+    lastStations = st;
+    applyFilters();
+  }
 
   const sCoord = qs("#sCoord");
   function syncLatLng(){
@@ -128,7 +243,7 @@ qsa("[data-del]").forEach(b=>b.addEventListener("click", async ()=>{
     btnPrev.addEventListener("click", ()=>{
       const res = syncLatLng();
       if(!res){
-        toast("Coordenada inválida","Pega una coordenada válida (DMS o decimal).");
+        toast("Coordenada inválida","Ingresa una coordenada válida (DMS o decimal).");
         return;
       }
       dlg.showModal();
@@ -145,16 +260,6 @@ qsa("[data-del]").forEach(b=>b.addEventListener("click", async ()=>{
   }
   if(btnClose && dlg) btnClose.addEventListener("click", ()=> dlg.close());
 
-  const btnCancelEdit = qs("#sCancelEdit");
-  if(btnCancelEdit){
-    btnCancelEdit.addEventListener("click", ()=>{
-      qs("#sId").value="";
-      qs("#sAdd").textContent="Crear";
-      btnCancelEdit.hidden=true;
-      ["#sName","#sCode","#sNum","#sGroup","#sState","#sCity","#sAddr","#sCoord","#sLat","#sLng"].forEach(sel=>{ const el=qs(sel); if(el) el.value=""; });
-    });
-  }
-
   qs("#sAdd").addEventListener("click", async ()=>{
     const editingId = (qs("#sId").value||"").trim();
     err.hidden=true;
@@ -170,9 +275,8 @@ qsa("[data-del]").forEach(b=>b.addEventListener("click", async ()=>{
         lat:qs("#sLat").value? Number(qs("#sLat").value): null,
         lng:qs("#sLng").value? Number(qs("#sLng").value): null
       })});
-      toast(editingId?"Actualizada":"Creada", editingId?"Estación actualizada.":"Estación creada.");
-      qs("#sId").value=""; qs("#sAdd").textContent="Crear"; qs("#sCancelEdit").hidden=true;
-      ["#sName","#sCode","#sNum","#sGroup","#sState","#sCity","#sAddr","#sLat","#sLng"].forEach(id=>{const el=qs(id); if(el) el.value="";});
+      toast(editingId?"Actualizada":"Creada", editingId?"Estación actualizada correctamente.":"Estación creada correctamente.");
+      closeModal();
       await refresh();
     }catch(e){
       err.textContent="Error: "+e.message;
@@ -180,16 +284,20 @@ qsa("[data-del]").forEach(b=>b.addEventListener("click", async ()=>{
     }
   });
 
-
-  // --- KML Import (Placemark/Point) ---
+  // --- KML Import ---
   const kmlBtn = qs("#kmlImport");
   const kmlFile = qs("#kmlFile");
   const kmlMsg = qs("#kmlMsg");
+  
+  // Botón para abrir modal KML (si existe)
+  const btnImportKml = qsa("button").find(b=>b.textContent.includes("KML") || b.textContent.includes("Importar"));
+  if(btnImportKml) btnImportKml.addEventListener("click", ()=> kmlModal.classList.add("active"));
+
   if(kmlBtn && kmlFile){
     kmlBtn.addEventListener("click", async ()=>{
       kmlMsg && (kmlMsg.hidden=true);
       const f = (kmlFile.files||[])[0];
-      if(!f){ toast("Falta archivo","Selecciona un .kml"); return; }
+      if(!f){ toast("Falta archivo","Selecciona un archivo .kml"); return; }
       const fd = new FormData();
       fd.append("file", f);
       kmlBtn.disabled = true;
@@ -202,13 +310,13 @@ qsa("[data-del]").forEach(b=>b.addEventListener("click", async ()=>{
           toast("Error", msg);
           return;
         }
-        const msg = `Importadas: ${data.count} · Omitidas: ${data.skipped}`;
+        const msg = `Importadas: ${data.count} estaciones · Omitidas: ${data.skipped}`;
         if(kmlMsg){ kmlMsg.textContent = msg; kmlMsg.hidden=false; }
-        toast("Importación lista", msg);
+        toast("Importación completada", msg);
         kmlFile.value = "";
         await refresh();
       }catch(e){
-        const msg = e.message || "Error al importar";
+        const msg = e.message || "Error al importar archivo";
         if(kmlMsg){ kmlMsg.textContent = msg; kmlMsg.hidden=false; }
         toast("Error", msg);
       }finally{

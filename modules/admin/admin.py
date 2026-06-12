@@ -265,7 +265,7 @@ def register(app):
             cur.execute(
                 """
                 SELECT
-                  SUM(CASE WHEN status='approved' THEN 1 ELSE 0 END) AS approved,
+                  SUM(CASE WHEN status<>'rejected' THEN 1 ELSE 0 END) AS approved,
                   COUNT(*) AS total
                 FROM submissions
                 WHERE user_id = ? AND date(created_at) >= date(?) AND date(created_at) <= date(?)

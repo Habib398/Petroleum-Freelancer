@@ -1,0 +1,184 @@
+================================================================
+REPORTE DE CAMBIOS — PANEL PRINCIPAL DE ADMINISTRADOR
+Fecha: 9 de junio de 2026
+================================================================
+
+
+RESUMEN
+-------
+
+Se rediseñó la pantalla principal que ve el administrador al
+iniciar sesión (su "panel de control"), buscando una imagen
+más limpia, formal y profesional, sin perder las funciones
+clave que ya se usaban a diario.
+
+Adicionalmente, se detectó y corrigió un problema técnico que
+hacía que esta pantalla se viera "rota" (sin estilos, como
+texto plano) para los administradores.
+
+
+2. NUEVO DISEÑO DEL PANEL PRINCIPAL
+--------------------------------------
+
+  La pantalla quedó organizada en bloques claros, de arriba
+  hacia abajo:
+
+  a) Encabezado de bienvenida
+     - Mensaje formal de bienvenida con el nombre del sistema
+       (Consulting o Petroleum, según el modo activo).
+     - Accesos rápidos a las secciones más usadas: SASISOPA,
+       Organigrama e Inbox del administrador.
+
+  b) Resumen del día (4 tarjetas)
+     - Estaciones activas
+     - Alertas abiertas
+     - Revisiones pendientes
+     - Pendientes del día
+
+     Estas tarjetas muestran números reales y actualizados,
+     para que el administrador tenga un "vistazo general" de
+     la operación sin tener que entrar a cada módulo.
+
+  c) Mapa de módulos principales
+     - Se conservó tal cual el mapa visual donde aparecen
+       flotando los accesos a SGM y SASISOPA, junto con
+       Estaciones e Inbox del administrador, conectados al
+       logo central de la empresa. Es el elemento que más le
+       gustaba al equipo y se mantuvo sin cambios.
+
+  d) Herramientas
+     - Se reorganizaron los demás accesos (bitácora, mi panel,
+       calendario, evidencias, usuarios, calibraciones, centro
+       documental, reportes, auditoría, backups, configuración,
+       carpeta compartida, documentos por validar, etc.) en
+       tres grupos claros:
+         * Operación diaria
+         * Control administrativo
+         * Supervisión y soporte
+
+     Esto evita que la pantalla se vea saturada y ayuda a
+     encontrar cada herramienta más rápido.
+
+
+3. RESULTADO
+---------------
+
+  - El panel principal ahora se ve más formal, ordenado y
+    profesional, manteniendo el "mapa mental" de SGM y
+    SASISOPA que se quería conservar.
+  - Se verificó visualmente que el diseño funciona
+    correctamente tanto en el modo Consulting (claro) como en
+    el modo Petroleum (oscuro), incluyendo sus respectivos
+    mapas de módulos y secciones de herramientas.
+
+
+4. PUNTOS PENDIENTES
+------------------------
+
+  Ninguno por ahora. El rediseño quedó completo y verificado
+  para ambos modos (Consulting y Petroleum).
+
+
+5. REDISEÑO DE LA VISTA DE USUARIOS
+-------------------------------------
+
+  Se aplicó el mismo patrón de diseño de la vista de estaciones
+  a la pantalla de gestión de usuarios, mejorando la experiencia
+  y manteniendo consistencia visual en el panel de administrador.
+
+  a) Cambios en la interfaz
+     - Se eliminó el layout de 2 columnas (formulario siempre
+       visible + tabla). Ahora el formulario aparece en un
+       modal que se abre al presionar "+ Nuevo usuario".
+     - Se agregó una barra de búsqueda profesional que filtra
+       usuarios por nombre, correo o estación en tiempo real.
+     - Se añadió un panel de filtros colapsable ("Filtros") que
+       permite refinar por:
+         * Rol (Administrador, Operador, Jefe de estación,
+           Contador, Auditor)
+         * Estado (Activos, Inactivos)
+     - La tabla se simplificó visualmente mostrando solo los
+       usuarios que cumplen con los criterios de búsqueda y
+       filtros aplicados.
+     - Se añadió un indicador que muestra "X de Y usuarios" cuando
+       hay filtros activos.
+
+  b) Cambios funcionales
+     - Modal para crear usuario: abre un formulario limpio y
+       enfocado, se cierra automáticamente al guardar.
+     - Modal para editar usuario: se abre con los datos
+       precargados, permitiendo cambiar cualquier atributo del
+       usuario sin usar prompts (más profesional).
+     - Búsqueda en tiempo real: cada carácter escrito filtra
+       instantáneamente la tabla.
+     - Filtros combinables: se pueden usar simultáneamente
+       (ej: buscar "juan" Y filtrar por "Contador" AND "Activos").
+     - Borrador limpio: se quitaron los emojis, reemplazándolos
+       con texto profesional.
+     - Acciones mejoradas: los botones ("Accesos", "Editar",
+       "Eliminar") son ahora claros y consistentes con el resto
+       de la interfaz.
+
+  c) Mejoras técnicas
+     - Se implementó control de modal: openModal(), closeModal(),
+       resetForm() para una experiencia más fluida.
+     - Se añadió event delegation para manejar todas las acciones
+       de la tabla dinámicamente.
+     - La funcionalidad de "Accesos por estación" se preservó
+       completamente y funciona desde la tabla.
+     - Soporte completo para crear, editar y eliminar usuarios con
+       validaciones y mensajes de confirmación.
+
+  d) Resultado visual
+     - La vista de usuarios ahora tiene el mismo patrón limpio,
+       formal y profesional que la vista de estaciones.
+     - Espacio más limpio: el formulario no ocupa espacio
+       permanentemente, solo aparece cuando se necesita.
+     - Mejor navegación: búsqueda y filtros hacen que encontrar
+       usuarios específicos sea más rápido.
+
+
+6. REDISEÑO DEL CENTRO OPERATIVO (VISTA DE OPERADOR / JEFE DE ESTACIÓN)
+---------------------------------------------------------------------
+
+  Se rediseñó la pantalla de inicio que ven los roles operativos
+  (Jefe de estación, operador, contador, auditor) al entrar al
+  sistema, conocida como "Centro operativo", aplicando el mismo
+  estilo ordenado y profesional del panel de administrador.
+
+  a) Cambios en la interfaz
+     - Se eliminó el bloque de 4 recuadros repetidos (Rol activo,
+       Sistema, Documental, Acceso), que mostraba información que
+       ya aparecía en el encabezado de la pantalla.
+     - Esa misma información ahora se muestra de forma compacta,
+       como etiquetas con ícono dentro del mensaje de bienvenida
+       (Rol, Sistema, Acceso).
+     - Los accesos del usuario se reorganizaron en dos grupos:
+         * "Módulos principales": los accesos de trabajo diario
+           según su rol (SASISOPA, SGM, Documentos faltantes),
+           mostrados en tarjetas grandes con ícono, descripción
+           y un enlace "Abrir".
+         * "Accesos y herramientas": el resto de accesos (Carpeta
+           compartida, Organigrama, Dashboard, Notificaciones,
+           Mensualidad / Pagos, Mapa de estaciones, según el rol),
+           en tarjetas más pequeñas y compactas.
+     - Se agregó un ícono distintivo para cada acceso, de forma
+       que sea más fácil identificarlos de un vistazo.
+
+  b) Resultado visual
+     - La pantalla se ve más limpia, sin información repetida.
+     - Queda más claro qué hacer primero: los módulos de trabajo
+       diario aparecen arriba, y las herramientas de consulta
+       quedan agrupadas debajo.
+     - Se conserva el mismo estilo según el sistema activo
+       (colores claros y verdes para Consulting, oscuros y
+       dorados para Petroleum).
+
+  c) Puntos pendientes
+     - Ninguno por ahora. Pendiente de revisión visual por el
+       equipo.
+
+
+================================================================
+Fin del reporte
+================================================================

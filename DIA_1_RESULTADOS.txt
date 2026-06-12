@@ -1,0 +1,338 @@
+================================================================================
+DÍA 1 — DIAGNÓSTICO EN VIVO + JERARQUÍA OBJETIVO (RESULTADOS)
+CONSULTING MODE (Admin + Centro Operativo)
+Fecha: 11 de junio de 2026
+================================================================================
+
+MÉTODO USADO
+------------
+- Mapeo completo de rutas Flask (grep de @app.get/@app.post + blueprints)
+  para confirmar que cada link mencionado en el plan existe de verdad.
+- Pruebas en vivo: servidor Flask local levantado (BRAND=consulting por
+  defecto), login real como admin (admin/admin123) vía /api/auth/login,
+  y verificación del código HTTP de cada pantalla (200/302/403/404).
+- Revisión de templates/layout.html (sidebar), admin_menu.html,
+  staff_menu_admin_like.html, mod/dashboard.html, mod/panel.html y
+  static/js/common.js (lógica de visibilidad por rol).
+- NO se probó en vivo como jefe_estacion (jose) / operador (paco): no se
+  tenían sus contraseñas y no se quiso resetearlas sin autorización. Su
+  navegación se validó por código (layout.html + common.js +
+  staff_menu_admin_like.html), que es donde vive toda la lógica de
+  visibilidad por rol.
+
+
+PASO 1 — AUTENTICACIÓN Y CONTEXTO
+------------------------------------
+- BRAND por defecto = "consulting" (session.get('brand','consulting')) OK
+- Usuario admin existe (admin/admin123, .env) OK
+- jose (jefe_estacion) y paco (operador) existen en BD OK
+- /select-system: si solo hay una marca asignada, admin -> /admin/menu,
+  resto de roles -> /staff/menu (tal como espera el plan) OK
+
+
+PASO 2 — RECORRIDO DE /admin/menu
+------------------------------------
+a) Hero CTAs:
+   - "Abrir SASISOPA" -> /admin/sasisopa -> redirige a /admin/sasisopa/docs  OK
+   - "Organigrama" -> /admin/organigrama (el plan asumía /mod/organigrama;
+     en realidad apunta a /admin/organigrama, ruta de EDICIÓN) -> 200 OK
+   - "Inbox admin" -> /admin/inbox -> 200 OK
+
+b) Mapa de módulos (4 tiles: SGM, SASISOPA, Estaciones, Inbox)
+   - /admin/sgm -> redirige a /admin/sgm/docs        OK
+   - /admin/sasisopa -> redirige a /admin/sasisopa/docs  OK
+   - /admin/stations -> 200                          OK
+   - /admin/inbox -> 200                             OK
+   - Ninguna de estas 4 vistas tiene botón de "volver" directo a
+     /admin/menu; el regreso depende del sidebar (ver Paso 7).
+
+c) Toolbox (3 categorías) — TODAS las rutas existen y responden 200:
+   /mod/activities (admin -> redirige), /mod/panel, /mod/operational-calendar,
+   /mod/evidencias, /admin/shared-folder, /admin/pending-docs,
+   /admin/calibraciones, /admin/users, /admin/document-center,
+   /admin/executive, /admin/audit, /admin/backup, /admin/setup-wizard.
+   -> Nada está técnicamente roto (sin 404/500).
+
+
+PASO 3 — SIDEBAR "ACCESO RÁPIDO"
+------------------------------------
+- Dashboard -> /mod/dashboard (200) — ver hallazgo clave en Paso 9
+- Mi panel -> /mod/panel (200) OK
+- Notificaciones -> /mod/notifications (200) OK
+- Perfil / FIEL -> /mod/profile (200) OK
+- Organigrama -> /mod/organigrama (200) OK (vista lectura/impresión,
+  distinta de /admin/organigrama que permite editar)
+
+HALLAZGO: /admin/menu NO usa layout.html, así que NO tiene este sidebar.
+"Acceso rápido" solo existe DENTRO de los módulos, nunca en la pantalla
+de inicio del admin.
+
+
+PASO 4 — SIDEBAR "OPERACIÓN"
+--------------------------------
+- "Actividades"/"Agenda" (data-operador-only, oculto para admin/jefe)
+  -> /mod/activities
+- "Calendario operativo" (data-supervisor-only: admin/jefe)
+  -> /mod/operational-calendar (200) OK — incluye botón "Crear actividad"
+  y "Ver evidencias" -> /mod/station-evidence
+- "Evidencias por estación" (data-supervisor-only) -> /mod/station-evidence
+  (200) OK — pantalla nueva, ruta registrada en activities_bp, funciona.
+- "Evidencias" -> /mod/evidencias (200) OK
+- "Incidencias" (data-not-admin, oculto para admin)
+  -> /mod/incidents -> para admin da 403 (correcto, coincide con el nuevo
+  modelo de incidencias de 2026-06-01). Depende de que el JS oculte el link.
+- "Tareas / Correcciones" -> /mod/corrections (200) OK
+
+El modelo classroom de VISIBILIDAD (ocultar "Actividades" a admin/jefe,
+mostrar "Calendario operativo") SÍ está implementado correctamente en el
+sidebar. El problema NO está aquí, sino en el toolbox de /admin/menu
+(ver Paso 9, punto 3).
+
+
+PASO 5 — SIDEBAR "OPERACIÓN TÉCNICA"
+----------------------------------------
+- Pipas -> /mod/pipas (200) OK
+- Mantenimiento -> /mod/maintenance (200) OK
+- Alertas -> /mod/alerts (200) OK
+- Reportes (data-not-operador) -> /mod/reports (200) OK
+- Mensualidad (data-not-operador) -> /mod/payments (200) OK
+
+Todas responden 200. Sin breadcrumb ni "volver a inicio": dependen 100%
+de que el sidebar siga visible. Se sienten "anexas" pero no están rotas.
+
+
+PASO 6 — SIDEBAR "AYUDA Y SOPORTE"
+---------------------------------------
+- Centro de ayuda -> /mod/help-center (200) OK (existe; revisar si el
+  contenido es solo placeholder)
+- Firma dibujada -> /mod/signature-pad (200) OK
+- Analíticas (admin/auditor only) -> /mod/analytics (200) OK
+
+
+PASO 7 — SIDEBAR "ADMINISTRADOR" (solo admin)
+--------------------------------------------------
+- "Módulos (SGM / SASISOPA)" -> /admin/menu (200) OK
+  -> Este es el ÚNICO link de regreso al hub /admin/menu desde cualquier
+  página con sidebar. Está dentro de una sub-sección colapsable
+  ("Control principal") y su etiqueta no comunica "Inicio".
+- Inbox (Revisión) -> /admin/inbox (200) OK
+- Estaciones -> /admin/stations (200) OK
+- Usuarios -> /admin/users (200) OK
+- /admin/permissions: la ruta existe y responde 200, pero CONFIRMADO que
+  ningún template en todo el proyecto enlaza a ella. Huérfana al 100%.
+
+Subsección "Supervisión":
+- Ejecutivo -> /admin/executive (200) OK
+- Auditoría -> /admin/audit (200) OK
+- Reporte de incidencias -> /admin/incidents-report (200) OK
+- Comparador documental -> /admin/docs/compare (200) OK
+- Impresión pro -> /admin/reports/print/consolidated (200) OK
+
+Subsección "Configuración":
+- Backups -> /admin/backup (200) OK
+- Configuración -> /admin/setup-wizard (200) OK
+
+
+PASO 8 — NAVEGACIÓN STAFF (jefe_estacion / operador)
+---------------------------------------------------------
+Validado por código (no en vivo, ver nota en MÉTODO):
+
+- Post-login -> /staff/menu (hub propio, SIN sidebar, igual patrón que
+  /admin/menu)
+- "Ir al Dashboard" -> /mod/dashboard (CON sidebar completo)
+- Dentro de /mod/dashboard, la sección #staffSimple muestra "Abrir módulo
+  principal" -> /staff/menu (única forma documentada de regresar)
+
+HALLAZGO CRÍTICO: templates/layout.html (el sidebar que usan TODOS los
+módulos) NO tiene NINGÚN link a /staff/menu. Si jefe/operador navega desde
+/mod/dashboard a cualquier otro módulo (Calendario operativo, Evidencias
+por estación, Pipas, etc.), pierde el botón "Abrir módulo principal" y NO
+existe ningún otro camino de regreso a /staff/menu salvo:
+  a) el botón "atrás" del navegador, o
+  b) volver primero a /mod/dashboard.
+
+Esto coincide DIRECTAMENTE con la queja del cliente ("los botones regresan
+hasta la página principal o no hay un flujo como tal"): para staff,
+literalmente no hay un link de regreso a su pantalla de inicio desde la
+mayoría de las pantallas.
+
+
+PASO 9 — DIAGNÓSTICO DEL PROBLEMA REPORTADO (CAUSA RAÍZ)
+---------------------------------------------------------------
+Por orden de impacto:
+
+1) DOS "HOME" SIN PUENTE CLARO
+   /admin/menu y /staff/menu son hubs SIN sidebar (topbar propio, sin
+   navegación lateral). Todo lo demás (/mod/*, /admin/<...>) usa
+   layout.html CON sidebar. El sidebar solo tiene un camino de regreso al
+   hub para ADMIN (link "Módulos (SGM/SASISOPA)" enterrado en
+   Administrador > Control principal) y NINGUNO para STAFF.
+
+2) /mod/dashboard SE SIENTE COMO "OTRO INICIO"
+   Tiene KPIs, accesos rápidos, "Bandeja rápida", "Estado de mi estación":
+   contenido que se solapa conceptualmente con /admin/menu / /staff/menu,
+   pero CON sidebar. Al hacer clic en "Dashboard" esperando "ver más", el
+   usuario aterriza en lo que parece una tercera versión del inicio.
+
+3) REDIRECCIÓN SILENCIOSA DEL MODELO CLASSROOM
+   admin/jefe haciendo clic en "Bitácora" (toolbox de /admin/menu) o en
+   "Actividades" recibe un 302 silencioso a /mod/operational-calendar. El
+   label del botón ("Bitácora") no coincide con el destino real
+   ("Calendario operativo"), sin aviso ni explicación.
+
+4) NO HAY 404 NI 500 EN LOS LINKS PROBADOS
+   Todas las rutas del plan devuelven 200/302/403 según corresponde. El
+   problema NO es "links rotos" técnicamente — es la AUSENCIA de un patrón
+   de regreso consistente ("Inicio" / breadcrumb).
+
+
+TABLA DE DECISIÓN
+========================================================================================================
+Pantalla / Link                | Funciona       | Confunde | A la deriva | Notas
+--------------------------------|----------------|----------|-------------|----------------------------
+/admin/menu (Centro módulos)    | SÍ             | SÍ       | NO          | Hub sin sidebar; topbar propio
+/staff/menu (Centro operativo)  | SÍ             | SÍ       | NO          | Hub sin sidebar; sin retorno desde otras páginas
+/mod/dashboard                  | SÍ             | SÍ       | NO          | Se siente "otro inicio"; único puente -> /staff/menu para staff
+/mod/panel (Mi panel)           | SÍ             | Parcial  | NO          | También dashboard-like (3er "home" potencial)
+/mod/organigrama                | SÍ             | NO       | NO          | Vista lectura/impresión
+/admin/organigrama               | SÍ             | NO       | NO          | Edición; hero CTA OK
+/mod/operational-calendar       | SÍ             | NO       | NO          | "Crear actividad" + link a station-evidence OK
+/mod/station-evidence           | SÍ             | NO       | NO          | Nuevo, funciona, oculto bien para operador
+/mod/activities (admin/jefe)    | Redirige (302) | SÍ       | NO          | Redirección silenciosa; label no coincide con destino
+/mod/incidents (admin)          | 403 (correcto) | NO       | NO          | Oculto vía data-not-admin; depende de JS
+/mod/pipas/maintenance/alerts   | SÍ             | NO       | SÍ (islas)  | Sin breadcrumb, dependen 100% del sidebar
+/mod/help-center                | SÍ             | ?        | SÍ          | Revisar si el contenido es placeholder
+/mod/signature-pad              | SÍ             | ?        | SÍ          | Revisar utilidad real para admin/staff
+/admin/permissions              | SÍ (ruta)      | —        | SÍ          | Huérfana: 0 links en toda la app
+sgm_menu.html / sasisopa_menu.html | N/A         | —        | SÍ          | Templates sin ninguna ruta que los renderice (código muerto)
+========================================================================================================
+
+
+RESPUESTAS A LAS 3 PREGUNTAS DE DECISIÓN (PROPUESTA — pendiente de confirmación)
+=================================================================================
+
+1. ¿DASHBOARD REDUNDANTE?
+   [x] SÍ, pero mantenerlo como acceso secundario dentro de "Operación"
+   RAZÓN: /mod/dashboard no es 100% redundante — hoy es el ÚNICO lugar
+   donde coexisten (a) el sidebar completo y (b) un botón de regreso al
+   hub para STAFF. Quitarlo de golpe rompería esa única vía de escape.
+   Propuesta:
+     - Renombrar el link del sidebar "Dashboard" a algo que no sugiera
+       "inicio" (ej. "Resumen / KPIs").
+     - Agregar un link "Inicio" SIEMPRE visible al tope de "Acceso rápido"
+       que apunte a /admin/menu (admin) o /staff/menu (staff). Esto
+       resuelve el problema de fondo sin depender de qué se haga con
+       Dashboard.
+
+2. ¿MODELO CLASSROOM CLARO?
+   [x] NO — alinear el LABEL del botón con el destino real (y opcionalmente
+       agregar un aviso breve)
+   RAZÓN: la redirección 302 /mod/activities -> /mod/operational-calendar
+   es funcionalmente correcta, pero el botón "Bitácora" en el toolbox de
+   /admin/menu lleva a una pantalla llamada "Calendario operativo" sin
+   aviso, generando la sensación de "el botón no hace lo que dice".
+   Propuesta de bajo costo: renombrar "Bitácora" -> "Calendario operativo"
+   para admin/jefe en el toolbox de /admin/menu (es siempre el destino
+   real). Opcional: banner de una línea la primera vez.
+
+3. ¿QUITAMOS MENÚ LATERAL DERECHO ADMIN DUPLICADO?
+   [x] NO, mantener ambas formas de acceso (pero reetiquetar/reubicar)
+   RAZÓN: /admin/menu (sin sidebar) sirve para "ir a algo nuevo desde
+   cero"; el sidebar "Administrador" sirve para "moverme entre
+   herramientas sin volver al hub cada vez". Son dos patrones
+   complementarios, no duplicados puros.
+   Propuesta: renombrar "Módulos (SGM / SASISOPA)" -> "Inicio / Centro de
+   módulos" y moverlo fuera de la sub-sección colapsable "Control
+   principal", al tope de "Acceso rápido" (mismo cambio que en la
+   pregunta 1).
+
+
+ÁRBOL DE NAVEGACIÓN FINAL (PROPUESTA)
+==========================================
+
+CONSULTING — ADMIN
+-------------------
+LOGIN -> /select-system (si aplica) -> /admin/menu (HUB, sin sidebar)
+  |- Hero: SASISOPA (/admin/sasisopa), Organigrama (/admin/organigrama),
+  |        Inbox admin (/admin/inbox)
+  |- Tile map: SGM, SASISOPA, Estaciones, Inbox
+  `- Toolbox:
+       |- Operación diaria: "Calendario operativo" (antes "Bitácora"),
+       |   Mi panel, Calendario, Evidencias, Carpeta compartida
+       |- Control administrativo: Documentos por validar, Calibraciones,
+       |   Usuarios, Centro documental
+       `- Supervisión y soporte: Ejecutivo, Auditoría, Backups, Configuración
+
+Cualquier página con sidebar (layout.html):
+  Acceso rápido:
+    |- NUEVO: "Inicio" -> /admin/menu   (siempre visible, arriba de todo)
+    |- "Resumen / KPIs" (antes "Dashboard") -> /mod/dashboard
+    `- Mi panel, Notificaciones, Perfil, Organigrama (lectura)
+  Operación: Calendario operativo, Evidencias por estación, Evidencias,
+             Correcciones  (Actividades oculto para admin)
+  Operación técnica: Pipas, Mantenimiento, Alertas, Reportes, Mensualidad
+  Ayuda y soporte: Centro de ayuda, Firma, Analíticas
+  Administrador: Inbox, Estaciones, Usuarios, Supervisión (Ejecutivo,
+                 Auditoría, Reporte de incidencias, Comparador, Impresión),
+                 Configuración (Backups, Setup wizard)
+
+
+CONSULTING — STAFF (JEFE / OPERADOR)
+--------------------------------------
+LOGIN -> /select-system (si aplica) -> /staff/menu (HUB, sin sidebar)
+  |- Módulos principales: SASISOPA, SGM, Documentos faltantes
+  `- Accesos y herramientas: Carpeta compartida, Organigrama, Dashboard,
+     Notificaciones, (Mensualidad si no es operador), (Mapa si
+     contador/auditor)
+
+Cualquier página con sidebar (layout.html):
+  Acceso rápido:
+    |- NUEVO: "Inicio" -> /staff/menu  (siempre visible, arriba de todo)
+    |- "Resumen / KPIs" (antes "Dashboard") -> /mod/dashboard
+    `- Mi panel, Notificaciones, Perfil, Organigrama (lectura)
+  Operación:
+    |- Actividades (solo operador)
+    |- Calendario operativo + Evidencias por estación (solo jefe)
+    `- Evidencias, Correcciones
+  Operación técnica: Pipas, Mantenimiento, Alertas, Reportes (no operador),
+                      Mensualidad (no operador)
+  Ayuda y soporte: Centro de ayuda, Firma
+  (sin sección "Administrador")
+
+
+LISTA PRIORIZADA — "A LA DERIVA" PARA DÍAS 2-7
+====================================================
+P1 — alto impacto / bajo costo (atacar primero):
+ 1. Agregar link fijo "Inicio" en el sidebar -> /admin/menu o /staff/menu
+    según rol. Resuelve directamente la queja del cliente.
+ 2. Reetiquetar el botón "Bitácora" del toolbox de /admin/menu a
+    "Calendario operativo" para admin/jefe (coincide con el destino real).
+ 3. Reetiquetar/mover "Módulos (SGM / SASISOPA)" -> "Inicio / Centro de
+    módulos", fuera de la sub-sección colapsable.
+
+P2 — medio:
+ 4. Decidir el rol final de /mod/dashboard y /mod/panel: hoy ambos son
+    "mini-home" superpuestos. Unificar contenido o diferenciar claramente
+    su propósito (KPIs globales vs. tareas personales).
+ 5. Resolver /admin/permissions: vincularla desde algún lado (¿gestión de
+    accesos por estación?) o retirarla si ya no aplica.
+ 6. Revisar contenido real de /mod/help-center y /mod/signature-pad
+    (¿placeholder? ¿útil para todos los roles?).
+
+P3 — bajo, limpieza de código:
+ 7. Eliminar templates muertos: templates/sgm_menu.html y
+    templates/sasisopa_menu.html (ninguna ruta los usa).
+ 8. Revisar /mod/pipas, /mod/maintenance, /mod/alerts como posibles
+    "islas": confirmar si deberían referenciarse desde Calendario
+    operativo / Reportes.
+
+
+PRÓXIMO PASO (DÍA 2)
+========================
+Implementar el link fijo "Inicio" + reetiquetados (puntos P1.1-P1.3), y
+validar en vivo con jefe_estacion/operador (se requieren credenciales o
+reseteo de password para "jose"/"paco" en el entorno de pruebas).
+
+================================================================================
+FIN DEL DIAGNÓSTICO — DÍA 1
+================================================================================

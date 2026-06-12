@@ -11,6 +11,10 @@
   const btnPrint = qs("#btnPrint");
   const btnPdf = qs("#btnPdf");
 
+  // Botón de actualizar para operador: fuerza recarga del rango visible.
+  const btnRefreshCal = qs("#btnRefreshCal");
+  if (btnRefreshCal) btnRefreshCal.addEventListener("click", () => calendar?.refetchEvents?.());
+
 const btnImportProgram = qs("#btnImportProgram");
 
   if (btnPrint) btnPrint.addEventListener("click", ()=>{
