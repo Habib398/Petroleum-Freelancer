@@ -457,6 +457,22 @@ class AppContext:
             pass
         conn.close()
 
+    def notify_if_critical_audit(self, me: dict | None, action: str, entity: str | None = None):
+        """Notify all admins if the action is in the CRITICAL_AUDIT_ACTIONS set."""
+        CRITICAL_AUDIT_ACTIONS = {
+            "change_role", "reset_password", "delete_user", "toggle_user",
+            "restore_backup", "delete_backup",
+            "grant_permission", "revoke_permission",
+            "delete_station", "delete_document", "delete_correction_task",
+            "update_user", "create_user",
+        }
+        if action not in CRITICAL_AUDIT_ACTIONS:
+            return
+        actor = (me.get("username") if me else "unknown") or "desconocido"
+        title = "Acción de auditoría crítica"
+        body = f"Usuario {actor} ejecutó '{action}' en {entity or 'sistema'}"
+        self.notify_admins(title, body, "/admin/audit", ntype="audit", exclude_user_id=me.get("id") if me else None)
+
     def save_upload(self, fs, subdir: str) -> str:
         return self.save_upload_checked(fs, subdir=subdir)
 

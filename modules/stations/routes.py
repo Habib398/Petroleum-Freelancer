@@ -198,6 +198,7 @@ def api_station_delete(station_id: int):
     conn.close()
     me = ctx.get_me()
     ctx.log_action(me, "delete_station", "stations", str(station_id))
+    ctx.notify_if_critical_audit(me, "delete_station", "stations")
     return jsonify({"ok": True})
 
 

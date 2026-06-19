@@ -356,9 +356,11 @@ def register(app):
         conn.close()
 
         ctx.log_action(me, "create_activity_template", "activities", str(activity_id), {"repeat": repeat, "station_id": station_id, "events": len(dates)})
-        # Activity template notifications are admin-only.
+        # Activity template notifications
         extra = f" (Estación {station_id})" if station_id else " (Todas las estaciones)"
         ctx.notify_admins("Nueva actividad creada", f"{title}{extra}", "/mod/activities", station_id=station_id, exclude_user_id=me.get("id"), ntype="activity")
+        if station_id:
+            ctx.notify_station_users(int(station_id), "Nueva actividad asignada", f"{title} · {start_date}", "/mod/operational-calendar", exclude_user_id=me.get("id"), ntype="activity_assigned")
         return jsonify({"ok": True, "activity_id": activity_id, "events_created": len(dates)})
 
 
@@ -473,9 +475,10 @@ def register(app):
         conn.commit()
         conn.close()
         ctx.log_action(me, "import_maintenance_program", "activities", str(year), {"station_id": station_id, "events": created})
-        # Maintenance-program imports are admin-only notifications.
         extra = f" (Estación {station_id})" if station_id else " (Todas las estaciones)"
         ctx.notify_admins("Programa de mantenimiento importado", f"Año {year}{extra}", "/mod/activities", station_id=station_id, exclude_user_id=me.get("id"), ntype="activity")
+        if station_id:
+            ctx.notify_station_users(int(station_id), "Programa de mantenimiento asignado", f"Año {year} · {created} actividades", "/mod/operational-calendar", exclude_user_id=me.get("id"), ntype="activity_assigned")
         return jsonify({"ok": True, "events_created": created})
 
     # ---------------- import activities (CSV/XLSX) ----------------
@@ -756,6 +759,8 @@ def register(app):
         eid = cur.lastrowid
         conn.close()
         ctx.log_action(me, "create_calendar_event", "calendar_events", str(eid))
+        if station_id:
+            ctx.notify_station_users(int(station_id), "Nueva actividad asignada", f"{title} · {start_date}", "/mod/operational-calendar", exclude_user_id=me.get("id"), ntype="activity_assigned")
         return jsonify({"ok": True, "id": eid})
 
     @activities_bp.put("/api/calendar/events/<int:event_id>")
@@ -1055,6 +1060,64 @@ def register(app):
         except Exception:
             pass
         return jsonify({"ok": True, "id": sub_id})
+
+    @activities_bp.post("/api/submissions/<int:submission_id>/set-status")
+    @login_required
+    @role_required("admin", "jefe_estacion")
+    def api_submission_set_status(submission_id: int):
+        """Update submission status and notify the operator."""
+        me = ctx.get_me()
+        brand = get_brand()
+        payload = request.get_json(silent=True) or {}
+        new_status = (payload.get("status") or "").strip().lower()
+        review_notes = (payload.get("review_notes") or "").strip()
+
+        if new_status not in {"approved", "rejected"}:
+            return jsonify({"error": "invalid_status"}), 400
+
+        conn = get_conn()
+        cur = conn.cursor()
+        cur.execute("SELECT * FROM submissions WHERE id=? AND brand=?", (submission_id, brand))
+        sub = cur.fetchone()
+        if not sub:
+            conn.close()
+            return jsonify({"error": "not_found"}), 404
+
+        # jefe_estacion scope enforcement
+        if me["role"] == "jefe_estacion":
+            sid_me = ctx.require_station(me)
+            if int(sub["station_id"] or 0) != int(sid_me):
+                conn.close()
+                return jsonify({"error": "forbidden_station"}), 403
+
+        cur.execute(
+            "UPDATE submissions SET status=?, review_notes=?, reviewed_by=?, reviewed_at=CURRENT_TIMESTAMP WHERE id=? AND brand=?",
+            (new_status, review_notes or None, me["id"], submission_id, brand),
+        )
+        conn.commit()
+        conn.close()
+
+        # Notify the operator who submitted
+        user_id = sub["user_id"]
+        station_id = sub["station_id"]
+        title = "Evidencia aprobada" if new_status == "approved" else "Evidencia rechazada"
+        body = review_notes or f"Evidencia #{submission_id}"
+        if user_id:
+            ctx.notify(int(user_id), int(station_id) if station_id else None, title, body, "/mod/evidencias", ntype="submission_review")
+
+        # If rejected, create a correction task
+        if new_status == "rejected":
+            try:
+                create_correction_task(
+                    ctx, me, brand=brand, title=f"Corregir evidencia #{submission_id}", description=review_notes or body,
+                    station_id=station_id, module="activities", related_entity="submission", related_entity_id=str(submission_id),
+                    assigned_to=user_id, source_status="rejected", priority="high", due_days=3,
+                )
+            except Exception:
+                pass
+
+        ctx.log_action(me, "set_submission_status", "submissions", str(submission_id), {"status": new_status})
+        return jsonify({"ok": True})
 
     @activities_bp.post("/api/submissions/<int:submission_id>/review")
     @login_required

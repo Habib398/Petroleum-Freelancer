@@ -98,6 +98,7 @@ def register(app):
         conn.close()
         me = ctx.get_me()
         ctx.log_action(me, "create_user", "users", str(uid), {"role": role, "station_id": station_id})
+        ctx.notify_if_critical_audit(me, "create_user", "users")
         return jsonify({"ok": True, "id": uid})
 
     @app.put("/api/users/<int:user_id>")
@@ -160,6 +161,12 @@ def register(app):
         conn.close()
         me=ctx.get_me()
         ctx.log_action(me,"update_user","users",str(user_id),{"fields":list(data.keys())})
+        if "role" in data and data["role"] != current.get("role"):
+            ctx.notify_if_critical_audit(me, "change_role", "users")
+        elif "password" in data and data["password"]:
+            ctx.notify_if_critical_audit(me, "reset_password", "users")
+        elif "is_active" in data:
+            ctx.notify_if_critical_audit(me, "toggle_user", "users")
         return jsonify({"ok":True})
 
     
@@ -191,6 +198,7 @@ def register(app):
         cur.execute("DELETE FROM users WHERE id=?", (user_id,))
         conn.commit(); conn.close()
         ctx.log_action(me, "delete_user", "users", str(user_id), {})
+        ctx.notify_if_critical_audit(me, "delete_user", "users")
         return jsonify({"ok": True})
 
     # ---------------- station access delegation ----------------

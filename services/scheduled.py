@@ -340,7 +340,7 @@ def run_due_tick(ctx, logger=None, min_interval_minutes: int = 15) -> None:
                         do_backup = True
                 if do_backup:
                     base_dir = Path(ctx.upload_dir).resolve().parent
-                    create_backup(
+                    backup_result = create_backup(
                         base_dir, Path(DB_PATH), Path(ctx.upload_dir),
                         include_uploads=True, retention=7,
                         kind="scheduled", notes="daily auto backup",
@@ -349,6 +349,11 @@ def run_due_tick(ctx, logger=None, min_interval_minutes: int = 15) -> None:
                     conn.commit()
                     if logger:
                         logger.info("daily backup created")
+                    try:
+                        _notify_admins_same_conn(conn, brand, "Respaldo automático completado", f"Respaldo diario creado: {backup_result.name if backup_result else 'desconocido'}", "/admin/backup", ntype="backup")
+                    except Exception as e:
+                        if logger:
+                            logger.error(f"Failed to notify admins of backup: {e}")
         except Exception:
             # Never break main tick
             pass
@@ -435,8 +440,12 @@ def run_due_tick(ctx, logger=None, min_interval_minutes: int = 15) -> None:
                         continue
 
                     body = f"{ev_date.isoformat()} · {ev.get('title') or 'Actividad'} (evento #{ev['id']})"
-                    # Activity due/overdue notifications must reach admins only.
+                    # Activity due/overdue notifications reach admins
                     _notify_admins_same_conn(conn, brand, title, body, "/admin/inbox", station_id=sid, ntype="due")
+                    # Also notify station users with different dedup key
+                    dkey_users = f"due:station_users:{brand}:{sid}:{int(ev['id'])}:{key_kind}"
+                    if _dedup_key(conn, dkey_users):
+                        _notify_station_users_same_conn(conn, brand, int(sid), title, body, "/mod/operational-calendar", ntype="due")
 
 
             # ---- Documental SASISOPA/SGM due reminders (admins only) ----

@@ -39,6 +39,7 @@ def register(app):
             kind="manual", triggered_by=int(me.get("id")) if me and me.get("id") else None,
         )
         ctx.log_action(me, "create_backup", "backup", out.name, {"path": str(out)})
+        ctx.notify_admins("Respaldo creado", f"Respaldo manual completado: {out.name}", "/admin/backup", ntype="backup", exclude_user_id=me.get("id"))
         return jsonify({"ok": True, "name": out.name})
 
     @app.get("/api/admin/backups/download/<name>")
@@ -84,8 +85,12 @@ def register(app):
             fs.save(tmp)
             zpath = tmp
 
+        me = ctx.get_me()
         try:
             restore_backup(zpath, Path(DB_PATH), Path(ctx.upload_dir), restore_uploads=True)
+            ctx.log_action(me, "restore_backup", "backup", str(zpath.name if zpath else ""))
+            ctx.notify_if_critical_audit(me, "restore_backup", "backup")
+            ctx.notify_admins("Respaldo restaurado", f"Restauración de respaldo completada: {zpath.name if zpath else 'desconocido'}", "/admin/backup", ntype="backup", exclude_user_id=me.get("id"))
         finally:
             # remove temp uploaded file if used
             if name == "" and zpath and zpath.name.startswith("_upload_restore_"):
@@ -94,5 +99,4 @@ def register(app):
                 except Exception:
                     pass
 
-        ctx.log_action(ctx.get_me(), "restore_backup", "backup", str(zpath.name if zpath else ""))
         return jsonify({"ok": True})
