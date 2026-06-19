@@ -31,17 +31,16 @@
       const when = (n.created_at||"").replace("T"," ").slice(0,16);
       const url = String(n.url || "");
       return `
-        <div class="card" style="margin:10px 0;opacity:${isRead?0.7:1};">
-          <div style="display:flex;gap:10px;justify-content:space-between;align-items:flex-start;">
-            <div>
-              <div style="font-weight:900;">${title}</div>
-              <div class="help">${when}</div>
-              ${body?`<div style="margin-top:8px;">${body}</div>`:""}
-            </div>
-            <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;">
-              ${url?`<a class="btn small" href="${url}">Abrir</a>`:""}
-              ${isRead?"":`<button class="btn small ghost" data-read="${n.id}">Leído</button>`}
-            </div>
+        <div class="notif-item ${isRead?'notif-read':'notif-unread'}">
+          <div class="notif-indicator"></div>
+          <div class="notif-body">
+            <div class="notif-title">${title}</div>
+            ${body?`<div class="notif-desc">${body}</div>`:""}
+            <div class="notif-time">${when}</div>
+          </div>
+          <div class="notif-actions">
+            ${url?`<a class="btn small" href="${url}">Abrir</a>`:""}
+            ${isRead?"":`<button class="btn small ghost" data-read="${n.id}">Marcar</button>`}
           </div>
         </div>
       `;

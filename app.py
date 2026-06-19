@@ -388,6 +388,41 @@ def create_app() -> Flask:
     mod_admin.register(app)       # Admin, reportes, analítica y organigrama
     mod_petroleum.register(app)   # Funcionalidad exclusiva Petroleum
 
+    def _get_active_section():
+        """Map current request path to sidebar section name."""
+        path = (request.path or "").lower()
+        # Quick lookup table for common routes to sections
+        section_map = {
+            "/mod/pipas": "operacion_tecnica",
+            "/mod/maintenance": "operacion_tecnica",
+            "/mod/alerts": "operacion_tecnica",
+            "/mod/reports": "operacion_tecnica",
+            "/mod/payments": "operacion_tecnica",
+            "/mod/activities": "operacion",
+            "/mod/operational-calendar": "operacion",
+            "/mod/station-evidence": "operacion",
+            "/mod/document-renewals-calendar": "operacion",
+            "/mod/evidencias": "operacion",
+            "/mod/incidents": "operacion",
+            "/mod/corrections": "operacion",
+            "/petroleum/normativas": "normativa_control",
+            "/petroleum/expedientes": "normativa_control",
+            "/mod/help-center": "ayuda",
+            "/mod/signature-pad": "ayuda",
+            "/mod/analytics": "ayuda",
+        }
+
+        # Check exact match first
+        if path in section_map:
+            return section_map[path]
+
+        # Check prefix match
+        for route, section in section_map.items():
+            if path.startswith(route.rstrip("/")):
+                return section
+
+        return None
+
     # Inject CSRF token + branding into templates
     @app.context_processor
     def _inject_csrf():
@@ -401,6 +436,7 @@ def create_app() -> Flask:
             "norm_cfg": get_normative_config,
             "norm_items": get_normative_items,
             "norm_titles_line": get_normative_titles_line,
+            "active_section": _get_active_section(),
         }
 
     if os.environ.get("COG_RUNTIME_SCHEDULER", "1") == "1":

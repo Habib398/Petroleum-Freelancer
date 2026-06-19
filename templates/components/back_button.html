@@ -1,0 +1,6 @@
+<div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:8px 0;">
+  <a href="{% if session.get('role') == 'admin' %}/admin/menu{% else %}/staff/menu{% endif %}"
+     style="display:flex;align-items:center;gap:4px;color:var(--hme-accent);text-decoration:none;font-weight:600;font-size:14px;">
+    ← Volver a {% if session.get('role') == 'admin' %}Centro de módulos{% else %}Centro operativo{% endif %}
+  </a>
+</div>

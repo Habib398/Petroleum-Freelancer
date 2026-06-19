@@ -1,4 +1,139 @@
 {% extends "layout.html" %}
+{% block head %}
+<style>
+  /* ===== Mi panel: hero ===== */
+  .panel-hero{
+    position:relative;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:18px;
+    flex-wrap:wrap;
+    padding:20px 24px;
+    border-radius:20px;
+    margin-bottom:16px;
+    background:
+      radial-gradient(420px 200px at 100% 0%, rgba(124,58,237,.14), rgba(124,58,237,0) 60%),
+      radial-gradient(420px 220px at 0% 100%, rgba(44,123,229,.12), rgba(44,123,229,0) 60%),
+      linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,252,.94));
+    border:1px solid var(--hme-border);
+    box-shadow:var(--shadow);
+  }
+  .panel-hero-greeting{font-size:20px;font-weight:900;letter-spacing:-.01em}
+  .panel-hero-sub{margin-top:4px;font-size:13px;color:var(--hme-text-soft)}
+  .panel-hero-badge{
+    display:inline-flex;align-items:center;gap:8px;
+    padding:9px 16px;border-radius:999px;
+    font-size:13px;font-weight:800;white-space:nowrap;
+    background:rgba(134,184,33,.14);color:var(--hme-green-dark);
+  }
+  .panel-hero-badge svg{width:16px;height:16px}
+  .panel-hero-badge.tone-warn{background:rgba(245,158,11,.14);color:#b45309}
+  .panel-hero-badge.tone-bad{background:rgba(220,38,38,.12);color:#b91c1c}
+
+  /* ===== Stat cards ===== */
+  .stat-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:12px;margin:0 0 14px}
+  .stat-card{
+    display:flex;align-items:center;gap:12px;
+    padding:16px;border-radius:16px;
+    border:1px solid var(--hme-border);
+    background:rgba(255,255,255,.97);
+    box-shadow:var(--shadow);
+    text-decoration:none;color:var(--hme-text);
+    transition:transform .16s ease,box-shadow .16s ease,border-color .16s ease;
+  }
+  a.stat-card:hover{transform:translateY(-2px);box-shadow:var(--hme-shadow-2);border-color:rgba(44,123,229,.22)}
+  .stat-card .icon{
+    display:inline-grid;place-items:center;flex:0 0 auto;
+    width:42px;height:42px;border-radius:12px;
+    background:rgba(44,123,229,.10);color:var(--hme-accent);
+  }
+  .stat-card .icon svg{width:20px;height:20px}
+  .stat-card .body{min-width:0}
+  .stat-card .value{font-size:24px;font-weight:900;letter-spacing:-.02em;line-height:1.1}
+  .stat-card .label{font-size:12.5px;color:var(--hme-text-soft);font-weight:700;margin-top:2px}
+  .stat-card.tone-ok .icon{background:rgba(22,163,74,.12);color:var(--hme-success)}
+  .stat-card.tone-warn{border-color:rgba(245,158,11,.28)}
+  .stat-card.tone-warn .icon{background:rgba(245,158,11,.14);color:var(--hme-warning)}
+  .stat-card.tone-bad{border-color:rgba(220,38,38,.28)}
+  .stat-card.tone-bad .icon{background:rgba(220,38,38,.12);color:var(--hme-danger)}
+  @media (max-width:1200px){.stat-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
+  @media (max-width:640px){.stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+  /* ===== Action tiles: icon badges ===== */
+  .action-tile .icon{
+    display:inline-grid;place-items:center;
+    width:36px;height:36px;border-radius:10px;
+    background:rgba(44,123,229,.10);color:var(--hme-accent);
+    margin-bottom:2px;
+  }
+  .action-tile .icon svg{width:18px;height:18px}
+
+  /* ===== List cards (pendientes / notificaciones / auditoría) ===== */
+  .list-card-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+  .list-stack{display:grid;gap:8px}
+  .list-item{
+    display:flex;align-items:flex-start;gap:12px;
+    padding:11px 12px;border-radius:14px;
+    background:rgba(248,250,252,.9);
+    border:1px solid rgba(148,163,184,.14);
+  }
+  .list-item .icon{
+    display:inline-grid;place-items:center;flex:0 0 auto;
+    width:34px;height:34px;border-radius:10px;
+    background:rgba(44,123,229,.10);color:var(--hme-accent);
+  }
+  .list-item .icon svg{width:16px;height:16px}
+  .list-item .content{min-width:0;flex:1}
+  .list-item .title{font-weight:800;font-size:13.5px;overflow-wrap:anywhere}
+  .list-item .meta{font-size:12px;color:var(--hme-text-soft);margin-top:2px;overflow-wrap:anywhere}
+  .list-item .when{font-size:11.5px;color:var(--hme-text-soft);white-space:nowrap;flex:0 0 auto;padding-top:2px}
+  .empty-state{
+    display:flex;flex-direction:column;align-items:center;gap:8px;
+    padding:26px 12px;text-align:center;color:var(--hme-text-soft);
+  }
+  .empty-state .icon{
+    width:40px;height:40px;border-radius:12px;display:inline-grid;place-items:center;
+    background:rgba(134,184,33,.12);color:var(--hme-green-dark);
+  }
+  .empty-state .icon svg{width:20px;height:20px}
+
+  /* ===== Petroleum (dark) overrides ===== */
+  body.brand-petroleum .panel-hero{
+    background:
+      radial-gradient(680px 260px at 0% 0%, rgba(47,111,237,.16), rgba(47,111,237,0) 55%),
+      radial-gradient(520px 220px at 100% 0%, rgba(200,162,74,.12), rgba(200,162,74,0) 58%),
+      linear-gradient(180deg, rgba(17,28,46,.92), rgba(11,19,32,.90));
+    border-color:rgba(49,67,96,.78);
+    box-shadow:0 18px 42px rgba(0,0,0,.24);
+  }
+  body.brand-petroleum .panel-hero-greeting{color:#F7FAFF}
+  body.brand-petroleum .panel-hero-sub{color:#B8C7DA}
+  body.brand-petroleum .stat-card{
+    background:linear-gradient(180deg,rgba(17,28,46,.96),rgba(13,22,37,.94));
+    border-color:rgba(49,67,96,.88);
+    box-shadow:0 16px 34px rgba(0,0,0,.20);
+    color:#E7EEF9;
+  }
+  body.brand-petroleum a.stat-card:hover{border-color:rgba(200,162,74,.40)}
+  body.brand-petroleum .stat-card .label{color:#B8C7DA}
+  body.brand-petroleum .stat-card .icon{background:rgba(200,162,74,.16);color:#F1D287}
+  body.brand-petroleum .stat-card.tone-warn .icon{background:rgba(245,158,11,.18);color:#FDE68A}
+  body.brand-petroleum .stat-card.tone-bad .icon{background:rgba(220,38,38,.18);color:#FECACA}
+  body.brand-petroleum .stat-card.tone-ok .icon{background:rgba(22,163,74,.18);color:#BBF7D0}
+  body.brand-petroleum .action-tile .icon{background:rgba(200,162,74,.16);color:#F1D287}
+  body.brand-petroleum .list-item{
+    background:linear-gradient(180deg,rgba(17,28,46,.96),rgba(13,22,37,.94));
+    border-color:rgba(49,67,96,.84);
+  }
+  body.brand-petroleum .list-item .icon{background:rgba(200,162,74,.16);color:#F1D287}
+  body.brand-petroleum .list-item .title{color:#E7EEF9}
+  body.brand-petroleum .list-item .meta, body.brand-petroleum .list-item .when{color:#B8C7DA}
+  body.brand-petroleum .empty-state{color:#B8C7DA}
+  body.brand-petroleum .empty-state .icon{background:rgba(200,162,74,.16);color:#F1D287}
+</style>
+{% endblock %}
 {% block content %}
   <div class="pagehead">
     <div>
@@ -11,26 +146,43 @@
     </div>
   </div>
 
+  <div class="panel-hero">
+    <div>
+      <div class="panel-hero-greeting" id="heroGreeting">Hola</div>
+      <div class="panel-hero-sub" id="heroSub">Cargando tu resumen…</div>
+    </div>
+    <div class="panel-hero-badge" id="heroBadge" hidden></div>
+  </div>
+
   <nav id="panelMiniSteps" class="mini-steps" hidden></nav>
 
   <div id="panelActions" class="action-grid"></div>
 
-  <div id="panelKpiStrip" class="kpi-strip" hidden></div>
+  <div id="panelStats" class="stat-grid" hidden></div>
 
   <div class="grid cols-2" style="margin-top:14px;">
     <div class="card">
-      <div style="font-weight:900;">Mis próximos pendientes</div>
-      <div id="pendingList" class="help" style="margin-top:10px;">Cargando…</div>
+      <div class="list-card-head">
+        <div style="font-weight:900;">Mis próximos pendientes</div>
+        <a class="btn ghost small" href="/mod/operational-calendar">Ver calendario</a>
+      </div>
+      <div id="pendingList" class="list-stack" style="margin-top:12px;">Cargando…</div>
     </div>
     <div class="card">
-      <div style="font-weight:900;">Mis últimas notificaciones</div>
-      <div id="notifList" class="help" style="margin-top:10px;">Cargando…</div>
+      <div class="list-card-head">
+        <div style="font-weight:900;">Mis últimas notificaciones</div>
+        <a class="btn ghost small" href="/mod/notifications">Ver todas</a>
+      </div>
+      <div id="notifList" class="list-stack" style="margin-top:12px;">Cargando…</div>
     </div>
   </div>
 
   <div class="card" style="margin-top:14px;" data-admin-only hidden>
-    <div style="font-weight:900;">Auditoría reciente</div>
-    <div id="auditList" class="help" style="margin-top:10px;">Cargando…</div>
+    <div class="list-card-head">
+      <div style="font-weight:900;">Auditoría reciente</div>
+      <a class="btn ghost small" href="/admin/audit">Ver auditoría completa</a>
+    </div>
+    <div id="auditList" class="list-stack" style="margin-top:12px;">Cargando…</div>
   </div>
 {% endblock %}
 {% block scripts %}

@@ -9,6 +9,7 @@ from flask import jsonify, render_template, request, current_app
 from db import get_conn
 from services.branding import get_normative_config
 from services.brand import get_brand
+from modules.core.notifications import _station_scope_for_user, _visibility_clause
 
 
 def _today() -> datetime.date:
@@ -75,10 +76,16 @@ def register(app):
         horizon = today + datetime.timedelta(days=14)
         items: dict = {"cards": [], "lists": {}, "brand": brand, "role": me.get("role")}
 
+        notif_scope = _station_scope_for_user(conn, me)
+        vis_sql, vis_params = _visibility_clause("notifications", notif_scope, int(me["id"]))
+        cur.execute(
+            "SELECT COUNT(*) AS c FROM notifications WHERE brand=? AND is_read=0 AND " + vis_sql,
+            tuple([brand, *vis_params]),
+        )
+        unread = int(cur.fetchone()["c"] or 0)
+
         if me.get("role") == "admin":
             # Reuse admin-friendly counters
-            cur.execute("SELECT COUNT(*) AS c FROM notifications WHERE brand=? AND is_read=0", (brand,))
-            unread = int(cur.fetchone()["c"] or 0)
             cur.execute("SELECT COUNT(*) AS c FROM submissions WHERE brand=? AND status='submitted'", (brand,))
             submitted = int(cur.fetchone()["c"] or 0)
             cur.execute("SELECT COUNT(*) AS c FROM payments WHERE brand=? AND status='pending'", (brand,))
@@ -109,12 +116,6 @@ def register(app):
 
         sid = int(me.get("station_id") or scope[0])
         in_clause = ",".join(["?"] * len(scope))
-
-        cur.execute(
-            f"SELECT COUNT(*) AS c FROM notifications WHERE brand=? AND user_id=? AND is_read=0",
-            (brand, int(me["id"])),
-        )
-        unread = int(cur.fetchone()["c"] or 0)
 
         cur.execute(
             f"""

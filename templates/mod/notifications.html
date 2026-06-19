@@ -7,14 +7,16 @@
       <div class="sub">Avisos del sistema (entregas, correcciones, aprobaciones, alertas).</div>
     </div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;">
-      <button id="btnReadAll" class="btn">Marcar todo como leído</button>
+      <button id="btnReadAll" class="btn primary">Marcar todo como leído</button>
       <button id="btnReload" class="btn ghost">Actualizar</button>
     </div>
   </div>
 
-  <div class="card" style="margin-top:12px;">
-    <div id="notifList" class="list"></div>
-    <div id="notifEmpty" class="help" style="padding:12px;" hidden>Sin notificaciones por ahora 🎉</div>
+  <div id="notifList" class="notif-list"></div>
+  <div id="notifEmpty" class="notif-empty" hidden>
+    <div class="empty-icon">🎉</div>
+    <div class="empty-title">Sin notificaciones</div>
+    <div class="empty-desc">Todo está en orden. No hay avisos por ahora.</div>
   </div>
 {% endblock %}
 

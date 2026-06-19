@@ -1,0 +1,378 @@
+================================================================================
+PLAN DE IMPLEMENTACIÓN - DÍA 3
+BREADCRUMBS Y "VOLVER A" CONSISTENTES EN PÁGINAS DE 2DO NIVEL
+CONSULTING MODE (Admin + Centro Operativo)
+================================================================================
+
+OBJETIVO DEL DÍA 3
+──────────────────
+Resolver la sensación de "no hay flujo como tal" agregando BREADCRUMBS y
+botones de regreso consistentes en todas las páginas de segundo nivel
+(páginas "profundas" que no son inicio / hub). Esto asegura que desde
+CUALQUIER lugar del sistema, el usuario puede regresar a su punto de
+partida o al hub correspondiente.
+
+Las páginas que necesitan navegación de regreso son:
+  - Admin level: /admin/sgm, /admin/sasisopa, /admin/stations,
+    /admin/users, /admin/inbox, /admin/executive, /admin/audit, etc.
+  - Modules level: /mod/operational-calendar, /mod/station-evidence,
+    /mod/pipas, /mod/maintenance, /mod/alerts, /mod/evidencias,
+    /mod/corrections, /mod/incidents, etc.
+
+SALIDA ESPERADA
+───────────────
+- Todas las páginas de 2do nivel tienen un BREADCRUMB o "botón de regreso"
+  visible y funcional que apunta al hub correcto (/admin/menu o /staff/menu).
+- El usuario nunca se siente "perdido" — siempre hay un camino obvio de
+  regreso a su punto de partida.
+- El flujo es: HUB (/admin/menu o /staff/menu) → Módulo → Submódulo →
+  (siempre con botón de regreso visible).
+
+
+ANÁLISIS DE ESTADO ACTUAL
+═════════════════════════
+
+Basado en DIA_1_RESULTADOS.txt y DIA_2_RESULTADOS.txt:
+
+PÁGINAS SIN BREADCRUMB (identificadas):
+  1. /admin/sgm → redirija a /admin/sgm/docs (ruta sin template específica)
+  2. /admin/sasisopa → redirija a /admin/sasisopa/docs (igual)
+  3. /admin/stations → lista de estaciones, parte del sidebar admin
+  4. /admin/users → gestión de usuarios
+  5. /admin/inbox → revisión de documentos/tareas
+  6. /admin/executive → ejecutivo (supervisión)
+  7. /admin/audit → auditoría
+  8. /mod/pipas → tabla de pipas (vía sidebar "Operación técnica")
+  9. /mod/maintenance → mantenimiento (vía sidebar)
+  10. /mod/alerts → alertas (vía sidebar)
+  11. /mod/evidencias → evidencias (vía sidebar "Operación")
+  12. /mod/corrections → tareas/correcciones (vía sidebar)
+  13. /mod/incidents → incidencias (vía sidebar "Operación")
+  14. /mod/operational-calendar → calendario operativo (vía sidebar)
+  15. /mod/station-evidence → evidencias por estación (vía sidebar)
+
+PÁGINAS CON BREADCRUMB (confirmadas o infiere):
+  - /admin/menu: hub, no necesita breadcrumb (o breadcrumb mínimo)
+  - /staff/menu: hub, no necesita breadcrumb
+  - /mod/dashboard: tiene botón "Abrir módulo principal" → /staff/menu
+    (solo para staff; para admin ya apunta a /admin/menu via link "Inicio")
+
+PÁGINAS HUÉRFANAS (sin link desde UI, pero con ruta):
+  - /admin/permissions: ruta existe, template existe, pero CERO links en
+    toda la app → RESOLUCIÓN: vincular desde /admin/users (gestión de
+    accesos) o eliminar si está deprecated.
+
+
+ESTRATEGIA DEL DÍA 3
+═════════════════════
+
+Hay dos enfoques:
+
+OPCIÓN A: Breadcrumb minimalista (bajo costo)
+  - Agregar un banner/barra encima del pagehead en cada página de 2do nivel
+  - Texto: "← Volver a [Hub]" o "← Volver a Centro de módulos" (admin) /
+    "← Volver a Centro operativo" (staff)
+  - Clic regresa a /admin/menu o /staff/menu según rol
+
+OPCIÓN B: Breadcrumb completo (alto costo, más profesional)
+  - Rutas de navegación: "Inicio > Módulo > Subpágina"
+  - Requiere pasar contexto desde Flask a template (qué "módulo" es cada
+    página, para renderizar el breadcrumb correcto)
+
+RECOMENDACIÓN: OPCIÓN A por ahora (bajo costo, resuelve el problema).
+Luego, en días posteriores (P3), convertir a OPCIÓN B si el cliente lo pide.
+
+
+IMPLEMENTACIÓN — OPCIÓN A (RECOMENDADA)
+═════════════════════════════════════════
+
+COMPONENTE 1: Partial / Macro Jinja2 (reutilizable)
+────────────────────────────────────────────────────
+
+Crear archivo:
+  templates/components/back_button.html
+
+Contenido:
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:8px 0;">
+    <a href="{% if me.role == 'admin' %}/admin/menu{% else %}/staff/menu{% endif %}"
+       style="display:flex;align-items:center;gap:4px;color:var(--hme-accent);text-decoration:none;font-weight:600;font-size:14px;">
+      ← Volver a {% if me.role == 'admin' %}Centro de módulos{% else %}Centro operativo{% endif %}
+    </a>
+  </div>
+
+(Alternativa más simple: sin condicional, solo "← Volver al inicio")
+
+
+COMPONENTE 2: Inyectar en templates de 2do nivel
+─────────────────────────────────────────────────
+
+Las siguientes páginas necesitan {% include "components/back_button.html" %}
+AL TOPE del {% block content %}, ANTES del <div class="pagehead">:
+
+ADMIN LEVEL (rutas en /admin/):
+  1. templates/admin/sgm.html (o similar si existe /admin/sgm/docs)
+  2. templates/admin/sasisopa.html
+  3. templates/admin/stations.html
+  4. templates/admin/users.html
+  5. templates/admin/inbox.html
+  6. templates/admin/executive.html
+  7. templates/admin/audit.html
+  8. templates/admin/backup.html (configuración)
+  9. templates/admin/setup-wizard.html (configuración)
+  10. templates/admin/calibraciones.html (si existe)
+  11. templates/admin/pending-docs.html (si existe)
+  12. templates/admin/document-center.html (si existe)
+
+MOD LEVEL (rutas en /mod/, todas con layout.html):
+  1. templates/mod/pipas.html
+  2. templates/mod/maintenance.html
+  3. templates/mod/alerts.html
+  4. templates/mod/evidencias.html
+  5. templates/mod/corrections.html
+  6. templates/mod/incidents.html
+  7. templates/mod/operational-calendar.html
+  8. templates/mod/station-evidence.html
+  9. templates/mod/help-center.html
+  10. templates/mod/signature-pad.html
+
+(Total: ~20 páginas con back_button.html a insertar)
+
+
+COMPONENTE 3: Resolución de /admin/permissions
+───────────────────────────────────────────────
+
+Opción 1: Vincular desde /admin/users
+  - Agregar un link/botón "Ver permisos y roles" en /admin/users
+  - Apunta a /admin/permissions
+  - Agregar back_button.html a templates/admin/permissions.html
+
+Opción 2: Eliminar
+  - Borrar templates/admin/permissions.html
+  - Borrar la ruta @app.get("/admin/permissions") de modules/core/pages.py
+  - Símbolo no más en la app
+  - RIESGO: si ya está siendo usada en algún lado, puede romper
+
+RECOMENDACIÓN: Opción 1 por ahora (más segura, se vincula desde algún lado).
+
+
+PASO A PASO — EJECUCIÓN
+════════════════════════
+
+PASO 1: INVESTIGACIÓN DE ARCHIVOS
+──────────────────────────────────
+□ Listar archivos en templates/admin/ y templates/mod/
+  Comando: find templates/admin templates/mod -name "*.html" | sort
+□ Confirmar que existan todos los templates mencionados arriba
+□ Si alguno NO existe (ej. templates/admin/sgm.html), investigar cuál es
+  la ruta real (ej. ¿es sgm/index.html? ¿sgm/docs.html?)
+□ Crear una lista FINAL de "templates a modificar"
+
+
+PASO 2: CREAR COMPONENTE back_button.html
+───────────────────────────────────────────
+□ Crear directorio: templates/components/ (si no existe)
+□ Crear archivo: templates/components/back_button.html
+□ Copiar el contenido del componente (ver arriba)
+□ Validar: que el Jinja2 esté bien balanceado ({% if %}/{% else %}/{% endif %})
+
+
+PASO 3: INSERTAR back_button.html EN TODOS LOS TEMPLATES DE 2DO NIVEL
+────────────────────────────────────────────────────────────────────────
+Para CADA archivo en la lista final:
+□ Abrir templates/admin/X.html (o templates/mod/X.html)
+□ Ubicar: {% block content %}
+□ Insertar JUSTO DESPUÉS: {% include "components/back_button.html" %}
+□ Validar: que no rompa el HTML (no duplicar divs, mantener indentación)
+
+Archivos admin/:
+  □ sgm.html
+  □ sasisopa.html
+  □ stations.html
+  □ users.html
+  □ inbox.html
+  □ executive.html
+  □ audit.html
+  □ backup.html
+  □ setup-wizard.html
+  □ calibraciones.html (si existe)
+  □ pending-docs.html (si existe)
+  □ document-center.html (si existe)
+  □ permissions.html (nuevo: agregar back_button)
+
+Archivos mod/:
+  □ pipas.html
+  □ maintenance.html
+  □ alerts.html
+  □ evidencias.html
+  □ corrections.html
+  □ incidents.html
+  □ operational-calendar.html
+  □ station-evidence.html
+  □ help-center.html
+  □ signature-pad.html
+
+
+PASO 4: RESOLVER /admin/permissions
+─────────────────────────────────────
+Opción A (recomendada: vincular):
+  □ Abrir templates/admin/users.html
+  □ Buscar donde termina el contenido principal (antes de </main> o </div>)
+  □ Agregar un link/botón "Ver referencia de permisos" → /admin/permissions
+     Ej: <a href="/admin/permissions" class="btn ghost">
+           Ver referencia de permisos y roles
+         </a>
+  □ Abrir templates/admin/permissions.html
+  □ Insertar {% include "components/back_button.html" %} como en Paso 3
+  □ Agregar un título claro: "Referencia de permisos y roles"
+
+Opción B (eliminar, si no es necesaria):
+  □ Borrar templates/admin/permissions.html
+  □ Borrar ruta de modules/core/pages.py (buscar @app.get("/admin/permissions"))
+  □ Confirmar que no haya otros links a /admin/permissions
+
+
+PASO 5: VALIDACIÓN EN VIVO
+──────────────────────────
+□ Reiniciar servidor Flask (sin errores)
+□ Login como admin
+□ Navegar a /admin/menu → ver que NO hay back_button (es hub)
+□ Navegar a /admin/sgm/docs → ¿aparece "← Volver a Centro de módulos"?
+□ Hacer clic en ese botón → ¿regresa a /admin/menu?
+□ Navegar a /admin/stations → ¿aparece el back_button?
+□ Navegar a /admin/users → ¿aparece el back_button?
+  - ¿Hay un link a /admin/permissions?
+  - Hacer clic en ese link → ¿abre /admin/permissions?
+  - ¿Aparece back_button en /admin/permissions?
+□ Navegar a /mod/operational-calendar → ¿aparece back_button?
+□ Navegar a /mod/pipas → ¿aparece back_button?
+□ Navegar a /mod/maintenance → ¿aparece back_button?
+□ Navegar a /mod/alerts → ¿aparece back_button?
+□ Navegar a /mod/evidencias → ¿aparece back_button?
+
+Login como JEFE_ESTACION (test env):
+□ Navegar a /staff/menu → no debe haber back_button
+□ Navegar a /mod/operational-calendar → ¿aparece "← Volver a Centro operativo"?
+□ Hacer clic → ¿regresa a /staff/menu?
+
+Login como OPERADOR (test env):
+□ Navegar a /mod/activities → ¿aparece back_button → /staff/menu?
+□ Navegar a /mod/pipas → ¿aparece back_button → /staff/menu?
+
+PASO 6: VALIDACIÓN DE REGRESIONES
+──────────────────────────────────
+□ ¿Todos los demás links del sidebar siguen siendo clickeables?
+□ ¿El layout no se rompió en ninguna página?
+□ ¿El back_button aparece con el color/estilo correcto?
+□ ¿No hay console errors en F12?
+□ ¿Las páginas siguen siendo responsivas (mobile ok)?
+
+
+CONSIDERACIONES ESPECIALES
+═══════════════════════════
+
+1. DINAMISMO DE ROLE EN TEMPLATES
+   El back_button.html usa `{% if me.role == 'admin' %}`, pero `me` no está
+   definido en todos los templates. Soluciones:
+
+   a) Opción simple: usar `{% if session.get('role') == 'admin' %}` en lugar
+      de `me.role` (session es siempre accesible en Jinja2)
+
+   b) Opción más robusta: pasar `me` desde Flask a TODOS los templates
+      (requiere cambios en las funciones de render_template en pages.py)
+
+   RECOMENDACIÓN: Opción A (usar session.get('role'), cero cambios en Python)
+
+2. ESTILOS DEL back_button
+   El componente usa estilos inline (color:var(--hme-accent), etc.).
+   Verificar que estos variables CSS existan en theme-hme.css. Si no,
+   reemplazar con valores HEX.
+
+3. RUTAS DE ADMINISTRADOR
+   ¿Cuál es el destino "correcto" para un administrador que está en
+   /admin/audit y hace clic en "Volver"? ¿/admin/menu (hub admin) o algo else?
+   DECISIÓN: siempre /admin/menu (hub único para admin, como definimos).
+
+4. STAFF (jefe_estacion, operador, etc.)
+   Para ellos, TODAS las páginas (tanto /mod/* como si acceden a algún /admin/*)
+   deben tener back_button → /staff/menu, EXCEPTO /staff/menu mismo.
+   Verificar que esto se cumpla en la validación.
+
+
+LISTA FINAL DE ARCHIVOS A MODIFICAR
+════════════════════════════════════
+
+1. NEW: templates/components/back_button.html
+   - Crear desde cero con contenido del componente
+
+2. EDIT: templates/admin/sgm.html (+ otros admin/)
+   - Insertar {% include "components/back_button.html" %}
+
+3. EDIT: templates/mod/pipas.html (+ otros mod/)
+   - Insertar {% include "components/back_button.html" %}
+
+4. EDIT: templates/admin/users.html
+   - Insertar link a /admin/permissions (si existe)
+
+5. EDIT: templates/admin/permissions.html
+   - Insertar {% include "components/back_button.html" %}
+
+
+DURACIÓN ESTIMADA
+═════════════════
+- Investigación de archivos: 5 min
+- Crear componente: 5 min
+- Editar 20 templates (insertar include): 20 min
+- Vincular /admin/permissions: 5 min
+- Validación en vivo: 20 min
+- Documentación: 5 min
+─────────────────────────
+TOTAL: ~60 minutos
+
+
+CHECKLIST DE COMPLETITUD
+════════════════════════
+
+Cambios de código:
+  □ Componente back_button.html creado
+  □ Todas las páginas admin/ con back_button insertado
+  □ Todas las páginas mod/ con back_button insertado
+  □ /admin/permissions vinculado desde /admin/users (o eliminado)
+  □ /admin/permissions con back_button (si mantenida)
+
+Validación:
+  □ Servidor reiniciado sin errores
+  □ Back_button aparece en TODAS las páginas de 2do nivel (admin y mod)
+  □ Back_button redirige a /admin/menu (admin) o /staff/menu (staff)
+  □ /admin/permissions es accesible desde /admin/users (si mantenida)
+  □ No hay regresiones en layout, sidebar, navegación
+  □ No hay console errors
+  □ Responsive ok (mobile)
+
+Documentación:
+  □ DIA_3_RESULTADOS.txt creado con findings
+
+
+NOTAS IMPORTANTES
+═════════════════
+- Si un template NO existe donde se espera (ej. templates/admin/sgm.html),
+  buscar cuál ES la ruta real y modificar esa.
+- Si algún template NO extiende layout.html (poco probable), el back_button
+  aun debería funcionar (es un include de HTML/Jinja2).
+- El componente back_button.html usa "var(--hme-accent)" para color. Si en
+  una página ese CSS no está disponible, se verá en negro. No es crítico.
+
+
+PRÓXIMO PASO (DÍA 4)
+═════════════════════
+Día 4 — Pulir "Operación técnica" (Pipas, Mantenimiento, Alertas):
+  - Contextualizarlas mejor (por estación, encabezados consistentes)
+  - Vincularlas a calendarios/reportes si es relevante
+
+Día 5 — Validar flujo Centro operativo (staff):
+  - Recorrido completo jefe/operador sin saltos inesperados
+
+════════════════════════════════════════════════════════════════════════════════
+FIN DEL PLAN — DÍA 3
+Duración estimada: ~60 minutos
+Próximo: Día 4 - Pulir "Operación técnica"
+════════════════════════════════════════════════════════════════════════════════

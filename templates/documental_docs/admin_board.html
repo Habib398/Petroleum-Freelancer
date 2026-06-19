@@ -428,10 +428,16 @@
         <div style="display:flex;flex-direction:column;gap:5px;">
           <label style="font-size:12px;font-weight:800;color:var(--hme-text-soft);">Acciones rápidas</label>
           <div class="board-quickdays">
-            <a class="board-quickday" href="{{ admin_base }}/board?date={{ day_prev }}&status={{ status_filter }}&q={{ q|urlencode }}">&#8592; Ayer</a>
             <a class="board-quickday" href="{{ admin_base }}/board">Hoy</a>
-            <a class="board-quickday" href="{{ admin_base }}/board?date={{ day_next }}&status={{ status_filter }}&q={{ q|urlencode }}">Mañana &#8594;</a>
           </div>
+        </div>
+
+        <div class="board-field board-field--status">
+          <label for="bf-station">Estación</label>
+          <select id="bf-station" name="station_id">
+            <option value="">Todas las estaciones</option>
+            {% for st in stations %}<option value="{{ st.id }}" {% if station_filter==st.id|string %}selected{% endif %}>{{ st.code }} • {{ st.name }}</option>{% endfor %}
+          </select>
         </div>
 
         <div class="board-field board-field--status">

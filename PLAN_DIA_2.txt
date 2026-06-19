@@ -1,0 +1,406 @@
+================================================================================
+PLAN DE IMPLEMENTACIÓN - DÍA 2
+RESOLVER NAVEGACIÓN: LINK "INICIO" + REETIQUETADOS + CLASSROOM CLARITY
+CONSULTING MODE (Admin + Centro Operativo)
+================================================================================
+
+OBJETIVO DEL DÍA 2
+──────────────────
+Implementar 3 cambios de alto impacto / bajo costo para resolver directamente
+el problema del cliente ("los botones regresan hasta la página principal o no hay
+un flujo como tal"):
+
+  1. Agregar link "Inicio" FIJO al tope del sidebar (accesible desde todas las
+     páginas con layout.html) que apunta a /admin/menu (admin) o /staff/menu
+     (staff según rol).
+
+  2. Renombrar botón "Bitácora" → "Calendario operativo" en el toolbox de
+     /admin/menu para que el label coincida con el destino real
+     (model classroom clarity).
+
+  3. Mover/renombrar "Módulos (SGM / SASISOPA)" en sidebar "Administrador"
+     → "Inicio / Centro de módulos", fuera de la subsección colapsable
+     "Control principal" (tope del sidebar, claramente visible).
+
+SALIDA ESPERADA
+───────────────
+- Admin/Staff pueden hacer clic en "Inicio" desde CUALQUIER pantalla con
+  sidebar y regresar a su hub respectivo.
+- Admin/jefe entienden que "Calendario operativo" es el botón para ver
+  actividades (no la palabra "Bitácora" engañosa).
+- Sidebar admin tiene un botón "Inicio" de fácil acceso sin necesidad de
+  abrir subsecciones colapsables.
+
+
+CAMBIOS A REALIZAR (3 ARCHIVOS)
+════════════════════════════════
+
+────────────────────────────────────────────────────────────────────────────────
+CAMBIO 1: templates/layout.html
+────────────────────────────────────────────────────────────────────────────────
+
+OBJETIVO: Agregar link "Inicio" en el tope de "Acceso rápido" del sidebar
+que sea dinámico (apunta a /admin/menu para admin, /staff/menu para otros).
+
+ARCHIVO: c:\Users\Abitt\Desktop\worklog_general_revisado_limpio_pruebas\templates\layout.html
+
+UBICACIÓN EXACTA:
+Después de la línea 50 (<div class="navtitle">Acceso rápido</div>), dentro del
+<nav class="nav"> que empieza en línea 52.
+
+ACCIÓN:
+Insertar el siguiente link COMO PRIMER ELEMENTO dentro de <nav class="nav">
+(antes de "Dashboard" que está en línea 53):
+
+  <a href="{% if me.role == 'admin' %}/admin/menu{% else %}/staff/menu{% endif %}">
+    {% if me.role == 'admin' %}Inicio / Centro de módulos{% else %}Inicio / Centro operativo{% endif %}
+  </a>
+
+PROBLEMA: El template no tiene acceso directo a 'me.role' (es JS, no Jinja2).
+SOLUCIÓN ALTERNATIVA: Usar data attributes + JS para setear el href dinámicamente.
+
+MEJOR IMPLEMENTACIÓN:
+────────────────────
+En layout.html, línea 52-53, CAMBIAR:
+
+ANTES:
+        <nav class="nav">
+          <a href="/mod/dashboard">Dashboard</a>
+
+DESPUÉS:
+        <nav class="nav">
+          <a id="homeLink" href="/mod/dashboard" data-admin-url="/admin/menu" data-staff-url="/staff/menu">Inicio</a>
+          <a href="/mod/dashboard">Dashboard</a>
+
+Luego, en static/js/common.js, dentro de la función loadMe() (después de la
+línea 84, antes del return me), agregar:
+
+  const homeLink = qs("#homeLink");
+  if (homeLink){
+    if (me.role === "admin"){
+      homeLink.href = homeLink.getAttribute("data-admin-url");
+      homeLink.textContent = "Inicio / Centro de módulos";
+    } else {
+      homeLink.href = homeLink.getAttribute("data-staff-url");
+      homeLink.textContent = "Inicio / Centro operativo";
+    }
+  }
+
+ARCHIVOS A EDITAR:
+  1. templates/layout.html (HTML)
+  2. static/js/common.js (JavaScript dinámico)
+
+
+────────────────────────────────────────────────────────────────────────────────
+CAMBIO 2: templates/admin_menu.html
+────────────────────────────────────────────────────────────────────────────────
+
+OBJETIVO: Cambiar "Bitácora" → "Calendario operativo" en el toolbox de /admin/menu
+para que el label coincida con el destino real para admin/jefe (classroom model).
+
+ARCHIVO: c:\Users\Abitt\Desktop\worklog_general_revisado_limpio_pruebas\templates\admin_menu.html
+
+BÚSQUEDA:
+Dentro de la sección "Operación diaria" del toolbox (líneas ~290-310), buscar
+la línea que contiene "Bitácora" o "Actividades".
+
+UBICACIÓN EXACTA (approximate, requiere lectura del archivo):
+Buscar en la sección del toolbox el link que dice "Bitácora" (probablemente
+alrededor de las líneas 290-295 en la categoría "Operación diaria").
+
+ACCIÓN:
+CAMBIAR de:
+  <div>Bitácora</div> o similar
+A:
+  <div>Calendario operativo</div>
+
+(mantener el href apuntando a /mod/activities, que redirige a /mod/operational-calendar)
+
+NOTA IMPORTANTE:
+Si el template usa condicionales por brand (petroleum vs consulting), asegurarse
+de que el cambio solo aplique a Consulting. Usar:
+  {% if session.get('brand','consulting') == 'consulting' %}
+    [aquí el "Calendario operativo"]
+  {% endif %}
+
+
+────────────────────────────────────────────────────────────────────────────────
+CAMBIO 3: templates/layout.html (sección Administrador)
+────────────────────────────────────────────────────────────────────────────────
+
+OBJETIVO: Mover y renombrar "Módulos (SGM / SASISOPA)" → "Inicio / Centro de
+módulos", fuera de la subsección colapsable "Control principal", al tope del
+sidebar admin (en "Acceso rápido" o como primer link de "Administrador").
+
+ARCHIVO: c:\Users\Abitt\Desktop\worklog_general_revisado_limpio_pruebas\templates\layout.html
+
+UBICACIÓN ACTUAL:
+Líneas 105-142 (sección <div class="navgrp navcompact" data-admin-only hidden>).
+Dentro de "Control principal" (lines 109-122), hay un link a /admin/menu
+(línea 111):
+  <a href="/admin/menu">{{ "Centro de módulos Petroleum" if ... else "Módulos (SGM / SASISOPA)" }}</a>
+
+PLAN:
+  1. Copiar este link (o simplificar su texto).
+  2. Pegarlo ANTES de la sección "Control principal", como primer link dentro
+     de <div class="navgrp navcompact" data-admin-only>.
+  3. Renombrar a algo más claro: "Inicio / Centro de módulos".
+  4. Opcionalmente, remover la copia original dentro de "Control principal"
+     si causa redundancia visual.
+
+MEJOR IMPLEMENTACIÓN:
+────────────────────
+Después de la línea 105 (<div class="navgrp navcompact" data-admin-only hidden>):
+
+AGREGAR (nuevo link de Inicio para admin):
+      <nav class="nav">
+        <a href="/admin/menu">Inicio / Centro de módulos</a>
+      </nav>
+
+Luego, DENTRO de la sección "Control principal" (líneas 109-122), REMOVER o
+COMENTAR la línea que apunta a /admin/menu:
+
+ANTES (línea 111):
+        <a href="/admin/menu">{{ "Centro de módulos Petroleum" if session.get('brand','consulting') == 'petroleum' else "Módulos (SGM / SASISOPA)" }}</a>
+
+DESPUÉS (eliminar o comentar):
+        <!-- REMOVIDO: link a /admin/menu ahora en tope de admin sidebar -->
+
+
+RESUMEN DE CAMBIOS POR ARCHIVO
+═══════════════════════════════
+
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ ARCHIVO                                  │ LÍNEAS | ACCIÓN                 │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ templates/layout.html                    │ 52-53  │ Insertar link "Inicio" │
+│                                          │        │ dinámico al tope de    │
+│                                          │        │ "Acceso rápido"        │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ static/js/common.js                      │ ~84    │ Agregar lógica JS para │
+│                                          │        │ setear href dinámico   │
+│                                          │        │ según rol              │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ templates/admin_menu.html                │ ~290   │ Renombrar "Bitácora"   │
+│                                          │        │ → "Calendario oper."   │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ templates/layout.html                    │ 105-111│ Mover link admin a     │
+│                                          │        │ tope; remover de       │
+│                                          │        │ "Control principal"    │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+
+PASO A PASO — EJECUCIÓN
+════════════════════════
+
+PASO 1: LEER Y PREPARAR
+───────────────────────
+□ Leer templates/layout.html completo (para ubicar líneas exactas)
+□ Leer templates/admin_menu.html completo (para ubicar "Bitácora")
+□ Leer static/js/common.js (para entender estructura de loadMe())
+
+PASO 2: CAMBIO 1a — Insertar link "Inicio" en layout.html
+────────────────────────────────────────────────────────────
+□ Editar templates/layout.html
+□ Ubicar: línea 52 (<nav class="nav"> en "Acceso rápido")
+□ Insertar ANTES del link a /mod/dashboard:
+     <a id="homeLink" href="/mod/dashboard" data-admin-url="/admin/menu" data-staff-url="/staff/menu">Inicio</a>
+□ Guardar
+
+PASO 3: CAMBIO 1b — Agregar JS dinámico en common.js
+──────────────────────────────────────────────────────
+□ Editar static/js/common.js
+□ Ubicar función loadMe() (línea 46)
+□ Antes del "return me;" (línea 84), agregar:
+
+   const homeLink = qs("#homeLink");
+   if (homeLink){
+     if (me.role === "admin"){
+       homeLink.href = homeLink.getAttribute("data-admin-url");
+       homeLink.textContent = "Inicio / Centro de módulos";
+     } else {
+       homeLink.href = homeLink.getAttribute("data-staff-url");
+       homeLink.textContent = "Inicio / Centro operativo";
+     }
+   }
+
+□ Guardar
+
+PASO 4: CAMBIO 2 — Renombrar "Bitácora" en admin_menu.html
+────────────────────────────────────────────────────────────
+□ Editar templates/admin_menu.html
+□ Buscar "Bitácora" o "Actividades" en la sección "Operación diaria" del toolbox
+□ Cambiar el text del link a "Calendario operativo"
+□ Si hay condicionales por brand, asegurarse de que el cambio sea solo para
+  Consulting (brand != 'petroleum')
+□ Guardar
+
+PASO 5: CAMBIO 3 — Reorganizar admin sidebar en layout.html
+──────────────────────────────────────────────────────────────
+□ Editar templates/layout.html (nuevamente)
+□ Ubicar línea 105 (<div class="navgrp navcompact" data-admin-only hidden>)
+□ Después de esa línea, INSERTAR un nuevo <nav> con link a /admin/menu:
+
+   <nav class="nav">
+     <a href="/admin/menu">Inicio / Centro de módulos</a>
+   </nav>
+
+□ Ubicar la línea ~111 que contiene el link a /admin/menu dentro de
+  "Control principal"
+□ COMENTAR o ELIMINAR esa línea para evitar duplicado visual
+□ Guardar
+
+
+VALIDACIÓN EN VIVO (PASO A PASO)
+═════════════════════════════════
+
+PASO 1: Reiniciar servidor Flask
+─────────────────────────────────
+□ Detener servidor actual (Ctrl+C si está en terminal)
+□ Iniciar Flask dev server nuevamente (python app.py o similar)
+□ Verificar que arranque sin errores
+
+PASO 2: Validar cambio 1 (link "Inicio")
+──────────────────────────────────────────
+□ Login como ADMIN
+□ Navegar a /mod/dashboard (o cualquier página con sidebar)
+□ VERIFICAR:
+   - ¿El link "Inicio / Centro de módulos" aparece al tope del sidebar?
+   - ¿Hace clic y va a /admin/menu?
+   - ¿El href se actualizó dinámicamente (no es /mod/dashboard)?
+
+□ Login como JEFE_ESTACION (si tienes credenciales)
+   o OPERADOR
+□ Navegar a /mod/dashboard
+□ VERIFICAR:
+   - ¿El link dice "Inicio / Centro operativo"?
+   - ¿Hace clic y va a /staff/menu?
+
+□ Navegar a una página distinta (ej. /mod/operational-calendar, /mod/pipas)
+□ VERIFICAR:
+   - ¿El link "Inicio" sigue presente?
+   - ¿Hace clic y regresa a su hub respectivo (/admin/menu o /staff/menu)?
+
+PASO 3: Validar cambio 2 (etiqueta "Calendario operativo")
+────────────────────────────────────────────────────────────
+□ Login como ADMIN
+□ En /admin/menu, buscar el botón "Calendario operativo" en el toolbox
+  (antes era "Bitácora")
+□ VERIFICAR:
+   - ¿El botón dice "Calendario operativo"?
+   - ¿Hace clic y abre /mod/operational-calendar?
+   - ¿El label coincide con el destino?
+
+□ Login como JEFE_ESTACION
+□ VERIFICAR lo mismo (si el toolbox es visible para jefe)
+
+PASO 4: Validar cambio 3 (admin sidebar reorganizado)
+───────────────────────────────────────────────────────
+□ Login como ADMIN
+□ Abrir /mod/dashboard (cualquier página con sidebar)
+□ En la sección "Administrador" del sidebar:
+   - ¿El link "Inicio / Centro de módulos" está al TOPE (fuera de subsecciones)?
+   - ¿Es fácil de ver sin abrir "Control principal"?
+   - ¿Si antes había un link duplicado dentro de "Control principal", fue removido?
+
+PASO 5: Validación completa — Recorrido de flujo
+──────────────────────────────────────────────────
+□ Hacer clic en "Inicio / Centro de módulos" desde /mod/dashboard
+  → ¿Llega a /admin/menu?
+□ Desde /admin/menu, hacer clic en "Calendario operativo" (botón de toolbox)
+  → ¿Llega a /mod/operational-calendar?
+□ Desde /mod/operational-calendar, hacer clic en "Inicio / Centro de módulos"
+  (en sidebar)
+  → ¿Regresa a /admin/menu?
+□ Desde /admin/menu, hacer clic en otro tile (ej. SGM)
+  → ¿Abre /admin/sgm/docs?
+□ Desde /admin/sgm/docs, hacer clic en "Inicio" (sidebar)
+  → ¿Regresa a /admin/menu?
+
+VERIFICACIÓN STAFF (si aplica):
+□ Login como JEFE_ESTACION
+□ Similar recorrido, pero desde /staff/menu
+□ Verificar que todos los links apunten a /staff/menu
+
+PASO 6: Prueba de regresiones
+──────────────────────────────
+□ Verificar que no haya roto ninguna otra funcionalidad:
+   - ¿Todos los demás links del sidebar siguen funcionando?
+   - ¿Los roles/visibilidades (data-admin-only, data-not-operador, etc.)
+     siguen siendo respetados?
+   - ¿No hay console errors en el navegador (F12)?
+
+
+CHECKLIST DE COMPLETITUD
+═════════════════════════
+
+Cambios de código:
+  □ Línea "Inicio" insertada en layout.html
+  □ JS dinámico agregado en common.js (dentro de loadMe())
+  □ "Bitácora" renombrado a "Calendario operativo" en admin_menu.html
+  □ Link admin reorganizado en layout.html (tope de sidebar admin)
+  □ Link duplicado removido de "Control principal" (si aplica)
+
+Validación:
+  □ Servidor reiniciado sin errores
+  □ Link "Inicio" aparece en todas las páginas con sidebar
+  □ Link "Inicio" apunta correctamente según rol (admin vs. staff)
+  □ Botón "Calendario operativo" en toolbox abierto correctamente
+  □ Recorrido de flujo completo sin saltos inesperados
+  □ No hay regresos sorpresivos a inicio
+  □ Roles/visibilidades funcionan como antes
+  □ Sin console errors
+
+Documentación:
+  □ Archivo DIA_2_RESULTADOS.txt creado con findings y screenshots (si aplica)
+
+
+DURACIÓN ESTIMADA
+═════════════════
+- Lectura de archivos: 10 min
+- Cambios de código: 15 min
+- Validación en vivo: 20 min
+- Documentación: 5 min
+─────────────────────────
+TOTAL: ~50 minutos
+
+
+NOTAS IMPORTANTES
+═════════════════
+1. Si el server no arranca después de cambios, verificar:
+   - Sintaxis de Python en common.js es HTML/JS, no Python (no aplica)
+   - Sintaxis de Jinja2 en templates ({% %} balanceados)
+   - No hay caracteres especiales que hayan roto el HTML
+
+2. Si el link "Inicio" no aparece:
+   - Verificar que loadMe() sea llamada en DOMContentLoaded (línea 302 en
+     common.js, ya está)
+   - Verificar que #homeLink elemento exista en HTML (fue insertado)
+   - Abrir F12 console para ver si hay errores JS
+
+3. Si "Calendario operativo" no se ve en el toolbox:
+   - Verificar que el cambio en admin_menu.html fue correcto
+   - Si hay condicionales por brand, revisar que no se esté ocultando
+     para Consulting
+
+4. Si el recorrido genera redirects inesperados:
+   - Revisar que /mod/activities aún redirige a /mod/operational-calendar
+     (cambio intencional del modelo classroom)
+   - No debe haber nuevos redirects introducidos
+
+
+SALIDA ESPERADA DEL DÍA 2
+════════════════════════
+- Tres cambios implementados y validados
+- El cliente puede hacer clic en "Inicio" desde cualquier página y regresar
+  a su hub
+- Admin entiende que "Calendario operativo" es para ver actividades
+  (no la palabra confusa "Bitácora")
+- Admin sidebar tiene navegación de regreso clara y fácil acceso
+- Ninguna regresión en otras funcionalidades
+- Archivo DIA_2_RESULTADOS.txt documentando cambios realizados y validaciones
+
+════════════════════════════════════════════════════════════════════════════════
+FIN DEL PLAN — DÍA 2
+Próximo: Día 3 - Breadcrumbs y "volver a" consistentes en páginas de 2do nivel
+════════════════════════════════════════════════════════════════════════════════

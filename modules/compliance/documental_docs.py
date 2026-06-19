@@ -388,6 +388,7 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
         status_filter = (request.args.get("status") or "all").strip().lower()
         if status_filter not in {"all", "pending", "submitted", "approved", "rejected", "unplanned"}:
             status_filter = "all"
+        station_filter = (request.args.get("station_id") or "").strip()
         q = (request.args.get("q") or "").strip()
         export_fmt = (request.args.get("export") or "").strip().lower()
         # Validate YYYY-MM-DD
@@ -402,6 +403,13 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
             "SELECT id, name, code FROM stations WHERE brand=? ORDER BY name ASC",
             (_brand(),),
         ).fetchall()]
+
+        if station_filter:
+            try:
+                station_filter_id = int(station_filter)
+                stations = [s for s in stations if s["id"] == station_filter_id]
+            except (ValueError, TypeError):
+                station_filter = ""
 
         req_rows = conn.execute(
             """
@@ -572,6 +580,8 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
                 counts=counts,
                 filtered_counts=filtered_counts,
                 status_filter=status_filter,
+                station_filter=station_filter,
+                stations=stations,
                 q=q,
                 day_prev=(day_obj.date() - timedelta(days=1)).isoformat(),
                 day_next=(day_obj.date() + timedelta(days=1)).isoformat(),
@@ -721,10 +731,20 @@ def register_module(app, *, brand: str | None = None, module_key: str, module_la
         if not template_id or not title or not open_date or not due_date:
             abort(400)
         conn = get_conn()
-        conn.execute("""
-            INSERT INTO doc_requirements (brand, module, template_id, title, open_date, due_date, station_id, assigned_user_id, status, created_by, created_at)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?)
-        """, (_brand(), module_key, template_id, title, open_date, due_date, int(station_id) if station_id else None, int(assigned_user_id) if assigned_user_id else None, "OPEN", int(me["id"]), _now_iso()))
+
+        if station_id:
+            conn.execute("""
+                INSERT INTO doc_requirements (brand, module, template_id, title, open_date, due_date, station_id, assigned_user_id, status, created_by, created_at)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?)
+            """, (_brand(), module_key, template_id, title, open_date, due_date, int(station_id), int(assigned_user_id) if assigned_user_id else None, "OPEN", int(me["id"]), _now_iso()))
+        else:
+            stations = conn.execute("SELECT id FROM stations WHERE brand=? ORDER BY id ASC", (_brand(),)).fetchall()
+            for st in stations:
+                conn.execute("""
+                    INSERT INTO doc_requirements (brand, module, template_id, title, open_date, due_date, station_id, assigned_user_id, status, created_by, created_at)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?)
+                """, (_brand(), module_key, template_id, title, open_date, due_date, int(st["id"]), int(assigned_user_id) if assigned_user_id else None, "OPEN", int(me["id"]), _now_iso()))
+
         conn.commit(); conn.close(); return redirect(f"{admin_base}/templates")
 
     def reviews():

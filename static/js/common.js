@@ -123,7 +123,13 @@ function renderRoleGuide(me){
 function setActiveNav(){
   const path = location.pathname;
   qsa(".nav a").forEach(a=>{
-    a.classList.toggle("active", a.getAttribute("href") === path);
+    const isActive = a.getAttribute("href") === path;
+    a.classList.toggle("active", isActive);
+    // If this link is active, open its parent details element
+    if (isActive){
+      let parent = a.closest("details");
+      if (parent) parent.open = true;
+    }
   });
 }
 

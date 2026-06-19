@@ -1,0 +1,230 @@
+================================================================================
+DÍA 3 — BREADCRUMBS Y "VOLVER A" CONSISTENTES EN PÁGINAS DE 2DO NIVEL
+CONSULTING MODE (Admin + Centro Operativo) — RESULTADOS
+Fecha: 14 de junio de 2026
+================================================================================
+
+MÉTODO USADO
+------------
+- Investigación de archivos: se listaron templates/admin y templates/mod, se
+  resolvieron rutas reales vía grep sobre modules/**/*.py para confirmar qué
+  template renderiza cada URL del plan (incluyendo las rutas genéricas
+  `/mod/<name>` y `/admin/<name>` en modules/core/pages.py).
+- Se implementó OPCIÓN A del plan (back_button minimalista) usando
+  `session.get('role')` en vez de `me.role`, tal como recomendaba la sección
+  "CONSIDERACIONES ESPECIALES".
+- Validación en vivo: servidor Flask local (python app.py, puerto 5000, BD de
+  producción) + login real como admin (admin/admin123) vía /api/auth/login
+  (header X-CSRF-Token con el valor del meta csrf-token).
+- Validación de roles staff (jefe_estacion, operador) en un entorno AISLADO
+  con BD temporal (scripts/tests/fixtures.py: make_test_env + seed_baseline),
+  igual criterio que Día 1/Día 2 — sin tocar la BD de producción.
+
+
+HALLAZGO CLAVE EN LA INVESTIGACIÓN — /admin/sgm y /admin/sasisopa
+-------------------------------------------------------------------
+El plan asumía templates "admin/sgm.html" / "admin/sasisopa.html" que no
+existen. Investigación de rutas (modules/core/pages.py + modules/compliance/
+sgm_docs.py + sasisopa_docs.py):
+
+  /admin/sgm      -> redirect -> /admin/sgm/docs
+  /admin/sasisopa -> redirect -> /admin/sasisopa/docs
+
+Ambas rutas se registran con `template_folder='documental_docs'` y renderizan
+el MISMO template: templates/documental_docs/admin_dashboard.html, el cual
+YA incluye templates/documental_docs/_subheader.html con un link
+"← Volver a módulos" -> /admin/menu (subheader_back_url='/admin/menu').
+
+RESOLUCIÓN: no se tocaron estos templates (ya cumplen el objetivo del Día 3
+sin cambios; agregar back_button.html habría duplicado el botón de regreso).
+Confirmado en vivo: /admin/sgm/docs y /admin/sasisopa/docs -> HTTP 200,
+contienen "Volver a módulos".
+
+
+IMPLEMENTACIÓN
+================
+
+COMPONENTE 1 — templates/components/back_button.html (NUEVO)
+---------------------------------------------------------------
+Creado con el contenido del plan, pero usando `session.get('role')` en lugar
+de `me.role` (Opción A de "CONSIDERACIONES ESPECIALES" — cero cambios en
+Python, porque varias rutas renderizan sin pasar `me` al template, p.ej.
+/mod/pipas, /mod/maintenance, /mod/alerts vía la ruta genérica `/mod/<name>`).
+
+  <div style="display:flex;align-items:center;gap:8px;margin-bottom:16px;padding:8px 0;">
+    <a href="{% if session.get('role') == 'admin' %}/admin/menu{% else %}/staff/menu{% endif %}"
+       style="display:flex;align-items:center;gap:4px;color:var(--hme-accent);text-decoration:none;font-weight:600;font-size:14px;">
+      ← Volver a {% if session.get('role') == 'admin' %}Centro de módulos{% else %}Centro operativo{% endif %}
+    </a>
+  </div>
+
+Se confirmó que `--hme-accent` existe en static/css/theme-hme.css (#2C7BE5),
+por lo que no se necesitan valores HEX de respaldo.
+
+
+COMPONENTE 2 — Inserción de {% include "components/back_button.html" %}
+---------------------------------------------------------------------------
+Insertado justo después de `{% block content %}`, antes del `<div class=
+"pagehead">` (o equivalente), en 20 templates:
+
+ADMIN (10):
+  - templates/admin/stations.html
+  - templates/admin/users.html
+  - templates/admin/inbox.html
+  - templates/admin/executive.html
+  - templates/admin/audit.html
+  - templates/admin/backup.html
+  - templates/admin/setup_wizard.html
+  - templates/admin/permissions.html
+  - templates/admin/document_center.html
+  - templates/admin/calibraciones_v2.html  (ruta real: /admin/calibraciones)
+
+MOD (10):
+  - templates/mod/pipas.html
+  - templates/mod/maintenance.html
+  - templates/mod/alerts.html
+  - templates/mod/evidencias.html
+  - templates/mod/corrections.html
+  - templates/mod/incidents.html
+  - templates/mod/operational_calendar.html
+  - templates/mod/station_evidence.html
+  - templates/mod/help_center.html
+  - templates/mod/signature_pad.html
+
+EXTRA (1, fuera del árbol admin/mod pero es página de 2do nivel compartida
+admin/staff):
+  - templates/pending_docs.html  (usada por /admin/pending-docs y
+    /staff/pending-docs; el back_button apunta correctamente a /admin/menu
+    o /staff/menu según `session.get('role')` en ambos casos)
+
+
+COMPONENTE 3 — Resolución de /admin/permissions (PASO 4, Opción 1)
+-----------------------------------------------------------------------
+- templates/admin/users.html: se agregó un botón "Ver permisos y roles"
+  (clase `btn ghost`, ya existente en theme-hme.css) junto a "+ Nuevo
+  usuario" en el pagehead, apuntando a /admin/permissions.
+- templates/admin/permissions.html: recibió back_button.html (ya tenía un
+  título claro "Permisos" + subtítulo "Referencia rápida de roles y accesos
+  (lectura/edición)" — no se modificó, ya cumplía el objetivo del título).
+
+
+VALIDACIÓN EN VIVO — RESULTADOS
+==================================
+
+PASO A: Servidor Flask
+  - Arrancó sin errores en http://127.0.0.1:5000.
+
+PASO B: Sesión ADMIN (admin/admin123, BD de producción)
+
+  | Página                    | HTTP | back_button | Label / destino                    |
+  |---------------------------|------|-------------|-------------------------------------|
+  | /admin/menu                | 200  | NO (hub)    | -                                     |
+  | /admin/stations             | 200  | SI          | "Volver a Centro de módulos" -> /admin/menu |
+  | /admin/users                | 200  | SI          | idem + botón "Ver permisos y roles"  |
+  | /admin/inbox                | 200  | SI          | idem                                  |
+  | /admin/executive             | 200  | SI          | idem                                  |
+  | /admin/audit                | 200  | SI          | idem                                  |
+  | /admin/backup                | 200  | SI          | idem                                  |
+  | /admin/setup-wizard          | 200  | SI          | idem                                  |
+  | /admin/permissions           | 200  | SI          | idem (accesible desde /admin/users)  |
+  | /admin/document-center        | 200  | SI          | idem                                  |
+  | /admin/calibraciones          | 200  | SI          | idem                                  |
+  | /admin/pending-docs           | 200  | SI          | idem                                  |
+  | /mod/pipas                    | 200  | SI          | idem (admin también ve "Centro de módulos") |
+  | /mod/maintenance               | 200  | SI          | idem                                  |
+  | /mod/alerts                    | 200  | SI          | idem                                  |
+  | /mod/evidencias                | 200  | SI          | idem                                  |
+  | /mod/corrections                | 200  | SI          | idem                                  |
+  | /mod/operational-calendar        | 200  | SI          | idem                                  |
+  | /mod/station-evidence            | 200  | SI          | idem                                  |
+  | /mod/help-center                  | 200  | SI          | idem                                  |
+  | /mod/signature-pad                 | 200  | SI          | idem                                  |
+  | /admin/sgm  (-> /admin/sgm/docs)     | 200  | SI (preexistente) | "Volver a módulos" -> /admin/menu |
+  | /admin/sasisopa (-> .../docs)        | 200  | SI (preexistente) | idem                            |
+  | /mod/incidents                       | 403  | n/a         | preexistente: solo operador/jefe_estacion (admin no autorizado, sin relación con Día 3) |
+  | /staff/menu (con sesión admin)        | 403  | n/a         | preexistente (admin no tiene /staff/menu) |
+
+PASO C: Roles STAFF (entorno aislado, BD temporal vía fixtures.py)
+
+  jefe_test (jefe_estacion):
+  | Página                    | HTTP | back_button                          |
+  |---------------------------|------|----------------------------------------|
+  | /staff/menu                | 200  | NO (hub)                                |
+  | /mod/operational-calendar   | 200  | SI -> "Volver a Centro operativo" -> /staff/menu |
+  | /mod/pipas                  | 200  | SI -> idem                              |
+  | /mod/maintenance             | 200  | SI -> idem                              |
+  | /mod/alerts                  | 200  | SI -> idem                              |
+  | /mod/evidencias              | 200  | SI -> idem                              |
+  | /mod/corrections              | 200  | SI -> idem                              |
+  | /mod/station-evidence         | 200  | SI -> idem                              |
+
+  operador_test (operador):
+  | Página                    | HTTP | back_button                          |
+  |---------------------------|------|----------------------------------------|
+  | /staff/menu                | 200  | NO (hub)                                |
+  | /mod/operational-calendar   | 403  | n/a (preexistente: data-supervisor-only / role_required admin,jefe_estacion) |
+  | /mod/pipas                  | 200  | SI -> "Volver a Centro operativo" -> /staff/menu |
+  | /mod/maintenance             | 200  | SI -> idem                              |
+  | /mod/alerts                  | 200  | SI -> idem                              |
+  | /mod/evidencias              | 200  | SI -> idem                              |
+  | /mod/corrections              | 200  | SI -> idem                              |
+  | /mod/station-evidence         | 403  | n/a (preexistente: role_required admin,jefe_estacion) |
+
+Los HTTP 403 marcados "preexistente" corresponden a restricciones de rol que
+ya existían antes del Día 3 (verificadas también con sesión admin sobre la
+BD de producción) y no son regresiones introducidas por estos cambios.
+
+
+CHECKLIST DE COMPLETITUD
+==========================
+
+Cambios de código:
+  [x] Componente back_button.html creado (templates/components/back_button.html)
+  [x] Todas las páginas admin/ de la lista (Paso 3) con back_button insertado
+  [x] Todas las páginas mod/ de la lista (Paso 3) con back_button insertado
+  [x] pending_docs.html (compartida admin/staff) con back_button insertado
+  [x] /admin/permissions vinculado desde /admin/users ("Ver permisos y roles")
+  [x] /admin/permissions con back_button
+
+Validación:
+  [x] Servidor reiniciado sin errores
+  [x] Back_button aparece en TODAS las páginas de 2do nivel probadas (admin y mod)
+  [x] Back_button redirige a /admin/menu (admin) o /staff/menu (staff) según
+      session.get('role')
+  [x] /admin/sgm y /admin/sasisopa ya contaban con "Volver a módulos" (sin
+      cambios necesarios, documentado)
+  [x] /admin/permissions accesible desde /admin/users
+  [x] Sin 404/500 en las rutas probadas (solo 403 preexistentes por rol)
+  [ ] Responsive / F12 console: no verificado visualmente en navegador (la
+      validación se hizo vía HTTP + grep sobre el HTML renderizado). El
+      componente es un <div>/<a> simple con estilo inline, sin JS, por lo que
+      el riesgo de error de consola o de layout es mínimo.
+
+Documentación:
+  [x] DIA_3_RESULTADOS.txt creado con findings
+
+
+CONCLUSIÓN
+===========
+Las 13 páginas de 2do nivel identificadas como "sin breadcrumb" en el
+análisis (excluyendo /admin/sgm y /admin/sasisopa, que ya tenían "Volver a
+módulos" vía documental_docs/_subheader.html) más 7 páginas adicionales del
+checklist extendido del Paso 3 (backup, setup-wizard, permissions,
+document-center, calibraciones, help-center, signature-pad) y la página
+compartida pending_docs.html, ahora tienen un botón "← Volver a Centro de
+módulos" (admin) / "← Volver a Centro operativo" (staff) visible al tope del
+contenido, apuntando siempre a /admin/menu o /staff/menu según el rol de
+sesión.
+
+/admin/permissions deja de ser una página huérfana: es accesible desde
+/admin/users mediante el botón "Ver permisos y roles", y a su vez tiene su
+propio botón de regreso.
+
+No se detectaron regresiones: todas las rutas devuelven 200 (o 403
+preexistente por rol, sin relación con este cambio).
+
+Próximo: Día 4 - Pulir "Operación técnica" (Pipas, Mantenimiento, Alertas).
+
+================================================================================
+FIN DE RESULTADOS — DÍA 3
+================================================================================

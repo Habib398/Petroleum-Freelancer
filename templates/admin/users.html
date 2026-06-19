@@ -19,15 +19,21 @@
   </style>
 {% endblock %}
 {% block content %}
+{% include "components/back_button.html" %}
 <div class="pagehead">
   <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; flex-wrap: wrap; gap: 16px;">
     <div>
       <h1 class="h1">Usuarios</h1>
       <div class="sub">Gestiona usuarios, roles y accesos por estación</div>
     </div>
-    <button id="btnNewUser" class="btn primary" style="padding: 12px 24px; font-weight: 600; white-space: nowrap;">
-      + Nuevo usuario
-    </button>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <a href="/admin/permissions" class="btn ghost" style="padding: 12px 24px; font-weight: 600; white-space: nowrap;">
+        Ver permisos y roles
+      </a>
+      <button id="btnNewUser" class="btn primary" style="padding: 12px 24px; font-weight: 600; white-space: nowrap;">
+        + Nuevo usuario
+      </button>
+    </div>
   </div>
 </div>
 

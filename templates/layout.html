@@ -35,6 +35,14 @@
     <div class="userbox">
       <button class="iconbtn" id="nav-toggle" aria-label="Menú" aria-controls="app-sidebar" aria-expanded="false">☰</button>
       <button class="iconbtn" id="theme-toggle" aria-label="Tema">🌓</button>
+      <div class="notif-dropdown" id="notifDropdown">
+        <button class="iconbtn" id="notifBtn" aria-label="Notificaciones">🔔</button>
+        <div class="notif-popup" id="notifPopup" hidden>
+          <div class="notif-header">Notificaciones recientes</div>
+          <div class="notif-content" id="notifContent"></div>
+          <a href="/mod/notifications" class="notif-footer">Ver todas...</a>
+        </div>
+      </div>
       <span id="me-name"></span>
       <a href="/logout">Salir</a>
     </div>
@@ -50,14 +58,19 @@
       <div class="navgrp navcompact">
         <div class="navtitle">Acceso rápido</div>
         <nav class="nav">
-          <a href="/mod/dashboard">Dashboard</a>
+          {% if session.get('role') == 'admin' %}
+          <a href="/admin/menu">{{ "Inicio · Centro de módulos Petroleum" if session.get('brand','consulting') == 'petroleum' else "Inicio · Centro de módulos" }}</a>
+          {% else %}
+          <a href="/staff/menu">Inicio</a>
+          {% endif %}
+          <a href="/mod/dashboard">Resumen / KPIs</a>
           <a href="/mod/panel">Mi panel</a>
           <a href="/mod/notifications">Notificaciones <span id="notifBadge" class="badge" style="display:none;margin-left:6px;">0</span></a>
           <a href="/mod/profile">Perfil / FIEL</a>
           <a href="/mod/organigrama">Organigrama</a>
         </nav>
         <div class="navdetails">
-          <details open>
+          <details {% if active_section in ('operacion', None) %}open{% endif %}>
             <summary>Operación</summary>
             <nav class="nav">
               <a href="/mod/activities" data-operador-only hidden>{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividades" }}</a>
@@ -69,7 +82,7 @@
               <a href="/mod/corrections">Tareas / Correcciones</a>
             </nav>
           </details>
-          <details>
+          <details {% if active_section in ('operacion_tecnica', 'normativa_control') %}open{% endif %}>
             <summary>{{ 'Normativa y control' if session.get('brand','consulting') == 'petroleum' else 'Operación técnica' }}</summary>
             <nav class="nav">
               {% if session.get('brand','consulting') == 'petroleum' %}
@@ -85,7 +98,7 @@
               <a href="/mod/payments" data-not-operador hidden>Mensualidad</a>
             </nav>
           </details>
-          <details>
+          <details {% if active_section == 'ayuda' %}open{% endif %}>
             <summary>Ayuda y soporte</summary>
             <nav class="nav">
               <a href="/mod/help-center">Centro de ayuda</a>
@@ -108,7 +121,6 @@
           <details open>
             <summary>Control principal</summary>
             <nav class="nav">
-              <a href="/admin/menu">{{ "Centro de módulos Petroleum" if session.get('brand','consulting') == 'petroleum' else "Módulos (SGM / SASISOPA)" }}</a>
               <a href="/admin/inbox">Inbox (Revisión)</a>
               <a href="/admin/stations">Estaciones</a>
               <a href="/admin/users">Usuarios</a>
@@ -149,6 +161,7 @@
 
   <div id="toast" class="toast"><div class="t"></div><div class="b"></div></div>
   <script src="/static/js/common.js"></script>
+  <script src="/static/js/notif_dropdown.js"></script>
   {% block scripts %}{% endblock %}
 </body>
 </html>

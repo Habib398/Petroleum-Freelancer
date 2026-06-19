@@ -1,5 +1,6 @@
 {% extends "layout.html" %}
 {% block content %}
+{% include "components/back_button.html" %}
 <div class="pagehead"><div><h1 class="h1">Tareas / Correcciones</h1><div class="sub">Seguimiento de rechazos, observaciones y acciones correctivas.</div></div></div>
 <div class="grid cols-2" style="margin-top:14px;">
   <div class="card"><div class="help">Nueva tarea</div><div style="display:grid;gap:10px;margin-top:10px;"><input id="title" class="input" placeholder="Título"><textarea id="description" class="input" style="min-height:110px;" placeholder="Detalle"></textarea><div class="grid cols-3"><input id="station_id" class="input" placeholder="ID estación"><input id="module" class="input" placeholder="Módulo"><select id="priority" class="input"><option>medium</option><option>low</option><option>high</option><option>urgent</option></select></div><button class="btn primary" id="btnCreate">Crear tarea</button><div id="msg" class="help"></div></div></div>
