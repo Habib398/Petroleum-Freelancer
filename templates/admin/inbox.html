@@ -1,196 +1,94 @@
 {% extends "layout.html" %}
 {% block content %}
 <style>
-  .inbox-wrapper {
+  /* ── Inbox Toolbar ─────────────────────────────────────────── */
+  .inbox-toolbar {
     display: flex;
-    gap: 16px;
-    height: 100%;
-  }
-
-  .inbox-sidebar {
-    width: 280px;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: flex-end;
     background: rgba(255, 255, 255, .97);
     border: 1px solid rgba(226, 232, 240, .95);
     border-radius: 16px;
-    padding: 18px;
-    box-shadow: 0 18px 40px rgba(15, 23, 42, .06);
-    flex-shrink: 0;
+    padding: 14px 16px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .05);
+    margin-bottom: 20px;
   }
 
-  .inbox-sidebar.collapsed {
-    width: 60px;
-    padding: 16px 8px;
+  .toolbar-group {
     display: flex;
     flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
+    gap: 4px;
+    min-width: 130px;
   }
 
-  .inbox-sidebar.collapsed .filter-label,
-  .inbox-sidebar.collapsed .filter-inputs,
-  .inbox-sidebar.collapsed .filter-actions {
-    display: none;
+  .toolbar-group.wide {
+    min-width: 180px;
   }
 
-  .sidebar-toggle {
-    width: 44px;
-    height: 44px;
-    padding: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: linear-gradient(135deg, var(--hme-green), var(--hme-green-dark));
-    color: white;
-    border: none;
-    border-radius: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all .2s;
-    font-size: 18px;
-    line-height: 1;
-    position: relative;
-    box-shadow: 0 4px 12px rgba(134, 184, 33, .2);
+  .toolbar-group.search {
+    flex: 1;
+    min-width: 160px;
   }
 
-  .sidebar-toggle:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(134, 184, 33, .3);
-  }
-
-  .sidebar-toggle span {
-    display: block;
-  }
-
-  .sidebar-toggle .toggle-icon {
-    font-size: 20px;
-    font-weight: 300;
-    letter-spacing: -2px;
-  }
-
-  .sidebar-toggle .toggle-text {
-    display: none;
-    font-size: 14px;
-  }
-
-  .inbox-sidebar:not(.collapsed) .sidebar-toggle {
-    width: 100%;
-    height: auto;
-    padding: 10px 14px;
-    margin-bottom: 16px;
-  }
-
-  .inbox-sidebar:not(.collapsed) .sidebar-toggle .toggle-text {
-    display: block;
-  }
-
-  .inbox-sidebar:not(.collapsed) .sidebar-toggle .toggle-icon {
-    display: none;
-  }
-
-  .filter-label {
-    font-size: 11px;
+  .toolbar-label {
+    font-size: 10px;
+    font-weight: 900;
     text-transform: uppercase;
     letter-spacing: .08em;
     color: var(--hme-text-soft);
-    margin: 12px 0 8px;
-    font-weight: 700;
   }
 
-  .filter-inputs {
-    display: flex;
-    flex-direction: column;
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .filter-inputs input,
-  .filter-inputs select {
-    width: 100%;
-    padding: 8px 10px;
-    border: 1px solid var(--hme-border);
-    border-radius: 8px;
+  .toolbar-group input,
+  .toolbar-group select {
+    padding: 7px 10px;
+    border: 1px solid rgba(148, 163, 184, .46);
+    border-radius: 10px;
     font-size: 13px;
-    background: white;
-  }
-
-  .filter-actions {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .filter-actions button {
-    padding: 8px 12px;
-    border: none;
-    border-radius: 8px;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all .2s;
-  }
-
-  .filter-actions .apply {
-    background: linear-gradient(135deg, var(--hme-green), var(--hme-green-dark));
-    color: white;
-  }
-
-  .filter-actions .apply:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 8px 16px rgba(134, 184, 33, .2);
-  }
-
-  .filter-actions .clear {
-    background: rgba(0, 0, 0, .06);
+    background: rgba(255, 255, 255, .98);
     color: var(--hme-text);
-    border: 1px solid var(--hme-border);
+    font-family: inherit;
   }
 
-  .filter-actions .clear:hover {
-    background: rgba(0, 0, 0, .1);
+  .toolbar-group input:focus,
+  .toolbar-group select:focus {
+    outline: none;
+    border-color: rgba(107, 165, 57, .5);
+    box-shadow: 0 0 0 3px rgba(107, 165, 57, .12);
   }
 
-  .inbox-main {
-    flex: 1;
+  .toolbar-actions {
     display: flex;
-    flex-direction: column;
+    gap: 6px;
+    align-items: flex-end;
+    padding-bottom: 1px;
   }
 
-  .inbox-header {
-    margin-bottom: 20px;
-  }
-
-  .inbox-header h1 {
-    font-size: 24px;
-    font-weight: 900;
-    margin: 0 0 4px;
-  }
-
-  .inbox-header .sub {
-    color: var(--hme-text-soft);
-    font-size: 14px;
-  }
-
+  /* ── Inbox Tabs ────────────────────────────────────────────── */
   .inbox-tabs {
     display: flex;
-    gap: 4px;
+    gap: 2px;
     border-bottom: 2px solid var(--hme-border);
-    margin-bottom: 20px;
+    margin-bottom: 18px;
   }
 
   .inbox-tab {
-    padding: 12px 20px;
+    padding: 10px 18px;
     background: none;
     border: none;
     cursor: pointer;
     font-weight: 700;
-    font-size: 14px;
+    font-size: 13px;
     color: var(--hme-text-soft);
     position: relative;
-    transition: color .2s;
+    transition: color .18s;
+    border-radius: 8px 8px 0 0;
+    font-family: inherit;
   }
 
   .inbox-tab:hover {
     color: var(--hme-text);
+    background: rgba(0, 0, 0, .03);
   }
 
   .inbox-tab.active {
@@ -205,11 +103,13 @@
     right: 0;
     height: 2px;
     background: linear-gradient(90deg, var(--hme-green), var(--hme-green-dark));
+    border-radius: 2px 2px 0 0;
   }
 
+  /* ── Tab content ───────────────────────────────────────────── */
   .inbox-content {
     display: none;
-    animation: fadeIn .2s ease;
+    animation: fadeIn .18s ease;
   }
 
   .inbox-content.active {
@@ -217,168 +117,111 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from { opacity: 0; transform: translateY(4px); }
+    to   { opacity: 1; transform: translateY(0); }
   }
 
-  .kpi-grid {
+  /* ── KPI strip ─────────────────────────────────────────────── */
+  .inbox-kpi-strip {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 14px;
-    margin-bottom: 20px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 12px;
+    margin-bottom: 18px;
   }
 
+  /* Clases inyectadas por el JS (.kpi-card) — remapeadas al tema */
   .kpi-card {
     background: rgba(255, 255, 255, .97);
     border: 1px solid rgba(226, 232, 240, .95);
     border-radius: 14px;
-    padding: 18px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .06);
+    padding: 16px;
+    box-shadow: 0 10px 24px rgba(0, 0, 0, .05);
+    border-left: 4px solid var(--hme-border);
   }
-
-  .kpi-card.critical {
-    border-left: 4px solid var(--hme-danger);
-  }
-
-  .kpi-card.warning {
-    border-left: 4px solid var(--hme-warning);
-  }
-
-  .kpi-card.success {
-    border-left: 4px solid var(--hme-success);
-  }
+  .kpi-card.critical { border-left-color: var(--hme-danger); }
+  .kpi-card.warning  { border-left-color: var(--hme-warning); }
+  .kpi-card.success  { border-left-color: var(--hme-success); }
 
   .kpi-value {
-    font-size: 32px;
+    font-size: 30px;
     font-weight: 900;
-    margin: 8px 0;
+    margin: 6px 0;
+    letter-spacing: -.03em;
   }
+  .kpi-card.critical .kpi-value { color: var(--hme-danger); }
+  .kpi-card.warning  .kpi-value { color: var(--hme-warning); }
+  .kpi-card.success  .kpi-value { color: var(--hme-success); }
 
   .kpi-label {
-    font-size: 13px;
+    font-size: 12px;
     color: var(--hme-text-soft);
-    font-weight: 600;
+    font-weight: 700;
   }
 
   .kpi-status {
     display: inline-block;
-    margin-top: 8px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-  }
-
-  .kpi-status.critical {
-    background: rgba(220, 38, 38, .1);
-    color: var(--hme-danger);
-  }
-
-  .kpi-status.warning {
-    background: rgba(245, 158, 11, .1);
-    color: var(--hme-warning);
-  }
-
-  .kpi-status.ok {
-    background: rgba(22, 163, 74, .1);
-    color: var(--hme-success);
-  }
-
-  .inbox-card {
-    background: rgba(255, 255, 255, .97);
-    border: 1px solid rgba(226, 232, 240, .95);
-    border-radius: 14px;
-    padding: 18px;
-    box-shadow: 0 10px 24px rgba(0, 0, 0, .06);
-    margin-bottom: 16px;
-  }
-
-  .inbox-card-title {
-    font-size: 14px;
+    margin-top: 6px;
+    padding: 3px 8px;
+    border-radius: 999px;
+    font-size: 10px;
     font-weight: 900;
-    margin: 0 0 14px;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .kpi-status.critical { background: rgba(220, 38, 38, .1);  color: var(--hme-danger); }
+  .kpi-status.warning  { background: rgba(245, 158, 11, .1); color: var(--hme-warning); }
+  .kpi-status.ok,
+  .kpi-status.success  { background: rgba(22, 163, 74, .1);  color: var(--hme-success); }
+
+  /* ── Activity summary grid ─────────────────────────────────── */
+  .activity-summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+  }
+
+  .activity-summary-card {
+    background: linear-gradient(135deg, rgba(134, 184, 33, .06), rgba(134, 184, 33, .02));
+    border: 1px solid rgba(134, 184, 33, .18);
+    border-radius: 12px;
+    padding: 14px;
+    text-align: center;
+  }
+
+  .activity-summary-card strong {
+    display: block;
+    font-size: 15px;
+    font-weight: 900;
+    margin-bottom: 6px;
+  }
+
+  .activity-summary-card .stat {
+    display: flex;
+    gap: 5px;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    color: var(--hme-text-soft);
+    margin-top: 2px;
+  }
+
+  /* ── Card section header ───────────────────────────────────── */
+  .section-head {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    margin-bottom: 14px;
   }
 
-  .inbox-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
+  .section-head h3 {
+    font-size: 14px;
+    font-weight: 900;
+    margin: 0;
+    color: var(--hme-text);
   }
 
-  .inbox-table thead {
-    background: rgba(0, 0, 0, .02);
-    border-bottom: 1px solid var(--hme-border);
-  }
-
-  .inbox-table th {
-    padding: 10px;
-    text-align: left;
-    font-weight: 700;
-    color: var(--hme-text-soft);
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-  }
-
-  .inbox-table td {
-    padding: 10px;
-    border-bottom: 1px solid var(--hme-border);
-  }
-
-  .inbox-table tr:hover {
-    background: rgba(0, 0, 0, .01);
-  }
-
-  .tag {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 11px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .05em;
-  }
-
-  .tag.ok {
-    background: rgba(22, 163, 74, .1);
-    color: var(--hme-success);
-  }
-
-  .tag.warn {
-    background: rgba(245, 158, 11, .1);
-    color: var(--hme-warning);
-  }
-
-  .tag.bad {
-    background: rgba(220, 38, 38, .1);
-    color: var(--hme-danger);
-  }
-
-  .empty-state {
-    text-align: center;
-    padding: 40px 20px;
-    color: var(--hme-text-soft);
-  }
-
-  .empty-state-icon {
-    font-size: 48px;
-    margin-bottom: 12px;
-  }
-
-  .empty-state-title {
-    font-weight: 700;
-    margin-bottom: 4px;
-  }
-
-  .empty-state-desc {
-    font-size: 13px;
-  }
-
+  /* ── btn-link (used by JS) ─────────────────────────────────── */
   .btn-link {
     background: none;
     border: none;
@@ -388,234 +231,199 @@
     font-weight: 700;
     font-size: 12px;
     padding: 0;
+    font-family: inherit;
   }
+  .btn-link:hover { text-decoration: underline; }
 
-  .btn-link:hover {
-    text-decoration: underline;
-  }
-
-  .activity-summary-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 12px;
-    margin-bottom: 20px;
-  }
-
-  .activity-summary-card {
-    background: linear-gradient(135deg, rgba(134, 184, 33, .05), rgba(134, 184, 33, .02));
-    border: 1px solid rgba(134, 184, 33, .2);
-    border-radius: 12px;
-    padding: 16px;
-    text-align: center;
-  }
-
-  .activity-summary-card strong {
-    display: block;
-    font-size: 16px;
-    margin-bottom: 4px;
-    color: var(--hme-text);
-  }
-
-  .activity-summary-card .stat {
-    display: inline-flex;
-    gap: 8px;
-    align-items: center;
-    font-size: 12px;
-    color: var(--hme-text-soft);
-  }
-
-  @media (max-width: 1000px) {
-    .inbox-wrapper {
-      flex-direction: column;
-    }
-    .inbox-sidebar {
-      width: 100%;
-    }
-    .kpi-grid {
-      grid-template-columns: repeat(2, 1fr);
-    }
+  /* ── Responsive ────────────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .inbox-toolbar { gap: 6px; }
+    .toolbar-group  { min-width: 120px; }
+    .toolbar-group.wide { min-width: 140px; }
   }
 
   @media (max-width: 600px) {
-    .inbox-sidebar {
-      width: 100%;
-    }
-    .kpi-grid {
-      grid-template-columns: 1fr;
-    }
-    .inbox-table {
-      font-size: 12px;
-    }
-    .inbox-table th,
-    .inbox-table td {
-      padding: 6px;
-    }
+    .toolbar-group,
+    .toolbar-group.wide,
+    .toolbar-group.search { min-width: 100%; }
+    .toolbar-actions { width: 100%; }
+    .toolbar-actions .btn { flex: 1; justify-content: center; }
+    .inbox-tabs { overflow-x: auto; }
+    .inbox-tab  { font-size: 12px; padding: 8px 12px; }
   }
+
+  /* ── Petroleum overrides ───────────────────────────────────── */
+  body.brand-petroleum .inbox-toolbar {
+    background: linear-gradient(180deg, rgba(17, 28, 46, .96), rgba(12, 21, 35, .94));
+    border-color: rgba(49, 67, 96, .88);
+  }
+  body.brand-petroleum .toolbar-group input,
+  body.brand-petroleum .toolbar-group select {
+    background: rgba(255, 255, 255, .06);
+    border-color: rgba(49, 67, 96, .88);
+    color: #E7EEF9;
+  }
+  body.brand-petroleum .toolbar-label { color: #B8C7DA; }
+  body.brand-petroleum .kpi-card {
+    background: linear-gradient(180deg, rgba(17, 28, 46, .96), rgba(12, 21, 35, .94));
+    border-color: rgba(49, 67, 96, .88);
+  }
+  body.brand-petroleum .kpi-label { color: #B8C7DA; }
+  body.brand-petroleum .activity-summary-card {
+    background: linear-gradient(135deg, rgba(200, 162, 74, .08), rgba(200, 162, 74, .02));
+    border-color: rgba(200, 162, 74, .20);
+  }
+  body.brand-petroleum .activity-summary-card strong { color: #F1D287; }
+  body.brand-petroleum .activity-summary-card .stat  { color: #B8C7DA; }
+  body.brand-petroleum .inbox-tabs { border-bottom-color: rgba(49, 67, 96, .88); }
+  body.brand-petroleum .inbox-tab  { color: #B8C7DA; }
+  body.brand-petroleum .inbox-tab:hover { background: rgba(255, 255, 255, .04); color: #E7EEF9; }
+  body.brand-petroleum .section-head h3 { color: #F7FAFF; }
 </style>
 
-<div class="inbox-wrapper">
-  <!-- SIDEBAR DE FILTROS -->
-  <div class="inbox-sidebar" id="inboxSidebar">
-    <button class="sidebar-toggle" id="sidebarToggle" title="Mostrar/ocultar filtros">
-      <span class="toggle-icon">≡</span>
-      <span class="toggle-text">Filtros</span>
-    </button>
+<!-- PAGE HEAD -->
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Inbox · Revisión</h1>
+    <div class="sub">Entregas, pagos y alertas pendientes de revisión.</div>
+  </div>
+</div>
 
-    <div class="filter-label">Estación</div>
-    <div class="filter-inputs">
-      <select id="fStation" class="input"></select>
+<!-- TOOLBAR DE FILTROS -->
+<div class="inbox-toolbar">
+  <div class="toolbar-group wide">
+    <span class="toolbar-label">Estación</span>
+    <select id="fStation"></select>
+  </div>
+
+  <div class="toolbar-group">
+    <span class="toolbar-label">Desde</span>
+    <input id="fFrom" type="date" />
+  </div>
+
+  <div class="toolbar-group">
+    <span class="toolbar-label">Hasta</span>
+    <input id="fTo" type="date" />
+  </div>
+
+  <div class="toolbar-group">
+    <span class="toolbar-label">Severidad alertas</span>
+    <select id="fSev">
+      <option value="">Todas</option>
+      <option value="green">Verde</option>
+      <option value="yellow">Amarilla</option>
+      <option value="red">Roja</option>
+    </select>
+  </div>
+
+  <div class="toolbar-group">
+    <span class="toolbar-label">Estado alerta</span>
+    <select id="fAlertStatus">
+      <option value="">Todos</option>
+      <option value="open">Abiertas</option>
+      <option value="closed">Cerradas</option>
+    </select>
+  </div>
+
+  <div class="toolbar-group search">
+    <span class="toolbar-label">Búsqueda</span>
+    <input id="fQ" type="text" placeholder="Actividad, estación…" />
+  </div>
+
+  <div class="toolbar-actions">
+    <button class="btn primary" id="fApply">Aplicar</button>
+    <button class="btn ghost" id="fClear">Limpiar</button>
+  </div>
+</div>
+
+<!-- TABS -->
+<div class="inbox-tabs">
+  <button class="inbox-tab active" data-tab="resumen">Resumen</button>
+  <button class="inbox-tab" data-tab="actividades">Actividades</button>
+  <button class="inbox-tab" data-tab="pagos">Pagos</button>
+</div>
+
+<!-- ══ TAB: RESUMEN ══════════════════════════════════════════ -->
+<div class="inbox-content active" id="tab-resumen">
+
+  <!-- KPI Strip -->
+  <div class="inbox-kpi-strip" id="inboxKpis"></div>
+
+  <!-- Actividades por estación -->
+  <div class="card" style="margin-bottom: 16px;">
+    <div class="section-head">
+      <h3>{{ "Agenda por Estación" if session.get('brand','consulting') == 'petroleum' else "Actividades por Estación" }}</h3>
     </div>
+    <div class="activity-summary-grid" id="actSummaryGrid"></div>
+  </div>
 
-    <div class="filter-label">Periodo</div>
-    <div class="filter-inputs">
-      <input id="fFrom" type="date" />
-      <input id="fTo" type="date" />
+  <!-- Alertas recientes -->
+  <div class="card">
+    <div class="section-head">
+      <h3>Alertas Recientes</h3>
     </div>
-
-    <div class="filter-label">Alertas</div>
-    <div class="filter-inputs">
-      <select id="fSev">
-        <option value="">Todas las severidades</option>
-        <option value="green">Verde</option>
-        <option value="yellow">Amarilla</option>
-        <option value="red">Roja</option>
-      </select>
-      <select id="fAlertStatus">
-        <option value="">Todos los estados</option>
-        <option value="open">Abiertas</option>
-        <option value="closed">Cerradas</option>
-      </select>
-    </div>
-
-    <div class="filter-label">Entregas</div>
-    <div class="filter-inputs">
-      <select id="fSubStatus">
-        <option value="">Pendientes (en revisión)</option>
-        <option value="all">Todas</option>
-        <option value="submitted">Enviadas</option>
-        <option value="approved">Aprobadas</option>
-        <option value="rejected">Rechazadas</option>
-        <option value="reviewed">Requiere corrección</option>
-      </select>
-    </div>
-
-    <div class="filter-label">Búsqueda</div>
-    <div class="filter-inputs">
-      <input id="fQ" type="text" placeholder="Actividad, estacion..." />
-    </div>
-
-    <div class="filter-actions">
-      <button class="apply" id="fApply">Aplicar</button>
-      <button class="clear" id="fClear">Limpiar</button>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Estación</th>
+            <th>Severidad</th>
+            <th>Título</th>
+            <th>Estado</th>
+          </tr>
+        </thead>
+        <tbody id="alertT"></tbody>
+      </table>
     </div>
   </div>
 
-  <!-- CONTENIDO PRINCIPAL -->
-  <div class="inbox-main">
-    <div class="inbox-header">
-      <h1>Inbox (Revisión)</h1>
-      <div class="sub">Entregas, pagos y alertas para revisión del administrador.</div>
+</div>
+
+<!-- ══ TAB: ACTIVIDADES ══════════════════════════════════════ -->
+<div class="inbox-content" id="tab-actividades">
+  <div class="card">
+    <div class="section-head">
+      <h3>{{ "Agenda entregada" if session.get('brand','consulting') == 'petroleum' else "Actividades completadas" }}
+        <span class="help" id="actEvidenceCount" style="font-weight:400;margin-left:6px;"></span>
+      </h3>
     </div>
-
-    <!-- TABS -->
-    <div class="inbox-tabs">
-      <button class="inbox-tab active" data-tab="resumen">Resumen</button>
-      <button class="inbox-tab" data-tab="actividades">Actividades</button>
-      <button class="inbox-tab" data-tab="entregas">Entregas</button>
-      <button class="inbox-tab" data-tab="pagos">Pagos</button>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Estación</th>
+            <th>{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividad" }}</th>
+            <th>Completó</th>
+            <th>Notas</th>
+            <th>Evidencia</th>
+          </tr>
+        </thead>
+        <tbody id="actEvidenceT"></tbody>
+      </table>
     </div>
+  </div>
+</div>
 
-    <!-- TAB: RESUMEN -->
-    <div class="inbox-content active" id="tab-resumen">
-      <div class="kpi-grid" id="inboxKpis"></div>
-
-      <div class="inbox-card">
-        <h3 class="inbox-card-title">{{ "Agenda por Estación" if session.get('brand','consulting') == 'petroleum' else "Actividades por Estación" }}</h3>
-        <div class="activity-summary-grid" id="actSummaryGrid"></div>
-      </div>
-
-      <div class="inbox-card">
-        <h3 class="inbox-card-title">Alertas Recientes</h3>
-        <div class="tablewrap">
-          <table class="inbox-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Estación</th>
-                <th>Severidad</th>
-                <th>Título</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="alertT"></tbody>
-          </table>
-        </div>
-      </div>
+<!-- ══ TAB: PAGOS ════════════════════════════════════════════ -->
+<div class="inbox-content" id="tab-pagos">
+  <div class="card">
+    <div class="section-head">
+      <h3>Pagos Pendientes de Revisión</h3>
     </div>
-
-    <!-- TAB: ACTIVIDADES -->
-    <div class="inbox-content" id="tab-actividades">
-      <div class="inbox-card">
-        <h3 class="inbox-card-title">{{ "Agenda Pendiente / Rechazada" if session.get('brand','consulting') == 'petroleum' else "Actividades Pendientes / Rechazadas" }}</h3>
-        <div class="tablewrap">
-          <table class="inbox-table">
-            <thead>
-              <tr>
-                <th>Fecha</th>
-                <th>Estación</th>
-                <th>{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividad" }}</th>
-                <th>Frecuencia</th>
-                <th>Estado</th>
-              </tr>
-            </thead>
-            <tbody id="actMissingT"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: ENTREGAS -->
-    <div class="inbox-content" id="tab-entregas">
-      <div class="inbox-card">
-        <h3 class="inbox-card-title">Evidencias Completadas</h3>
-        <div class="tablewrap">
-          <table class="inbox-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Fecha</th>
-                <th>Estación</th>
-                <th>{{ "Agenda" if session.get('brand','consulting') == 'petroleum' else "Actividad" }}</th>
-                <th>Usuario</th>
-                <th>Estado</th>
-                <th>Archivo</th>
-                <th>Acción</th>
-              </tr>
-            </thead>
-            <tbody id="subT"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- TAB: PAGOS -->
-    <div class="inbox-content" id="tab-pagos">
-      <div class="inbox-card">
-        <h3 class="inbox-card-title">Pagos Pendientes de Revisión</h3>
-        <div class="tablewrap">
-          <table class="inbox-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Estación</th>
-                <th>Comprobante</th>
-                <th>Nota</th>
-              </tr>
-            </thead>
-            <tbody id="payT"></tbody>
-          </table>
-        </div>
-      </div>
+    <div class="tablewrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Estación</th>
+            <th>Comprobante</th>
+            <th>Nota</th>
+          </tr>
+        </thead>
+        <tbody id="payT"></tbody>
+      </table>
     </div>
   </div>
 </div>

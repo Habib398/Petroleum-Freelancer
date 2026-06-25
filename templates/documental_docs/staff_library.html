@@ -45,10 +45,15 @@
 {% include 'documental_docs/_subheader.html' %}
 
 <div class="card">
-  <div>
-    <div class="muted" style="text-transform:uppercase;font-weight:800;letter-spacing:.6px;font-size:11px">{{ module_label }} · Biblioteca</div>
-    <h1 style="margin:4px 0 6px">Plantillas disponibles</h1>
-    <p class="page-intro">Consulta y descarga las plantillas publicadas por administración para el módulo <b>{{ module_label }}</b>.</p>
+  <div style="display:flex;justify-content:space-between;gap:16px;align-items:flex-start;flex-wrap:wrap">
+    <div>
+      <div class="muted" style="text-transform:uppercase;font-weight:800;letter-spacing:.6px;font-size:11px">{{ module_label }} · Biblioteca</div>
+      <h1 style="margin:4px 0 6px">Plantillas disponibles</h1>
+      <p class="page-intro">Consulta y descarga las plantillas publicadas por administración para el módulo <b>{{ module_label }}</b>.</p>
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-start">
+      <a class="btnx alt" href="{{ staff_base }}">← Volver</a>
+    </div>
   </div>
 </div>
 

@@ -1,209 +1,601 @@
 {% extends "layout.html" %}
 {% block head %}
 <style>
-  /* Banner de pendientes (jefe) */
-  .inc-pending-banner{
-    display:flex; align-items:center; gap:14px;
-    padding:14px 18px; border-radius:14px;
-    background:linear-gradient(180deg, rgba(220,38,38,.06), rgba(220,38,38,.02));
-    border:1px solid rgba(220,38,38,.22);
-    margin-top:14px;
-  }
-  .inc-pending-banner .ico{
-    width:42px; height:42px; border-radius:12px;
-    background:#dc2626; color:#fff;
-    display:flex; align-items:center; justify-content:center;
-    font-size:22px; font-weight:900;
-    box-shadow: 0 4px 10px rgba(220,38,38,.30);
-  }
-  .inc-pending-banner .text .lbl{
-    font-size:11px; color:#7f1d1d; font-weight:800;
-    text-transform:uppercase; letter-spacing:.06em;
-  }
-  .inc-pending-banner .text .msg{
-    font-size:16px; font-weight:700; color:#1f2937; line-height:1.2; margin-top:2px;
-  }
-  .inc-pending-banner .text .msg b{ color:#b91c1c; font-size:20px; }
+  /* =============================================
+     INCIDENCIAS — Diseño premium v2
+     Compatible con theme-hme.css + dark mode
+     ============================================= */
 
-  /* Toolbar */
-  .inc-toolbar{
-    display:flex; gap:14px; align-items:center; flex-wrap:wrap;
-    padding:10px 14px; border-radius:14px;
-    background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55));
-    border:1px solid var(--hme-border, rgba(2,6,23,.08));
-    box-shadow: 0 1px 2px rgba(2,6,23,.04);
+  /* ── Stats bar ── */
+  .inc-stats{
+    display:grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap:10px;
     margin-top:14px;
   }
-  .inc-chips{ display:flex; gap:6px; flex-wrap:wrap; }
-  .inc-chip{
-    display:inline-flex; align-items:center; gap:7px;
-    padding:7px 14px; border-radius:999px;
-    background:#fff; border:1px solid rgba(2,6,23,.10);
-    font-size:13px; font-weight:600; color:#1f2937;
-    cursor:pointer; transition: all .15s ease;
-    font-family: inherit;
+  .inc-stat{
+    background:#fff;
+    border:1px solid rgba(2,6,23,.07);
+    border-radius:16px;
+    padding:16px 18px;
+    position:relative;
+    overflow:hidden;
+    transition: box-shadow .18s ease, transform .18s ease, border-color .18s ease;
   }
-  .inc-chip:hover{ border-color:rgba(2,6,23,.22); background:#f8fafc; }
-  .inc-chip.active{ background:#0f172a; color:#fff; border-color:#0f172a; }
-  .inc-chip .count{
-    display:inline-block; padding:1px 8px; border-radius:999px;
-    background:rgba(2,6,23,.08); font-size:11px; font-weight:800; color:#475569;
-    min-width:18px; text-align:center;
+  .inc-stat:hover{
+    transform:translateY(-2px);
+    box-shadow:0 12px 32px rgba(2,6,23,.08);
   }
-  .inc-chip.active .count{ background:rgba(255,255,255,.18); color:#fff; }
-  .inc-chip[data-chip="pendiente"]:not(.active) .count{ background:rgba(220,38,38,.12); color:#b91c1c; }
+  .inc-stat::after{
+    content:"";
+    position:absolute;
+    bottom:0; left:0; right:0;
+    height:3px;
+    border-radius:0 0 16px 16px;
+  }
+  .inc-stat.tone-red  ::after,
+  .inc-stat.tone-red  { border-color:rgba(220,38,38,.18); }
+  .inc-stat.tone-red::after   { background:linear-gradient(90deg,#dc2626,#ef4444); }
+  .inc-stat.tone-blue { border-color:rgba(14,165,233,.18); }
+  .inc-stat.tone-blue::after  { background:linear-gradient(90deg,#0ea5e9,#38bdf8); }
+  .inc-stat.tone-green{ border-color:rgba(22,163,74,.18); }
+  .inc-stat.tone-green::after { background:linear-gradient(90deg,#16a34a,#22c55e); }
+  .inc-stat.tone-purple{border-color:rgba(147,51,234,.18); }
+  .inc-stat.tone-purple::after{ background:linear-gradient(90deg,#9333ea,#a855f7); }
+
+  .inc-stat .stat-label{
+    font-size:10.5px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    color:var(--hme-text-soft,#64748b);
+    margin-bottom:8px;
+  }
+  .inc-stat .stat-num{
+    font-size:32px;
+    font-weight:900;
+    line-height:1;
+    letter-spacing:-.02em;
+  }
+  .inc-stat.tone-red   .stat-num{ color:#b91c1c; }
+  .inc-stat.tone-blue  .stat-num{ color:#0369a1; }
+  .inc-stat.tone-green .stat-num{ color:#15803d; }
+  .inc-stat.tone-purple.stat-num{ color:#6b21a8; }
+  .inc-stat.tone-purple .stat-num{ color:#6b21a8; }
+  .inc-stat .stat-sub{
+    font-size:11.5px;
+    color:var(--hme-text-soft,#64748b);
+    font-weight:600;
+    margin-top:4px;
+  }
+
+  /* ── Barra de acciones ── */
+  .inc-toolbar{
+    display:flex;
+    gap:10px;
+    align-items:center;
+    flex-wrap:wrap;
+    padding:10px 14px;
+    border-radius:14px;
+    background:#fff;
+    border:1px solid rgba(2,6,23,.07);
+    box-shadow:0 1px 3px rgba(2,6,23,.04);
+    margin-top:12px;
+  }
+  .inc-tabs{
+    display:flex;
+    gap:2px;
+    background:rgba(2,6,23,.04);
+    border-radius:10px;
+    padding:3px;
+  }
+  .inc-tab{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 13px;
+    border-radius:8px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--hme-text-soft,#64748b);
+    cursor:pointer;
+    border:0;
+    background:transparent;
+    transition:all .15s ease;
+    font-family:inherit;
+    white-space:nowrap;
+  }
+  .inc-tab:hover{ color:var(--hme-text,#1f2937); }
+  .inc-tab.active{
+    background:#fff;
+    color:var(--hme-text,#1f2937);
+    font-weight:800;
+    box-shadow:0 1px 4px rgba(2,6,23,.10);
+  }
+  .inc-tab .count{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    min-width:20px;
+    padding:0 5px;
+    height:18px;
+    border-radius:999px;
+    font-size:10.5px;
+    font-weight:900;
+    background:rgba(2,6,23,.06);
+    color:var(--hme-text-soft,#64748b);
+  }
+  .inc-tab.active .count{ background:rgba(2,6,23,.10); color:var(--hme-text,#1f2937); }
+  .inc-tab[data-chip="pendiente"].active .count{ background:rgba(220,38,38,.12); color:#b91c1c; }
 
   .inc-new-btn{
     margin-left:auto;
-    padding:8px 16px; border-radius:10px;
-    background:#0f172a; color:#fff; font-weight:700;
-    font-size:13px; cursor:pointer; border:0;
-    display:inline-flex; align-items:center; gap:6px;
-    transition: all .15s;
-    font-family: inherit;
+    padding:8px 16px;
+    border-radius:10px;
+    background:linear-gradient(135deg,var(--hme-accent,#2C7BE5),var(--hme-accent-2,#7C3AED));
+    color:#fff;
+    font-weight:700;
+    font-size:13px;
+    cursor:pointer;
+    border:0;
+    display:inline-flex;
+    align-items:center;
+    gap:7px;
+    transition:all .18s ease;
+    font-family:inherit;
+    box-shadow:0 6px 18px rgba(44,123,229,.22);
+    letter-spacing:.01em;
   }
-  .inc-new-btn:hover{ background:#1e293b; transform: translateY(-1px); }
-  .inc-new-btn.is-open{ background:#dc2626; }
-  .inc-new-btn .plus{ font-size:16px; line-height:1; }
+  .inc-new-btn:hover{
+    filter:brightness(1.06);
+    transform:translateY(-1px);
+    box-shadow:0 10px 26px rgba(44,123,229,.28);
+  }
+  .inc-new-btn.is-open{
+    background:linear-gradient(135deg,#dc2626,#ef4444);
+    box-shadow:0 6px 18px rgba(220,38,38,.22);
+  }
+  .inc-new-btn .icon-new{
+    width:16px; height:16px;
+    font-size:15px; line-height:1;
+    font-weight:900;
+  }
 
-  /* Formulario colapsable */
+  /* ── Banner pendientes ── */
+  .inc-pending-banner{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    padding:13px 18px;
+    border-radius:14px;
+    background:linear-gradient(135deg, rgba(220,38,38,.07), rgba(239,68,68,.03));
+    border:1px solid rgba(220,38,38,.20);
+    margin-top:12px;
+  }
+  .inc-pending-banner .banner-ico{
+    width:40px; height:40px;
+    border-radius:11px;
+    background:linear-gradient(135deg,#dc2626,#ef4444);
+    color:#fff;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:17px;
+    font-weight:900;
+    box-shadow:0 6px 14px rgba(220,38,38,.28);
+    flex-shrink:0;
+  }
+  .inc-pending-banner .banner-text .lbl{
+    font-size:10.5px;
+    color:#7f1d1d;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+  }
+  .inc-pending-banner .banner-text .msg{
+    font-size:15px;
+    font-weight:700;
+    color:#1f2937;
+    line-height:1.25;
+    margin-top:2px;
+  }
+  .inc-pending-banner .banner-text .msg b{ color:#b91c1c; }
+
+  /* ── Formulario colapsable ── */
   .inc-form{
     margin-top:10px;
     background:#fff;
-    border:1px solid rgba(2,6,23,.08); border-radius:14px;
+    border:1px solid rgba(2,6,23,.08);
+    border-radius:16px;
     overflow:hidden;
-    max-height:0; opacity:0;
-    transition: max-height .25s ease, opacity .15s, margin .15s;
+    max-height:0;
+    opacity:0;
+    transition: max-height .28s cubic-bezier(.4,0,.2,1), opacity .2s ease, border-color .2s ease;
   }
-  .inc-form.open{ max-height:480px; opacity:1; }
-  .inc-form-inner{ padding:18px; }
-  .inc-form-row{ display:grid; grid-template-columns:1fr 220px; gap:12px; margin-top:10px; }
-  .inc-form .actions{ display:flex; gap:8px; justify-content:flex-end; align-items:center; margin-top:12px; }
-  .inc-form .actions #msg{ margin-right:auto; font-size:12px; color:#64748b; }
-  .inc-form .actions #msg.ok{ color:#15803d; }
-  .inc-form .actions #msg.err{ color:#b91c1c; }
+  .inc-form.open{ max-height:520px; opacity:1; }
+  /* El borde del form cambia según severidad seleccionada */
+  .inc-form.sev-low    { border-color:rgba(100,116,139,.30); }
+  .inc-form.sev-medium { border-color:rgba(245,158,11,.35); }
+  .inc-form.sev-high   { border-color:rgba(220,38,38,.35); }
+  .inc-form.sev-critical{ border-color:rgba(127,29,29,.45); border-width:2px; }
 
-  /* Lista */
+  .inc-form-inner{ padding:20px; }
+  .inc-form-header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:14px;
+    padding-bottom:12px;
+    border-bottom:1px solid rgba(2,6,23,.06);
+  }
+  .inc-form-header .fh-title{
+    font-size:14px;
+    font-weight:800;
+    color:var(--hme-text,#1f2937);
+  }
+  .inc-form-header .fh-sub{
+    font-size:12px;
+    color:var(--hme-text-soft,#64748b);
+    margin-top:1px;
+  }
+
+  /* Indicador de severidad en tiempo real */
+  .sev-indicator{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 10px;
+    border-radius:8px;
+    font-size:11px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.05em;
+    margin-left:auto;
+    transition:all .2s ease;
+  }
+  .sev-indicator .sev-dot{
+    width:7px; height:7px;
+    border-radius:50%;
+    background:currentColor;
+  }
+  .sev-indicator.low    { background:#f1f5f9; color:#64748b; }
+  .sev-indicator.medium { background:#fef3c7; color:#92400e; }
+  .sev-indicator.high   { background:#fee2e2; color:#b91c1c; }
+  .sev-indicator.critical{ background:#7f1d1d; color:#fff; }
+
+  .inc-form-row{ display:grid; grid-template-columns:1fr 220px; gap:10px; margin-top:10px; }
+  .inc-form .actions{
+    display:flex;
+    gap:8px;
+    justify-content:flex-end;
+    align-items:center;
+    margin-top:14px;
+    padding-top:12px;
+    border-top:1px solid rgba(2,6,23,.06);
+  }
+  .inc-form .actions #msg{ margin-right:auto; font-size:12px; color:var(--hme-text-soft,#64748b); }
+  .inc-form .actions #msg.ok{ color:#15803d; font-weight:700; }
+  .inc-form .actions #msg.err{ color:#b91c1c; font-weight:700; }
+
+  /* ── Timeline de incidencias ── */
   .inc-listwrap{ margin-top:14px; }
-  .inc-list{ display:flex; flex-direction:column; gap:8px; }
+
+  .inc-timeline{
+    position:relative;
+    display:flex;
+    flex-direction:column;
+    gap:0;
+  }
+  /* Línea vertical de tiempo */
+  .inc-timeline::before{
+    content:"";
+    position:absolute;
+    left:22px;
+    top:24px;
+    bottom:24px;
+    width:2px;
+    background:linear-gradient(180deg, rgba(2,6,23,.10), rgba(2,6,23,.03));
+    border-radius:2px;
+  }
 
   .inc-row{
-    background:#fff;
-    border:1px solid rgba(2,6,23,.08); border-radius:12px;
-    padding:14px 18px;
-    display:grid; grid-template-columns: auto 1fr auto; gap:14px;
-    align-items:start;
-    transition: box-shadow .15s ease, transform .12s ease, border-color .15s;
+    display:flex;
+    gap:14px;
+    align-items:flex-start;
+    padding:14px 0 14px 0;
     position:relative;
   }
-  .inc-row:hover{ box-shadow: 0 4px 14px rgba(2,6,23,.06); border-color:rgba(2,6,23,.16); }
-  .inc-row::before{
-    content:""; position:absolute; left:0; top:14px; bottom:14px; width:3px;
-    border-radius:0 3px 3px 0;
-  }
-  .inc-row.s-pendiente::before{ background:#dc2626; }
-  .inc-row.s-leido::before    { background:#0ea5e9; }
-  .inc-row.s-atendido::before { background:#16a34a; }
-  .inc-row.s-reportado::before{ background:#9333ea; }
-  .inc-row.s-atendido, .inc-row.s-reportado{ opacity:.88; }
 
-  /* Severidad — chip lateral */
-  .inc-sev{
-    width:46px; height:46px; border-radius:11px;
-    display:flex; flex-direction:column; align-items:center; justify-content:center;
-    font-size:9px; font-weight:800; text-transform:uppercase; letter-spacing:.04em;
+  /* Nodo de timeline (punto en la línea) */
+  .inc-node{
+    width:46px;
+    flex-shrink:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    position:relative;
+    z-index:1;
+  }
+  .inc-node-dot{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    border:2px solid #fff;
+    box-shadow:0 0 0 2px currentColor;
+    margin-top:5px;
     flex-shrink:0;
   }
-  .inc-sev .icon{ font-size:16px; line-height:1; margin-bottom:2px; }
-  .inc-sev.low{      background:#f1f5f9; color:#64748b; }
-  .inc-sev.medium{   background:#fef3c7; color:#92400e; }
-  .inc-sev.high{     background:#fee2e2; color:#b91c1c; }
-  .inc-sev.critical{ background:#7f1d1d; color:#fff; }
+  .inc-row.s-pendiente .inc-node-dot{ color:#dc2626; background:#dc2626; }
+  .inc-row.s-leido     .inc-node-dot{ color:#0ea5e9; background:#0ea5e9; }
+  .inc-row.s-atendido  .inc-node-dot{ color:#16a34a; background:#16a34a; }
+  .inc-row.s-reportado .inc-node-dot{ color:#9333ea; background:#9333ea; }
 
-  /* Cuerpo */
-  .inc-body{ min-width:0; }
-  .inc-head{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:2px; }
-  .inc-folio{
-    font-size:10.5px; color:#64748b; font-weight:700;
-    letter-spacing:.04em; font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  }
-  .inc-status{
-    display:inline-flex; align-items:center; gap:4px;
-    padding:2px 9px; border-radius:8px;
-    font-size:10.5px; font-weight:800;
-    text-transform:uppercase; letter-spacing:.04em;
-  }
-  .inc-status.pendiente{ background:#fef2f2; color:#b91c1c; }
-  .inc-status.leido    { background:#e0f2fe; color:#0369a1; }
-  .inc-status.atendido { background:#dcfce7; color:#15803d; }
-  .inc-status.reportado{ background:#f3e8ff; color:#6b21a8; }
-  .inc-status .dot{ width:6px; height:6px; border-radius:50%; background:currentColor; }
-
-  .inc-title{ font-size:15px; font-weight:700; color:#0f172a; line-height:1.35; margin:2px 0 4px; }
-  .inc-desc{
-    font-size:13px; color:#475569; line-height:1.5;
-    white-space:pre-wrap; margin-bottom:6px;
+  /* Card de la incidencia */
+  .inc-card{
+    flex:1;
+    min-width:0;
+    background:#fff;
+    border:1px solid rgba(2,6,23,.07);
+    border-radius:16px;
+    padding:16px 18px;
+    transition: box-shadow .18s ease, transform .16s ease, border-color .18s ease;
+    position:relative;
     overflow:hidden;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical;
   }
-  .inc-row.expanded .inc-desc{ display:block; -webkit-line-clamp:initial; }
+  .inc-card::before{
+    content:"";
+    position:absolute;
+    left:0; top:0; bottom:0;
+    width:4px;
+    border-radius:16px 0 0 16px;
+  }
+  .inc-row.s-pendiente .inc-card::before{ background:linear-gradient(180deg,#dc2626,#ef4444); }
+  .inc-row.s-leido     .inc-card::before{ background:linear-gradient(180deg,#0ea5e9,#38bdf8); }
+  .inc-row.s-atendido  .inc-card::before{ background:linear-gradient(180deg,#16a34a,#22c55e); }
+  .inc-row.s-reportado .inc-card::before{ background:linear-gradient(180deg,#9333ea,#a855f7); }
+
+  .inc-card:hover{
+    box-shadow:0 8px 28px rgba(2,6,23,.09);
+    border-color:rgba(2,6,23,.14);
+    transform:translateY(-1px);
+  }
+  .inc-row.s-atendido  .inc-card,
+  .inc-row.s-reportado .inc-card{ opacity:.85; }
+  .inc-row.s-atendido  .inc-card:hover,
+  .inc-row.s-reportado .inc-card:hover{ opacity:1; }
+
+  /* Header de la card */
+  .inc-card-head{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    margin-bottom:6px;
+  }
+  .inc-folio{
+    font-size:10.5px;
+    color:var(--hme-text-soft,#64748b);
+    font-weight:700;
+    letter-spacing:.04em;
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+  }
+  .inc-status-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:2px 9px;
+    border-radius:8px;
+    font-size:10.5px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+  }
+  .inc-status-badge .dot{
+    width:5px; height:5px;
+    border-radius:50%;
+    background:currentColor;
+    flex-shrink:0;
+  }
+  .inc-status-badge.pendiente{ background:#fef2f2; color:#b91c1c; }
+  .inc-status-badge.leido    { background:#e0f2fe; color:#0369a1; }
+  .inc-status-badge.atendido { background:#dcfce7; color:#15803d; }
+  .inc-status-badge.reportado{ background:#f3e8ff; color:#6b21a8; }
+
+  /* Chip de severidad (inline, compacto) */
+  .inc-sev-chip{
+    margin-left:auto;
+    display:inline-flex;
+    align-items:center;
+    gap:5px;
+    padding:2px 8px;
+    border-radius:7px;
+    font-size:10px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    flex-shrink:0;
+  }
+  .inc-sev-chip .sev-bar{
+    width:3px;
+    border-radius:2px;
+    align-self:stretch;
+    min-height:12px;
+  }
+  .inc-sev-chip.low     { background:#f1f5f9; color:#64748b; }
+  .inc-sev-chip.low .sev-bar    { background:#94a3b8; }
+  .inc-sev-chip.medium  { background:#fef3c7; color:#92400e; }
+  .inc-sev-chip.medium .sev-bar { background:#f59e0b; }
+  .inc-sev-chip.high    { background:#fee2e2; color:#b91c1c; }
+  .inc-sev-chip.high .sev-bar   { background:#dc2626; }
+  .inc-sev-chip.critical{ background:#7f1d1d; color:#fca5a5; }
+  .inc-sev-chip.critical .sev-bar{ background:#fca5a5; }
+
+  /* Título y descripción */
+  .inc-title{
+    font-size:15px;
+    font-weight:700;
+    color:var(--hme-text,#0f172a);
+    line-height:1.35;
+    margin:0 0 5px;
+  }
+  .inc-desc{
+    font-size:13px;
+    color:var(--hme-text-soft,#475569);
+    line-height:1.55;
+    white-space:pre-wrap;
+    overflow:hidden;
+    display:-webkit-box;
+    -webkit-line-clamp:2;
+    -webkit-box-orient:vertical;
+    margin-bottom:6px;
+  }
+  .inc-row.expanded .inc-desc{
+    display:block;
+    -webkit-line-clamp:initial;
+  }
   .inc-desc-toggle{
-    font-size:11.5px; color:#0369a1; font-weight:600;
-    cursor:pointer; background:none; border:0; padding:0; margin-bottom:6px;
+    font-size:11.5px;
+    color:var(--hme-accent,#2C7BE5);
+    font-weight:600;
+    cursor:pointer;
+    background:none;
+    border:0;
+    padding:0;
+    margin-bottom:8px;
+    transition:opacity .15s;
+    font-family:inherit;
+  }
+  .inc-desc-toggle:hover{ opacity:.75; }
+
+  /* Meta info y acciones en el footer de la card */
+  .inc-card-foot{
+    display:flex;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-top:4px;
   }
   .inc-meta{
-    font-size:11.5px; color:#64748b;
-    display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+    font-size:11.5px;
+    color:var(--hme-text-soft,#64748b);
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+    align-items:center;
+    flex:1;
+    min-width:0;
   }
-  .inc-meta .sep{ color:#cbd5e1; }
+  .inc-meta .sep{ color:rgba(2,6,23,.18); }
+  .inc-meta .m-tag{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:1px 7px;
+    border-radius:5px;
+    background:rgba(2,6,23,.04);
+    font-weight:700;
+    font-size:10.5px;
+  }
 
-  /* Acciones */
+  /* Botones de acción (jefe) */
   .inc-actions{ display:flex; gap:6px; flex-shrink:0; align-items:center; }
   .btn-act{
-    padding:7px 12px; border-radius:9px;
-    font-size:12px; font-weight:700; cursor:pointer;
-    border:1px solid; background:#fff;
+    padding:6px 12px;
+    border-radius:9px;
+    font-size:11.5px;
+    font-weight:700;
+    cursor:pointer;
+    border:1px solid;
+    background:#fff;
     transition: all .15s ease;
-    font-family: inherit;
-    white-space: nowrap;
+    font-family:inherit;
+    white-space:nowrap;
+    letter-spacing:.01em;
   }
-  .btn-act:hover{ transform: translateY(-1px); }
-  .btn-act.read{   color:#0369a1; border-color:rgba(14,165,233,.30); }
-  .btn-act.read:hover{   background:#e0f2fe; border-color:rgba(14,165,233,.50); }
-  .btn-act.attend{ color:#15803d; border-color:rgba(34,197,94,.30); }
+  .btn-act:hover{ transform:translateY(-1px); }
+  .btn-act:active{ transform:translateY(0); }
+  .btn-act.read  { color:#0369a1; border-color:rgba(14,165,233,.28); }
+  .btn-act.read:hover  { background:#e0f2fe; border-color:rgba(14,165,233,.50); }
+  .btn-act.attend{ color:#15803d; border-color:rgba(34,197,94,.28); }
   .btn-act.attend:hover{ background:#dcfce7; border-color:rgba(34,197,94,.50); }
-  .btn-act.report{ color:#6b21a8; border-color:rgba(147,51,234,.30); }
+  .btn-act.report{ color:#6b21a8; border-color:rgba(147,51,234,.28); }
   .btn-act.report:hover{ background:#f3e8ff; border-color:rgba(147,51,234,.50); }
 
-  /* Estado vacío */
+  /* ── Estado vacío ── */
   .inc-empty{
-    padding:48px 24px; text-align:center;
+    padding:56px 24px;
+    text-align:center;
     background:#fff;
-    border:1px dashed rgba(2,6,23,.14); border-radius:14px;
-    color:#94a3b8;
+    border:1px dashed rgba(2,6,23,.12);
+    border-radius:16px;
+    color:var(--hme-text-soft,#94a3b8);
   }
-  .inc-empty .ico{ font-size:42px; opacity:.35; margin-bottom:10px; }
-  .inc-empty .ttl{ font-size:15px; font-weight:700; color:#475569; margin-bottom:4px; }
-  .inc-empty .sub{ font-size:13px; color:#94a3b8; }
-
-  /* Responsive */
-  @media (max-width:720px){
-    .inc-row{ grid-template-columns: auto 1fr; }
-    .inc-actions{ grid-column: 1 / -1; justify-content:flex-end; flex-wrap:wrap; }
-    .inc-form-row{ grid-template-columns:1fr; }
-    .inc-new-btn{ margin-left:0; }
+  .inc-empty .ico-wrap{
+    width:56px; height:56px;
+    border-radius:16px;
+    background:rgba(2,6,23,.04);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    margin:0 auto 14px;
   }
+  .inc-empty .ico-wrap svg{
+    width:24px; height:24px;
+    stroke:rgba(2,6,23,.22);
+    fill:none;
+    stroke-width:1.5;
+    stroke-linecap:round;
+    stroke-linejoin:round;
+  }
+  .inc-empty .ttl{
+    font-size:15px;
+    font-weight:700;
+    color:var(--hme-text-soft,#475569);
+    margin-bottom:5px;
+  }
+  .inc-empty .sub{ font-size:13px; }
 
+  /* ── Dark mode ── */
+  body.dark .inc-stat,
   body.dark .inc-toolbar,
   body.dark .inc-form,
-  body.dark .inc-row,
-  body.dark .inc-chip,
+  body.dark .inc-card,
   body.dark .inc-empty,
   body.dark .btn-act{
-    background:rgba(15,23,42,.55); border-color:rgba(255,255,255,.08); color:#e2e8f0;
+    background:rgba(15,23,42,.60);
+    border-color:rgba(255,255,255,.08);
+    color:var(--hme-text,#e2e8f0);
   }
+  body.dark .inc-timeline::before{ background:linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.02)); }
   body.dark .inc-title{ color:#f1f5f9; }
   body.dark .inc-desc, body.dark .inc-meta{ color:#94a3b8; }
+  body.dark .inc-tabs{ background:rgba(255,255,255,.06); }
+  body.dark .inc-tab.active{ background:rgba(255,255,255,.10); }
+  body.dark .inc-node-dot{ border-color:rgba(15,23,42,.8); }
+  body.dark .inc-pending-banner{ background:rgba(127,29,29,.15); }
+  body.dark .inc-form-inner, body.dark .inc-form-header{ border-color:rgba(255,255,255,.06); }
+  body.dark .inc-empty .ico-wrap{ background:rgba(255,255,255,.06); }
+  body.dark .inc-empty .ico-wrap svg{ stroke:rgba(255,255,255,.20); }
+  body.dark .inc-stat.tone-red   { background:rgba(127,29,29,.15); border-color:rgba(220,38,38,.22); }
+  body.dark .inc-stat.tone-blue  { background:rgba(7,89,133,.15);  border-color:rgba(14,165,233,.22); }
+  body.dark .inc-stat.tone-green { background:rgba(20,83,45,.15);  border-color:rgba(22,163,74,.22); }
+  body.dark .inc-stat.tone-purple{ background:rgba(88,28,135,.15); border-color:rgba(147,51,234,.22); }
+
+  /* ── Responsive ── */
+  @media (max-width:860px){
+    .inc-stats{ grid-template-columns:repeat(2,1fr); }
+  }
+  @media (max-width:640px){
+    .inc-stats{ grid-template-columns:1fr 1fr; gap:8px; }
+    .inc-stat .stat-num{ font-size:26px; }
+    .inc-timeline::before{ left:16px; }
+    .inc-node{ width:34px; }
+    .inc-form-row{ grid-template-columns:1fr; }
+    .inc-new-btn{ margin-left:0; }
+    .inc-card-foot{ flex-direction:column; align-items:flex-start; }
+    .inc-actions{ flex-wrap:wrap; }
+  }
 </style>
 {% endblock %}
 {% block content %}
@@ -215,28 +607,66 @@
   </div>
 </div>
 
+<!-- Stats bar -->
+<div class="inc-stats" id="statsBar">
+  <div class="inc-stat tone-red">
+    <div class="stat-label">Pendientes</div>
+    <div class="stat-num" id="statPendiente">—</div>
+    <div class="stat-sub">Sin atender</div>
+  </div>
+  <div class="inc-stat tone-blue">
+    <div class="stat-label">Leídas</div>
+    <div class="stat-num" id="statLeido">—</div>
+    <div class="stat-sub">Reconocidas</div>
+  </div>
+  <div class="inc-stat tone-green">
+    <div class="stat-label">Atendidas</div>
+    <div class="stat-num" id="statAtendido">—</div>
+    <div class="stat-sub">Resueltas en sitio</div>
+  </div>
+  <div class="inc-stat tone-purple">
+    <div class="stat-label">Reportadas</div>
+    <div class="stat-num" id="statReportado">—</div>
+    <div class="stat-sub">Escaladas</div>
+  </div>
+</div>
+
+<!-- Banner de pendientes (solo jefe) -->
 <div id="pendingBanner" class="inc-pending-banner" style="display:none;">
-  <div class="ico">!</div>
-  <div class="text">
+  <div class="banner-ico">!</div>
+  <div class="banner-text">
     <div class="lbl">Pendientes de revisar</div>
     <div class="msg"><b><span id="pendingCount">0</span></b> incidencia(s) sin marcar en tu estación</div>
   </div>
 </div>
 
+<!-- Toolbar con tabs y botón nueva -->
 <div class="inc-toolbar">
-  <div class="inc-chips" id="chipsBox">
-    <button class="inc-chip active" data-chip="" type="button">Todas <span class="count" data-count="">0</span></button>
-    <button class="inc-chip" data-chip="pendiente" type="button">Pendientes <span class="count" data-count="pendiente">0</span></button>
-    <button class="inc-chip" data-chip="leido" type="button">Leídas <span class="count" data-count="leido">0</span></button>
-    <button class="inc-chip" data-chip="atendido" type="button">Atendidas <span class="count" data-count="atendido">0</span></button>
-    <button class="inc-chip" data-chip="reportado" type="button">Reportadas <span class="count" data-count="reportado">0</span></button>
+  <div class="inc-tabs" id="chipsBox">
+    <button class="inc-tab active" data-chip="" type="button">Todas <span class="count" data-count="">0</span></button>
+    <button class="inc-tab" data-chip="pendiente" type="button">Pendientes <span class="count" data-count="pendiente">0</span></button>
+    <button class="inc-tab" data-chip="leido" type="button">Leídas <span class="count" data-count="leido">0</span></button>
+    <button class="inc-tab" data-chip="atendido" type="button">Atendidas <span class="count" data-count="atendido">0</span></button>
+    <button class="inc-tab" data-chip="reportado" type="button">Reportadas <span class="count" data-count="reportado">0</span></button>
   </div>
-  <button class="inc-new-btn" id="btnToggleForm" type="button"><span class="plus">+</span> Nueva incidencia</button>
+  <button class="inc-new-btn" id="btnToggleForm" type="button">
+    <span class="icon-new">+</span> Nueva incidencia
+  </button>
 </div>
 
+<!-- Formulario colapsable -->
 <div class="inc-form" id="formBox">
   <div class="inc-form-inner">
-    <input id="title" class="input" placeholder="Título breve" style="margin-bottom:10px;">
+    <div class="inc-form-header">
+      <div>
+        <div class="fh-title">Registrar nueva incidencia</div>
+        <div class="fh-sub">El jefe de estación será notificado automáticamente.</div>
+      </div>
+      <span class="sev-indicator medium" id="sevIndicator">
+        <span class="sev-dot"></span>Severidad media
+      </span>
+    </div>
+    <input id="title" class="input" placeholder="Título breve de la incidencia" style="margin-bottom:10px;">
     <textarea id="description" class="input" style="min-height:90px;" placeholder="Describe la incidencia con el detalle que el jefe necesita para actuar"></textarea>
     <div class="inc-form-row">
       <select id="severity" class="input">
@@ -245,64 +675,82 @@
         <option value="high">Severidad alta</option>
         <option value="critical">Severidad crítica</option>
       </select>
-      <input id="module" class="input" placeholder="Módulo (opcional)">
+      <input id="module" class="input" placeholder="Módulo o área (opcional)">
     </div>
     <div class="actions">
       <div id="msg"></div>
       <button class="btn ghost" id="btnCancel" type="button">Cancelar</button>
-      <button class="btn primary" id="btnCreate" type="button">Registrar</button>
+      <button class="btn primary" id="btnCreate" type="button">Registrar incidencia</button>
     </div>
   </div>
 </div>
 
+<!-- Lista/timeline -->
 <div class="inc-listwrap">
-  <div id="list" class="inc-list"></div>
+  <div id="list" class="inc-timeline"></div>
 </div>
 {% endblock %}
 {% block scripts %}
 <script>
 const STATUS_LABEL   = {pendiente:'Pendiente', leido:'Leída', atendido:'Atendida', reportado:'Reportada'};
 const SEVERITY_LABEL = {low:'Baja', medium:'Media', high:'Alta', critical:'Crítica'};
-const SEVERITY_ICON  = {low:'·', medium:'!', high:'!!', critical:'!!!'};
 
 let ME_ROLE = '';
 let ALL_ITEMS = [];
 let FILTER = '';
 let EXPANDED = new Set();
 
-function fmtDate(s){ if(!s) return '—'; return String(s).replace('T',' ').slice(0,16); }
+function fmtDate(s){
+  if(!s) return '—';
+  const d = new Date(String(s).replace(' ','T'));
+  if(isNaN(d)) return String(s).slice(0,16).replace('T',' ');
+  const now = new Date();
+  const diff = Math.round((now - d) / 60000); // minutos
+  if(diff < 60)  return `Hace ${diff < 2 ? '1 min' : diff + ' min'}`;
+  if(diff < 1440) return `Hace ${Math.floor(diff/60)} h`;
+  return d.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'});
+}
+
+function fmtDateFull(s){
+  if(!s) return '—';
+  return String(s).replace('T',' ').slice(0,16);
+}
 
 function rowHtml(it){
   const expanded = EXPANDED.has(it.id) ? 'expanded' : '';
-  const sev = (it.severity || 'medium').toLowerCase();
-  const status = (it.status || 'pendiente').toLowerCase();
-  const folio = it.folio || ('#' + it.id);
-  const meta = [
-    `<span>${_esc(it.station_code || 'Global')}</span>`,
+  const sev    = (it.severity || 'medium').toLowerCase();
+  const status = (it.status   || 'pendiente').toLowerCase();
+  const folio  = it.folio || ('#' + it.id);
+
+  // Meta info
+  const metaParts = [
+    `<span class="m-tag">${_esc(it.station_code || 'Global')}</span>`,
     `<span class="sep">·</span>`,
-    `<span>Creada ${_esc(fmtDate(it.created_at))}</span>`,
+    `<span title="${_esc(fmtDateFull(it.created_at))}">${_esc(fmtDate(it.created_at))}</span>`,
   ];
-  if (it.created_by_name){
-    meta.push(`<span class="sep">·</span><span>Por ${_esc(it.created_by_name)}</span>`);
+  if(it.created_by_name){
+    metaParts.push(`<span class="sep">·</span><span>${_esc(it.created_by_name)}</span>`);
   }
-  if (it.acknowledged_at){
-    meta.push(`<span class="sep">·</span><span>Leída ${_esc(fmtDate(it.acknowledged_at))}</span>`);
+  if(it.acknowledged_at){
+    metaParts.push(`<span class="sep">·</span><span>Leída ${_esc(fmtDateFull(it.acknowledged_at))}</span>`);
   }
-  if (it.resolved_at){
-    meta.push(`<span class="sep">·</span><span>Cerrada ${_esc(fmtDate(it.resolved_at))}</span>`);
+  if(it.resolved_at){
+    metaParts.push(`<span class="sep">·</span><span>Cerrada ${_esc(fmtDateFull(it.resolved_at))}</span>`);
   }
 
+  // Acciones (solo jefe)
   const actions = [];
-  if (ME_ROLE === 'jefe_estacion'){
-    if (status === 'pendiente'){
+  if(ME_ROLE === 'jefe_estacion'){
+    if(status === 'pendiente'){
       actions.push(`<button class="btn-act read" onclick="markIncident(${it.id},'leido')">Marcar leída</button>`);
     }
-    if (status === 'pendiente' || status === 'leido'){
+    if(status === 'pendiente' || status === 'leido'){
       actions.push(`<button class="btn-act attend" onclick="markIncident(${it.id},'atendido')">Atender</button>`);
       actions.push(`<button class="btn-act report" onclick="markIncident(${it.id},'reportado')">Reportar</button>`);
     }
   }
 
+  // Descripción
   const desc = (it.description || '').trim();
   const showToggle = desc.length > 140;
   const descHtml = desc
@@ -311,42 +759,55 @@ function rowHtml(it){
     : '';
 
   return `
-    <article class="inc-row s-${status} ${expanded}" data-id="${it.id}">
-      <div class="inc-sev ${sev}" title="Severidad ${_esc(SEVERITY_LABEL[sev]||sev)}">
-        <span class="icon">${SEVERITY_ICON[sev]||'·'}</span>
-        <span>${_esc(SEVERITY_LABEL[sev]||sev)}</span>
+    <div class="inc-row s-${status} ${expanded}" data-id="${it.id}">
+      <div class="inc-node">
+        <div class="inc-node-dot" title="${_esc(STATUS_LABEL[status]||status)}"></div>
       </div>
-      <div class="inc-body">
-        <div class="inc-head">
+      <article class="inc-card">
+        <div class="inc-card-head">
           <span class="inc-folio">${_esc(folio)}</span>
-          <span class="inc-status ${status}"><span class="dot"></span>${_esc(STATUS_LABEL[status]||status)}</span>
+          <span class="inc-status-badge ${status}"><span class="dot"></span>${_esc(STATUS_LABEL[status]||status)}</span>
+          <span class="inc-sev-chip ${sev}"><span class="sev-bar"></span>${_esc(SEVERITY_LABEL[sev]||sev)}</span>
         </div>
         <div class="inc-title">${_esc(it.title || '(sin título)')}</div>
         ${descHtml}
-        <div class="inc-meta">${meta.join('')}</div>
-      </div>
-      ${actions.length ? `<div class="inc-actions">${actions.join('')}</div>` : ''}
-    </article>`;
+        <div class="inc-card-foot">
+          <div class="inc-meta">${metaParts.join('')}</div>
+          ${actions.length ? `<div class="inc-actions">${actions.join('')}</div>` : ''}
+        </div>
+      </article>
+    </div>`;
 }
 
 function updateCounts(){
-  const counts = {'': ALL_ITEMS.length, pendiente:0, leido:0, atendido:0, reportado:0};
+  const counts = {'':ALL_ITEMS.length, pendiente:0, leido:0, atendido:0, reportado:0};
   ALL_ITEMS.forEach(it => { counts[it.status] = (counts[it.status]||0) + 1; });
+
+  // Tabs
   qsa('[data-count]').forEach(el => {
     const k = el.getAttribute('data-count');
     el.textContent = counts[k] || 0;
   });
+
+  // Stats bar
+  const set = (id, v) => { const el = qs('#'+id); if(el) el.textContent = v; };
+  set('statPendiente', counts.pendiente || 0);
+  set('statLeido',     counts.leido     || 0);
+  set('statAtendido',  counts.atendido  || 0);
+  set('statReportado', counts.reportado || 0);
 }
 
 function renderList(){
   const box = qs('#list');
   const items = FILTER ? ALL_ITEMS.filter(it => it.status === FILTER) : ALL_ITEMS;
-  if (!items.length){
+  if(!items.length){
     box.innerHTML = `
       <div class="inc-empty">
-        <div class="ico">∅</div>
+        <div class="ico-wrap">
+          <svg viewBox="0 0 24 24"><path d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414A1 1 0 0119 9.414V19a2 2 0 01-2 2z"/></svg>
+        </div>
         <div class="ttl">No hay incidencias ${FILTER ? 'en este filtro' : 'registradas'}</div>
-        <div class="sub">${FILTER ? 'Cambia de filtro o limpia la selección.' : 'Cuando registres una incidencia, aparecerá en esta lista.'}</div>
+        <div class="sub">${FILTER ? 'Cambia de filtro o limpia la selección.' : 'Cuando registres una incidencia aparecerá en esta lista.'}</div>
       </div>`;
     return;
   }
@@ -354,7 +815,7 @@ function renderList(){
 }
 
 window.toggleExpand = function(id){
-  if (EXPANDED.has(id)) EXPANDED.delete(id);
+  if(EXPANDED.has(id)) EXPANDED.delete(id);
   else EXPANDED.add(id);
   renderList();
 };
@@ -368,22 +829,35 @@ async function refresh(){
 
 function setFilter(value){
   FILTER = value;
-  qsa('.inc-chip').forEach(c => c.classList.toggle('active', c.getAttribute('data-chip') === value));
+  qsa('.inc-tab').forEach(c => c.classList.toggle('active', c.getAttribute('data-chip') === value));
   renderList();
+}
+
+/* Indicador de severidad del formulario */
+const SEV_LABEL = {low:'Severidad baja', medium:'Severidad media', high:'Severidad alta', critical:'Severidad crítica'};
+function updateSevIndicator(v){
+  const el = qs('#sevIndicator');
+  const fb = qs('#formBox');
+  if(!el || !fb) return;
+  el.className = `sev-indicator ${v}`;
+  el.innerHTML = `<span class="sev-dot"></span>${_esc(SEV_LABEL[v]||v)}`;
+  // Borde del form
+  fb.classList.remove('sev-low','sev-medium','sev-high','sev-critical');
+  fb.classList.add('sev-'+v);
 }
 
 async function createIncident(){
   const title = qs('#title').value.trim();
-  const msg = qs('#msg');
+  const msg   = qs('#msg');
   msg.className = '';
-  if (!title){ msg.textContent = 'Falta el título.'; msg.className = 'err'; return; }
+  if(!title){ msg.textContent = 'Falta el título.'; msg.className = 'err'; return; }
   await api('/api/incidents', {
     method:'POST',
     body: JSON.stringify({
       title,
       description: qs('#description').value,
-      module: qs('#module').value,
-      severity: qs('#severity').value,
+      module:      qs('#module').value,
+      severity:    qs('#severity').value,
     }),
   });
   msg.textContent = 'Registrada. El jefe de estación fue notificado.';
@@ -391,8 +865,10 @@ async function createIncident(){
   qs('#title').value = '';
   qs('#description').value = '';
   qs('#module').value = '';
+  qs('#severity').value = 'medium';
+  updateSevIndicator('medium');
   await Promise.all([refresh(), refreshPendingBanner()]);
-  setTimeout(() => closeForm(), 1200);
+  setTimeout(() => closeForm(), 1400);
 }
 
 window.markIncident = async function(id, status){
@@ -401,26 +877,26 @@ window.markIncident = async function(id, status){
 };
 
 async function refreshPendingBanner(){
-  if (ME_ROLE !== 'jefe_estacion') return;
+  if(ME_ROLE !== 'jefe_estacion') return;
   try{
     const r = await api('/api/incidents/pending-count');
     const n = Number(r.count || 0);
     qs('#pendingBanner').style.display = n > 0 ? 'flex' : 'none';
     qs('#pendingCount').textContent = n;
-    if (typeof updateIncidentsBadge === 'function') updateIncidentsBadge(n);
+    if(typeof updateIncidentsBadge === 'function') updateIncidentsBadge(n);
   }catch(e){}
 }
 
 function openForm(){
   qs('#formBox').classList.add('open');
   qs('#btnToggleForm').classList.add('is-open');
-  qs('#btnToggleForm').innerHTML = '<span class="plus">×</span> Cerrar';
-  setTimeout(() => qs('#title').focus(), 200);
+  qs('#btnToggleForm').innerHTML = '<span class="icon-new">×</span> Cerrar';
+  setTimeout(() => qs('#title').focus(), 220);
 }
 function closeForm(){
   qs('#formBox').classList.remove('open');
   qs('#btnToggleForm').classList.remove('is-open');
-  qs('#btnToggleForm').innerHTML = '<span class="plus">+</span> Nueva incidencia';
+  qs('#btnToggleForm').innerHTML = '<span class="icon-new">+</span> Nueva incidencia';
   qs('#msg').textContent = '';
   qs('#msg').className = '';
 }
@@ -431,14 +907,14 @@ function closeForm(){
     ME_ROLE = (r.me || {}).role || '';
   }catch(e){}
 
-  // chips
-  qsa('.inc-chip').forEach(chip => {
-    chip.addEventListener('click', () => setFilter(chip.getAttribute('data-chip') || ''));
+  // Tabs de filtro
+  qsa('.inc-tab').forEach(tab => {
+    tab.addEventListener('click', () => setFilter(tab.getAttribute('data-chip') || ''));
   });
 
-  // form toggle
+  // Toggle del formulario
   qs('#btnToggleForm').addEventListener('click', () => {
-    if (qs('#formBox').classList.contains('open')) closeForm(); else openForm();
+    if(qs('#formBox').classList.contains('open')) closeForm(); else openForm();
   });
   qs('#btnCancel').addEventListener('click', closeForm);
   qs('#btnCreate').addEventListener('click', () =>
@@ -447,6 +923,10 @@ function closeForm(){
       qs('#msg').className = 'err';
     })
   );
+
+  // Preview de severidad en tiempo real
+  qs('#severity').addEventListener('change', e => updateSevIndicator(e.target.value));
+  updateSevIndicator('medium');
 
   await Promise.all([refresh(), refreshPendingBanner()]);
 })();

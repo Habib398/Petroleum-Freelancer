@@ -65,9 +65,13 @@ async function loadMe(){
   qsa("[data-operador-only]").forEach(a=>{
     a.hidden = me.role !== "operador";
   });
-  // Supervisores (admin/jefe): calendario operativo + evidencias por estación.
+  // Supervisores (admin/jefe): calendario operativo.
   qsa("[data-supervisor-only]").forEach(a=>{
     a.hidden = !["admin","jefe_estacion"].includes(me.role);
+  });
+  // Solo jefe de estación (no admin): evidencias por estación en operación.
+  qsa("[data-jefe-only]").forEach(a=>{
+    a.hidden = me.role !== "jefe_estacion";
   });
 
   // privileged-only links (admin/contador/auditor)

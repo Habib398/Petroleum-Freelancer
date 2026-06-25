@@ -1,21 +1,4 @@
 (async ()=>{
-  // === SIDEBAR TOGGLE ===
-  const sidebarToggle = qs("#sidebarToggle");
-  const inboxSidebar = qs("#inboxSidebar");
-
-  if (sidebarToggle && inboxSidebar) {
-    sidebarToggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      inboxSidebar.classList.toggle("collapsed");
-      localStorage.setItem("inboxSidebarCollapsed", inboxSidebar.classList.contains("collapsed"));
-    });
-
-    // Restore sidebar state
-    if (localStorage.getItem("inboxSidebarCollapsed") === "true") {
-      inboxSidebar.classList.add("collapsed");
-    }
-  }
-
   // === TAB SWITCHING ===
   const tabs = qsa(".inbox-tab");
   tabs.forEach(tab => {
@@ -63,7 +46,6 @@
     const fTo = qs("#fTo");
     const fSev = qs("#fSev");
     const fAlertStatus = qs("#fAlertStatus");
-    const fSubStatus = qs("#fSubStatus");
     const fQ = qs("#fQ");
 
     if (fStation && fStation.value) q.set("station_id", fStation.value);
@@ -71,7 +53,6 @@
     if (fTo && fTo.value) q.set("to", fTo.value);
     if (fSev && fSev.value) q.set("severity", fSev.value);
     if (fAlertStatus && fAlertStatus.value) q.set("alert_status", fAlertStatus.value);
-    if (fSubStatus && fSubStatus.value) q.set("submission_status", fSubStatus.value);
     if (fQ && fQ.value) q.set("q", fQ.value);
     return q;
   }
@@ -86,7 +67,6 @@
       if (kpis) {
         const kpisData = data.kpis || {};
         const cards = [
-          {l:"Entregas pendientes", v:kpisData.submissions_pending||0, type:(kpisData.submissions_pending?"warning":"success")},
           {l:"Pagos pendientes", v:kpisData.payments_pending||0, type:(kpisData.payments_pending?"warning":"success")},
           {l:"Alertas críticas", v:kpisData.red_alerts||0, type:(kpisData.red_alerts?"critical":"success")},
         ];
@@ -128,36 +108,6 @@
           });
         }
         actSummaryGrid.innerHTML = gridHtml;
-      }
-
-      // === SUBMISSIONS TABLE ===
-      const subT = qs("#subT");
-      if (subT) {
-        const submissions = data.submissions || [];
-        let subHtml = "";
-        if (submissions.length === 0) {
-          subHtml = '<tr><td colspan="8" style="text-align: center; padding: 30px; color: var(--hme-text-soft);">Sin entregas pendientes</td></tr>';
-        } else {
-          submissions.forEach(s => {
-            const status = s.status||"";
-            const completed = status !== "rejected";
-            const tag = completed ? "ok" : "bad";
-            const stLabel = completed ? "Completada" : "Rechazada";
-            const evLink = s.event_id ? '<a class="btn-link" href="/mod/activities/event/' + s.event_id + '">Ver</a>' : "—";
-            const evidenceLink = s.evidence_path ? '<a class="btn-link" href="/uploads/' + s.evidence_path + '">Descargar</a>' : "—";
-            subHtml += '<tr>' +
-              '<td><strong>' + s.id + '</strong></td>' +
-              '<td>' + (s.event_date||s.created_at||"-").slice(0,10) + '</td>' +
-              '<td>' + (s.station_name||"") + '</td>' +
-              '<td>' + (s.activity_title||"") + '</td>' +
-              '<td>' + (s.user_name||"") + '</td>' +
-              '<td><span class="tag ' + tag + '">' + stLabel + '</span></td>' +
-              '<td>' + evidenceLink + '</td>' +
-              '<td>' + evLink + '</td>' +
-              '</tr>';
-          });
-        }
-        subT.innerHTML = subHtml;
       }
 
       // === PAYMENTS TABLE ===
@@ -208,27 +158,52 @@
         alertT.innerHTML = alertHtml;
       }
 
-      // === ACTIVITIES MISSING TABLE ===
-      const actM = qs("#actMissingT");
-      if (actM && data.activity_overview){
-        const missing = data.activity_overview.missing || [];
-        let actHtml = "";
-        if (missing.length === 0) {
-          actHtml = '<tr><td colspan="5" style="text-align: center; padding: 30px; color: var(--hme-text-soft);">Todas las actividades están al día</td></tr>';
-        } else {
-          missing.forEach(m => {
-            const statusTag = m.status === "rejected" ? "bad" : "warn";
-            const statusLabel = m.status === "rejected" ? "Rechazada" : "Pendiente";
-            actHtml += '<tr>' +
-              '<td>' + (m.due_date||"—") + '</td>' +
-              '<td>' + (m.station_code||"") + '</td>' +
-              '<td>' + (m.activity_title||"") + '</td>' +
-              '<td>' + (m.recurrence||"—") + '</td>' +
-              '<td><span class="tag ' + statusTag + '">' + statusLabel + '</span></td>' +
-              '</tr>';
-          });
+      // === STATION EVIDENCE TABLE (tab actividades) ===
+      const actEv = qs("#actEvidenceT");
+      const actEvCount = qs("#actEvidenceCount");
+      if (actEv) {
+        try {
+          const evParams = new URLSearchParams();
+          const _fSt = qs("#fStation"); if (_fSt && _fSt.value) evParams.set("station_id", _fSt.value);
+          const _fFr = qs("#fFrom");  if (_fFr && _fFr.value) evParams.set("from", _fFr.value);
+          const _fTo = qs("#fTo");    if (_fTo && _fTo.value) evParams.set("to", _fTo.value);
+          const _fQ  = qs("#fQ");     if (_fQ  && _fQ.value)  evParams.set("q",  _fQ.value);
+
+          const evData = await api("/api/station-evidence?" + evParams.toString());
+          const items = evData.items || [];
+
+          if (actEvCount) actEvCount.textContent = items.length ? "(" + items.length + ")" : "";
+
+          if (items.length === 0) {
+            actEv.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:30px;color:var(--hme-text-soft);">Sin evidencias para los filtros seleccionados.</td></tr>';
+          } else {
+            actEv.innerHTML = items.map(it => {
+              const fecha = (it.event_date || it.created_at || "").slice(0, 10) || "—";
+              const estacion = '<b>' + _esc(it.station_code || "") + '</b>' +
+                (it.station_name ? ' • ' + _esc(it.station_name) : "");
+              const actividad = it.event_id
+                ? '<a class="btn-link" href="/mod/activities/event/' + it.event_id + '">' + _esc(it.activity_title || "Actividad") + '</a>'
+                : _esc(it.activity_title || "—");
+              const usuario = _esc(it.user_name || "—");
+              const notas = _esc((it.notes || "").slice(0, 100)) || '<span style="color:var(--hme-text-soft)">—</span>';
+              const archivo = it.evidence_path
+                ? '<a class="btn ghost small" href="/uploads/' + encodeURIComponent(it.evidence_path) + '?inline=1" target="_blank" rel="noopener" style="margin-right:4px;">Ver</a>' +
+                  '<a class="btn small" href="/uploads/' + encodeURIComponent(it.evidence_path) + '">Descargar</a>'
+                : '—';
+              return '<tr>' +
+                '<td>' + fecha + '</td>' +
+                '<td>' + estacion + '</td>' +
+                '<td>' + actividad + '</td>' +
+                '<td>' + usuario + '</td>' +
+                '<td style="font-size:12px;color:var(--hme-text-soft);max-width:180px;">' + notas + '</td>' +
+                '<td style="white-space:nowrap;">' + archivo + '</td>' +
+                '</tr>';
+            }).join("");
+          }
+        } catch (evErr) {
+          const actEv2 = qs("#actEvidenceT");
+          if (actEv2) actEv2.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px;color:var(--hme-danger);">Error al cargar evidencias.</td></tr>';
         }
-        actM.innerHTML = actHtml;
       }
     } catch (e) {
       console.error("Error loading inbox data:", e);
@@ -247,13 +222,11 @@
       const fStation = qs("#fStation");
       const fSev = qs("#fSev");
       const fAlertStatus = qs("#fAlertStatus");
-      const fSubStatus = qs("#fSubStatus");
       const fQ = qs("#fQ");
 
       if (fStation) fStation.value = "";
       if (fSev) fSev.value = "";
       if (fAlertStatus) fAlertStatus.value = "";
-      if (fSubStatus) fSubStatus.value = "";
       if (fQ) fQ.value = "";
 
       load();

@@ -1,83 +1,350 @@
 {% extends "layout.html" %}
 {% block head %}
 <style>
-  .ir-wrap{ display:flex; flex-direction:column; gap:14px; margin-top:14px; }
-  .ir-toolbar{
-    display:flex; flex-wrap:wrap; align-items:center; gap:10px;
-    padding:12px 14px; border-radius:14px;
-    background:linear-gradient(180deg, rgba(255,255,255,.85), rgba(255,255,255,.55));
-    border:1px solid var(--hme-border, rgba(2,6,23,.08));
-    box-shadow:0 1px 2px rgba(2,6,23,.04);
-  }
-  .ir-toolbar .group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
-  .ir-toolbar label.tiny{ font-size:11px; font-weight:700; color:var(--hme-text-soft,#64748b); text-transform:uppercase; letter-spacing:.04em; }
-  .ir-toolbar .input{ padding:8px 10px; font-size:13px; min-width:140px; }
+  /* =============================================
+     REPORTE DE INCIDENCIAS — Admin
+     Mismo design system que mod/incidents.html v2
+     ============================================= */
 
-  .ir-card{
-    padding:18px; border-radius:16px; background:#fff;
-    border:1px solid var(--hme-border, rgba(2,6,23,.08));
+  .ir-wrap{ display:flex; flex-direction:column; gap:12px; margin-top:14px; }
+
+  /* ── Toolbar de filtros ── */
+  .ir-toolbar{
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    gap:10px;
+    padding:12px 16px;
+    border-radius:16px;
+    background:#fff;
+    border:1px solid rgba(2,6,23,.07);
     box-shadow:0 1px 3px rgba(2,6,23,.04);
   }
+  .ir-toolbar .group{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .ir-toolbar label.tiny{
+    font-size:10.5px;
+    font-weight:800;
+    color:var(--hme-text-soft,#64748b);
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    white-space:nowrap;
+  }
+  .ir-toolbar .input{ padding:8px 10px; font-size:13px; min-width:130px; }
+  .ir-toolbar .group.actions{ margin-left:auto; }
 
-  .ir-kpis{ display:grid; grid-template-columns:repeat(4, 1fr); gap:12px; }
+  /* ── KPIs ── */
+  .ir-kpis{
+    display:grid;
+    grid-template-columns:repeat(4, 1fr);
+    gap:10px;
+  }
   .ir-kpi{
-    padding:18px; border-radius:14px; background:#fff;
-    border:1px solid var(--hme-border, rgba(2,6,23,.08));
-    position:relative; overflow:hidden;
+    padding:18px;
+    border-radius:16px;
+    background:#fff;
+    border:1px solid rgba(2,6,23,.07);
+    box-shadow:0 1px 4px rgba(2,6,23,.04);
+    position:relative;
+    overflow:hidden;
+    transition: box-shadow .18s ease, transform .18s ease;
   }
-  .ir-kpi .label{ font-size:11px; font-weight:800; color:var(--hme-text-soft,#64748b); text-transform:uppercase; letter-spacing:.06em; }
-  .ir-kpi .num{ font-size:36px; font-weight:900; line-height:1.1; margin:8px 0 4px; letter-spacing:-.02em; }
-  .ir-kpi .sub{ font-size:12px; color:var(--hme-text-soft,#64748b); font-weight:600; }
+  .ir-kpi:hover{
+    transform:translateY(-2px);
+    box-shadow:0 10px 28px rgba(2,6,23,.08);
+  }
+  .ir-kpi::after{
+    content:"";
+    position:absolute;
+    bottom:0; left:0; right:0;
+    height:3px;
+    border-radius:0 0 16px 16px;
+  }
+  .ir-kpi .kpi-label{
+    font-size:10.5px;
+    font-weight:800;
+    color:var(--hme-text-soft,#64748b);
+    text-transform:uppercase;
+    letter-spacing:.07em;
+    margin-bottom:8px;
+  }
+  .ir-kpi .kpi-num{
+    font-size:36px;
+    font-weight:900;
+    line-height:1;
+    letter-spacing:-.02em;
+    margin-bottom:5px;
+  }
+  .ir-kpi .kpi-sub{
+    font-size:11.5px;
+    color:var(--hme-text-soft,#64748b);
+    font-weight:600;
+  }
 
-  .ir-kpi.tone-red    { background:linear-gradient(180deg, rgba(220,38,38,.05),  #fff); border-color:rgba(220,38,38,.20); }
-  .ir-kpi.tone-red    .num{ color:#b91c1c; }
-  .ir-kpi.tone-blue   { background:linear-gradient(180deg, rgba(14,165,233,.05), #fff); border-color:rgba(14,165,233,.20); }
-  .ir-kpi.tone-blue   .num{ color:#0369a1; }
-  .ir-kpi.tone-green  { background:linear-gradient(180deg, rgba(34,197,94,.05),  #fff); border-color:rgba(34,197,94,.22); }
-  .ir-kpi.tone-green  .num{ color:#15803d; }
-  .ir-kpi.tone-purple { background:linear-gradient(180deg, rgba(147,51,234,.05), #fff); border-color:rgba(147,51,234,.22); }
-  .ir-kpi.tone-purple .num{ color:#6b21a8; }
+  .ir-kpi.tone-red    { border-color:rgba(220,38,38,.18); }
+  .ir-kpi.tone-red::after   { background:linear-gradient(90deg,#dc2626,#ef4444); }
+  .ir-kpi.tone-red    .kpi-num{ color:#b91c1c; }
+  .ir-kpi.tone-blue   { border-color:rgba(14,165,233,.18); }
+  .ir-kpi.tone-blue::after  { background:linear-gradient(90deg,#0ea5e9,#38bdf8); }
+  .ir-kpi.tone-blue   .kpi-num{ color:#0369a1; }
+  .ir-kpi.tone-green  { border-color:rgba(22,163,74,.18); }
+  .ir-kpi.tone-green::after { background:linear-gradient(90deg,#16a34a,#22c55e); }
+  .ir-kpi.tone-green  .kpi-num{ color:#15803d; }
+  .ir-kpi.tone-purple { border-color:rgba(147,51,234,.18); }
+  .ir-kpi.tone-purple::after{ background:linear-gradient(90deg,#9333ea,#a855f7); }
+  .ir-kpi.tone-purple .kpi-num{ color:#6b21a8; }
 
-  .ir-summary-grid{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
-  .ir-summary-grid h3{ margin:0 0 10px; font-size:15px; font-weight:800; }
-  .ir-row{ display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px solid rgba(2,6,23,.06); font-size:14px; }
-  .ir-row:last-child{ border-bottom:0; }
-  .ir-row .k{ color:var(--hme-text-soft,#64748b); font-weight:600; }
-  .ir-row .v{ font-weight:800; }
+  /* ── Cards de contenido ── */
+  .ir-content-grid{
+    display:grid;
+    grid-template-columns: 1fr 1fr;
+    gap:12px;
+  }
+  .ir-card{
+    padding:20px;
+    border-radius:16px;
+    background:#fff;
+    border:1px solid rgba(2,6,23,.07);
+    box-shadow:0 1px 4px rgba(2,6,23,.04);
+  }
+  .ir-card h3{
+    margin:0 0 14px;
+    font-size:14px;
+    font-weight:800;
+    color:var(--hme-text,#1f2937);
+    padding-bottom:10px;
+    border-bottom:1px solid rgba(2,6,23,.06);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .ir-card h3 .h-badge{
+    display:inline-flex;
+    align-items:center;
+    padding:1px 8px;
+    border-radius:6px;
+    font-size:10px;
+    font-weight:900;
+    letter-spacing:.04em;
+    text-transform:uppercase;
+    margin-left:auto;
+  }
+  .ir-card h3 .h-badge.admin{ background:rgba(44,123,229,.10); color:#1d4ed8; }
 
-  .ir-table{ width:100%; border-collapse:collapse; font-size:13px; }
-  .ir-table thead th{ text-align:left; padding:8px 6px; border-bottom:2px solid rgba(2,6,23,.10); font-size:11px; text-transform:uppercase; letter-spacing:.04em; color:var(--hme-text-soft,#64748b); }
-  .ir-table tbody td{ padding:10px 6px; border-bottom:1px solid rgba(2,6,23,.06); vertical-align:top; }
+  .ir-stat-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    padding:8px 0;
+    border-bottom:1px solid rgba(2,6,23,.05);
+    font-size:13.5px;
+  }
+  .ir-stat-row:last-child{ border-bottom:0; }
+  .ir-stat-row .k{ color:var(--hme-text-soft,#64748b); font-weight:600; }
+  .ir-stat-row .v{
+    font-weight:800;
+    color:var(--hme-text,#1f2937);
+  }
+
+  /* Barras de severidad */
+  .ir-sev-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:7px 0;
+    border-bottom:1px solid rgba(2,6,23,.05);
+  }
+  .ir-sev-row:last-child{ border-bottom:0; }
+  .ir-sev-row .sev-name{
+    font-size:13px;
+    font-weight:700;
+    color:var(--hme-text-soft,#64748b);
+    width:70px;
+    flex-shrink:0;
+  }
+  .ir-sev-row .sev-track{
+    flex:1;
+    height:7px;
+    border-radius:4px;
+    background:rgba(2,6,23,.06);
+    overflow:hidden;
+  }
+  .ir-sev-row .sev-fill{
+    height:100%;
+    border-radius:4px;
+    transition:width .5s cubic-bezier(.4,0,.2,1);
+    min-width:4px;
+  }
+  .ir-sev-row.sev-critical .sev-fill{ background:linear-gradient(90deg,#7f1d1d,#dc2626); }
+  .ir-sev-row.sev-high     .sev-fill{ background:linear-gradient(90deg,#dc2626,#ef4444); }
+  .ir-sev-row.sev-medium   .sev-fill{ background:linear-gradient(90deg,#f59e0b,#fbbf24); }
+  .ir-sev-row.sev-low      .sev-fill{ background:linear-gradient(90deg,#64748b,#94a3b8); }
+  .ir-sev-row .sev-count{
+    font-size:13px;
+    font-weight:800;
+    color:var(--hme-text,#1f2937);
+    width:24px;
+    text-align:right;
+    flex-shrink:0;
+  }
+
+  /* ── Tabla de detalle ── */
+  .ir-detail-card{
+    padding:20px;
+    border-radius:16px;
+    background:#fff;
+    border:1px solid rgba(2,6,23,.07);
+    box-shadow:0 1px 4px rgba(2,6,23,.04);
+  }
+  .ir-detail-card h3{
+    margin:0 0 14px;
+    font-size:14px;
+    font-weight:800;
+    color:var(--hme-text,#1f2937);
+    padding-bottom:10px;
+    border-bottom:1px solid rgba(2,6,23,.06);
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+
+  .ir-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  .ir-table thead th{
+    text-align:left;
+    padding:9px 10px;
+    border-bottom:2px solid rgba(2,6,23,.08);
+    font-size:10.5px;
+    text-transform:uppercase;
+    letter-spacing:.06em;
+    color:var(--hme-text-soft,#64748b);
+    font-weight:800;
+    background:rgba(248,250,252,.80);
+  }
+  .ir-table thead th:first-child{ border-radius:8px 0 0 0; }
+  .ir-table thead th:last-child{ border-radius:0 8px 0 0; }
+  .ir-table tbody td{
+    padding:11px 10px;
+    border-bottom:1px solid rgba(2,6,23,.05);
+    vertical-align:top;
+    color:var(--hme-text,#1f2937);
+  }
   .ir-table tbody tr:last-child td{ border-bottom:0; }
-  .ir-table .desc{ font-size:12px; color:var(--hme-text-soft,#64748b); margin-top:4px; white-space:pre-wrap; }
-
-  .ir-status{ display:inline-block; padding:2px 8px; border-radius:8px; color:#fff; font-size:11px; font-weight:700; }
-  .ir-status.pendiente{ background:#dc2626; }
-  .ir-status.leido    { background:#0ea5e9; }
-  .ir-status.atendido { background:#16a34a; }
-  .ir-status.reportado{ background:#9333ea; }
-
-  .ir-empty{ padding:24px; text-align:center; color:var(--hme-text-soft,#64748b); }
-
-  body.dark .ir-toolbar, body.dark .ir-card, body.dark .ir-kpi{
-    background:rgba(15,23,42,.6); border-color:rgba(255,255,255,.08);
+  .ir-table tbody tr:hover td{ background:rgba(44,123,229,.03); }
+  .ir-table .folio-cell{
+    font-family:ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size:11px;
+    color:var(--hme-text-soft,#64748b);
+    font-weight:700;
+    white-space:nowrap;
+  }
+  .ir-table .date-cell{
+    font-size:11.5px;
+    color:var(--hme-text-soft,#64748b);
+    white-space:nowrap;
+    font-weight:600;
+  }
+  .ir-table .title-cell .desc{
+    font-size:11.5px;
+    color:var(--hme-text-soft,#64748b);
+    margin-top:3px;
+    line-height:1.5;
+    white-space:pre-wrap;
+  }
+  .ir-table .title-cell .trail{
+    font-size:11px;
+    color:var(--hme-text-soft,#94a3b8);
+    margin-top:4px;
   }
 
-  @media (max-width:900px){
+  /* Badges de estado en tabla */
+  .ir-status-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:3px 9px;
+    border-radius:8px;
+    font-size:10.5px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    white-space:nowrap;
+  }
+  .ir-status-badge .dot{ width:5px; height:5px; border-radius:50%; background:currentColor; flex-shrink:0; }
+  .ir-status-badge.pendiente{ background:#fef2f2; color:#b91c1c; }
+  .ir-status-badge.leido    { background:#e0f2fe; color:#0369a1; }
+  .ir-status-badge.atendido { background:#dcfce7; color:#15803d; }
+  .ir-status-badge.reportado{ background:#f3e8ff; color:#6b21a8; }
+
+  /* Badge de severidad en tabla */
+  .ir-sev-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+    padding:2px 7px;
+    border-radius:6px;
+    font-size:10px;
+    font-weight:800;
+    text-transform:uppercase;
+    letter-spacing:.04em;
+    white-space:nowrap;
+  }
+  .ir-sev-badge.low     { background:#f1f5f9; color:#64748b; }
+  .ir-sev-badge.medium  { background:#fef3c7; color:#92400e; }
+  .ir-sev-badge.high    { background:#fee2e2; color:#b91c1c; }
+  .ir-sev-badge.critical{ background:#7f1d1d; color:#fca5a5; }
+
+  .ir-empty{
+    padding:32px 24px;
+    text-align:center;
+    color:var(--hme-text-soft,#94a3b8);
+    font-size:13.5px;
+  }
+
+  /* ── Dark mode ── */
+  body.dark .ir-toolbar,
+  body.dark .ir-kpi,
+  body.dark .ir-card,
+  body.dark .ir-detail-card{
+    background:rgba(15,23,42,.60);
+    border-color:rgba(255,255,255,.08);
+  }
+  body.dark .ir-table thead th{ background:rgba(255,255,255,.04); }
+  body.dark .ir-table tbody tr:hover td{ background:rgba(255,255,255,.03); }
+  body.dark .ir-sev-row .sev-track{ background:rgba(255,255,255,.08); }
+  body.dark .ir-kpi.tone-red   { background:rgba(127,29,29,.15); border-color:rgba(220,38,38,.22); }
+  body.dark .ir-kpi.tone-blue  { background:rgba(7,89,133,.15);  border-color:rgba(14,165,233,.22); }
+  body.dark .ir-kpi.tone-green { background:rgba(20,83,45,.15);  border-color:rgba(22,163,74,.22); }
+  body.dark .ir-kpi.tone-purple{ background:rgba(88,28,135,.15); border-color:rgba(147,51,234,.22); }
+  body.dark .ir-card h3,
+  body.dark .ir-detail-card h3{ border-color:rgba(255,255,255,.06); }
+  body.dark .ir-stat-row,
+  body.dark .ir-sev-row{ border-color:rgba(255,255,255,.05); }
+
+  /* ── Responsivo ── */
+  @media (max-width:960px){
     .ir-kpis{ grid-template-columns:repeat(2,1fr); }
-    .ir-summary-grid{ grid-template-columns:1fr; }
+    .ir-content-grid{ grid-template-columns:1fr; }
+  }
+  @media (max-width:580px){
+    .ir-kpis{ grid-template-columns:1fr 1fr; gap:8px; }
+    .ir-kpi .kpi-num{ font-size:28px; }
   }
 </style>
 {% endblock %}
 {% block content %}
+{% include "components/back_button.html" %}
 <div class="pagehead">
   <div>
-    <h1 class="h1">Reporte mensual de incidencias</h1>
-    <div class="sub">Resumen por estación del mes seleccionado.</div>
+    <h1 class="h1">Reporte de incidencias</h1>
+    <div class="sub">Resumen mensual por estación — análisis de hallazgos e incidentes operativos.</div>
   </div>
 </div>
 
 <div class="ir-wrap">
+  <!-- Toolbar de filtros -->
   <div class="ir-toolbar">
     <div class="group">
       <label class="tiny" for="irStation">Estación</label>
@@ -85,43 +352,87 @@
     </div>
     <div class="group">
       <label class="tiny" for="irYear">Año</label>
-      <select id="irYear" class="input"></select>
+      <select id="irYear" class="input" style="min-width:90px;"></select>
     </div>
     <div class="group">
       <label class="tiny" for="irMonth">Mes</label>
-      <select id="irMonth" class="input"></select>
+      <select id="irMonth" class="input" style="min-width:120px;"></select>
     </div>
-    <div class="group" style="margin-left:auto;">
-      <button id="irReload" class="btn">Ver reporte</button>
+    <div class="group actions">
+      <button id="irReload" class="btn ghost">Ver reporte</button>
       <button id="irPdf" class="btn primary">Descargar PDF</button>
     </div>
   </div>
 
+  <!-- KPIs -->
   <div id="irKpis" class="ir-kpis">
-    <div class="ir-kpi tone-red"><div class="label">Pendientes</div><div class="num" data-k="pendiente">—</div><div class="sub">Sin marcar</div></div>
-    <div class="ir-kpi tone-blue"><div class="label">Leídas</div><div class="num" data-k="leido">—</div><div class="sub">Reconocidas</div></div>
-    <div class="ir-kpi tone-green"><div class="label">Atendidas</div><div class="num" data-k="atendido">—</div><div class="sub">Resueltas en sitio</div></div>
-    <div class="ir-kpi tone-purple"><div class="label">Reportadas</div><div class="num" data-k="reportado">—</div><div class="sub">Escaladas</div></div>
+    <div class="ir-kpi tone-red">
+      <div class="kpi-label">Pendientes</div>
+      <div class="kpi-num" data-k="pendiente">—</div>
+      <div class="kpi-sub">Sin atender</div>
+    </div>
+    <div class="ir-kpi tone-blue">
+      <div class="kpi-label">Leídas</div>
+      <div class="kpi-num" data-k="leido">—</div>
+      <div class="kpi-sub">Reconocidas</div>
+    </div>
+    <div class="ir-kpi tone-green">
+      <div class="kpi-label">Atendidas</div>
+      <div class="kpi-num" data-k="atendido">—</div>
+      <div class="kpi-sub">Resueltas en sitio</div>
+    </div>
+    <div class="ir-kpi tone-purple">
+      <div class="kpi-label">Reportadas</div>
+      <div class="kpi-num" data-k="reportado">—</div>
+      <div class="kpi-sub">Escaladas</div>
+    </div>
   </div>
 
-  <div class="ir-summary-grid">
+  <!-- Resumen + Por severidad -->
+  <div class="ir-content-grid">
     <div class="ir-card">
-      <h3>Resumen del mes</h3>
-      <div class="ir-row"><span class="k">Total de incidencias</span><span class="v" id="irTotal">—</span></div>
-      <div class="ir-row"><span class="k">Tiempo promedio hasta lectura</span><span class="v" id="irAvg">—</span></div>
-      <div class="ir-row"><span class="k">Rango del período</span><span class="v" id="irRange">—</span></div>
+      <h3>Resumen del período <span class="h-badge admin">Admin</span></h3>
+      <div class="ir-stat-row">
+        <span class="k">Total de incidencias</span>
+        <span class="v" id="irTotal">—</span>
+      </div>
+      <div class="ir-stat-row">
+        <span class="k">Tiempo promedio hasta lectura</span>
+        <span class="v" id="irAvg">—</span>
+      </div>
+      <div class="ir-stat-row">
+        <span class="k">Rango del período</span>
+        <span class="v" id="irRange">—</span>
+      </div>
     </div>
     <div class="ir-card">
-      <h3>Por severidad</h3>
-      <div class="ir-row"><span class="k">Crítica</span><span class="v" data-sev="critical">—</span></div>
-      <div class="ir-row"><span class="k">Alta</span><span class="v" data-sev="high">—</span></div>
-      <div class="ir-row"><span class="k">Media</span><span class="v" data-sev="medium">—</span></div>
-      <div class="ir-row"><span class="k">Baja</span><span class="v" data-sev="low">—</span></div>
+      <h3>Distribución por severidad</h3>
+      <div class="ir-sev-row sev-critical">
+        <span class="sev-name">Crítica</span>
+        <div class="sev-track"><div class="sev-fill" id="sevBarCritical" style="width:0%"></div></div>
+        <span class="sev-count" data-sev="critical">—</span>
+      </div>
+      <div class="ir-sev-row sev-high">
+        <span class="sev-name">Alta</span>
+        <div class="sev-track"><div class="sev-fill" id="sevBarHigh" style="width:0%"></div></div>
+        <span class="sev-count" data-sev="high">—</span>
+      </div>
+      <div class="ir-sev-row sev-medium">
+        <span class="sev-name">Media</span>
+        <div class="sev-track"><div class="sev-fill" id="sevBarMedium" style="width:0%"></div></div>
+        <span class="sev-count" data-sev="medium">—</span>
+      </div>
+      <div class="ir-sev-row sev-low">
+        <span class="sev-name">Baja</span>
+        <div class="sev-track"><div class="sev-fill" id="sevBarLow" style="width:0%"></div></div>
+        <span class="sev-count" data-sev="low">—</span>
+      </div>
     </div>
   </div>
 
-  <div class="ir-card">
-    <h3 style="margin:0 0 10px;font-size:15px;font-weight:800;">Detalle de incidencias</h3>
+  <!-- Tabla de detalle -->
+  <div class="ir-detail-card">
+    <h3>Detalle de incidencias</h3>
     <div id="irDetailBox">
       <div class="ir-empty">Selecciona estación y período, luego presiona <b>Ver reporte</b>.</div>
     </div>
@@ -130,7 +441,7 @@
 {% endblock %}
 {% block scripts %}
 <script>
-const STATUS_LABEL = {pendiente:'Pendiente', leido:'Leída', atendido:'Atendida', reportado:'Reportada'};
+const STATUS_LABEL   = {pendiente:'Pendiente', leido:'Leída', atendido:'Atendida', reportado:'Reportada'};
 const SEVERITY_LABEL = {low:'Baja', medium:'Media', high:'Alta', critical:'Crítica'};
 const MONTHS = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
 
@@ -139,7 +450,7 @@ function fmtDate(s){ if(!s) return '—'; return String(s).replace('T',' ').slic
 function buildYearOptions(){
   const sel = qs('#irYear');
   const now = new Date().getFullYear();
-  for (let y = now; y >= now - 4; y--){
+  for(let y = now; y >= now - 4; y--){
     const opt = document.createElement('option');
     opt.value = y; opt.textContent = y;
     sel.appendChild(opt);
@@ -153,7 +464,7 @@ function buildMonthOptions(){
     const opt = document.createElement('option');
     opt.value = String(i+1).padStart(2,'0');
     opt.textContent = name;
-    if (i+1 === now) opt.selected = true;
+    if(i+1 === now) opt.selected = true;
     sel.appendChild(opt);
   });
 }
@@ -173,74 +484,86 @@ function setKpi(key, value){
   qsa(`#irKpis [data-k="${key}"]`).forEach(el => el.textContent = String(value));
 }
 
-function setSev(key, value){
+function setSev(key, value, max){
   qsa(`[data-sev="${key}"]`).forEach(el => el.textContent = String(value));
+  const bar = qs(`#sevBar${key.charAt(0).toUpperCase()+key.slice(1)}`);
+  if(bar) bar.style.width = max > 0 ? Math.max(4, Math.round(value/max*100))+'%' : '0%';
 }
 
 function renderDetail(items){
   const box = qs('#irDetailBox');
-  if (!items.length){
-    box.innerHTML = '<div class="ir-empty">Sin incidencias registradas en el período.</div>';
+  if(!items.length){
+    box.innerHTML = '<div class="ir-empty">Sin incidencias registradas en el período seleccionado.</div>';
     return;
   }
   const rows = items.map(it => {
-    const folio = it.folio || ('#' + it.id);
-    const sev = SEVERITY_LABEL[it.severity] || it.severity || '';
-    const status = STATUS_LABEL[it.status] || it.status || '';
+    const folio  = it.folio || ('#' + it.id);
+    const sev    = (it.severity || 'medium').toLowerCase();
+    const status = (it.status   || 'pendiente').toLowerCase();
+    const trail  = [
+      it.created_by_name   ? `Creó: ${_esc(it.created_by_name)}`   : '',
+      it.acknowledged_by_name ? `Leyó: ${_esc(it.acknowledged_by_name)} (${_esc(fmtDate(it.acknowledged_at))})` : '',
+      it.resolved_by_name  ? `Cerró: ${_esc(it.resolved_by_name)} (${_esc(fmtDate(it.resolved_at))})` : '',
+    ].filter(Boolean).join(' · ');
     return `
       <tr>
-        <td>${_esc(fmtDate(it.created_at))}</td>
-        <td>${_esc(folio)}</td>
-        <td>${_esc(sev)}</td>
-        <td><span class="ir-status ${_esc(it.status||'')}">${_esc(status)}</span></td>
-        <td>
+        <td class="date-cell">${_esc(fmtDate(it.created_at))}</td>
+        <td class="folio-cell">${_esc(folio)}</td>
+        <td><span class="ir-sev-badge ${sev}">${_esc(SEVERITY_LABEL[sev]||sev)}</span></td>
+        <td><span class="ir-status-badge ${status}"><span class="dot"></span>${_esc(STATUS_LABEL[status]||status)}</span></td>
+        <td class="title-cell">
           <div><b>${_esc(it.title || '')}</b></div>
           ${it.description ? `<div class="desc">${_esc(it.description)}</div>` : ''}
-          <div class="desc">
-            Creó: ${_esc(it.created_by_name || '—')}
-            ${it.acknowledged_by_name ? ` · Leyó: ${_esc(it.acknowledged_by_name)} (${_esc(fmtDate(it.acknowledged_at))})` : ''}
-            ${it.resolved_by_name ? ` · Cerró: ${_esc(it.resolved_by_name)} (${_esc(fmtDate(it.resolved_at))})` : ''}
-          </div>
+          ${trail ? `<div class="trail">${trail}</div>` : ''}
         </td>
       </tr>`;
   }).join('');
   box.innerHTML = `
-    <table class="ir-table">
-      <thead>
-        <tr><th>Fecha</th><th>Folio</th><th>Severidad</th><th>Estado</th><th>Detalle</th></tr>
-      </thead>
-      <tbody>${rows}</tbody>
-    </table>`;
+    <div style="overflow-x:auto;">
+      <table class="ir-table">
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Folio</th>
+            <th>Severidad</th>
+            <th>Estado</th>
+            <th>Detalle</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>`;
 }
 
 async function loadReport(){
   const station_id = qs('#irStation').value;
-  const year = qs('#irYear').value;
-  const month = qs('#irMonth').value;
-  if (!station_id){ toast('Selecciona una estación'); return; }
+  const year       = qs('#irYear').value;
+  const month      = qs('#irMonth').value;
+  if(!station_id){ toast('Selecciona una estación'); return; }
   const r = await api(`/api/admin/incidents-report?year=${year}&month=${month}&station_id=${station_id}`);
-  if (!r.ok){ toast(r.message || 'No se pudo cargar el reporte'); return; }
+  if(!r.ok){ toast(r.message || 'No se pudo cargar el reporte'); return; }
   const t = r.totals || {};
   setKpi('pendiente', t.pendiente || 0);
-  setKpi('leido', t.leido || 0);
-  setKpi('atendido', t.atendido || 0);
+  setKpi('leido',     t.leido     || 0);
+  setKpi('atendido',  t.atendido  || 0);
   setKpi('reportado', t.reportado || 0);
   qs('#irTotal').textContent = t.total || 0;
-  qs('#irAvg').textContent = r.avg_response_hours != null ? `${r.avg_response_hours} h` : 'Sin datos';
-  qs('#irRange').textContent = `${r.period.from} a ${r.period.to}`;
+  qs('#irAvg').textContent   = r.avg_response_hours != null ? `${r.avg_response_hours} h` : 'Sin datos';
+  qs('#irRange').textContent = `${r.period.from} — ${r.period.to}`;
   const sev = r.by_severity || {};
-  setSev('low', sev.low || 0);
-  setSev('medium', sev.medium || 0);
-  setSev('high', sev.high || 0);
-  setSev('critical', sev.critical || 0);
+  const maxSev = Math.max(sev.critical||0, sev.high||0, sev.medium||0, sev.low||0, 1);
+  setSev('critical', sev.critical || 0, maxSev);
+  setSev('high',     sev.high     || 0, maxSev);
+  setSev('medium',   sev.medium   || 0, maxSev);
+  setSev('low',      sev.low      || 0, maxSev);
   renderDetail(r.items || []);
 }
 
 function downloadPdf(){
   const station_id = qs('#irStation').value;
-  const year = qs('#irYear').value;
-  const month = qs('#irMonth').value;
-  if (!station_id){ toast('Selecciona una estación'); return; }
+  const year       = qs('#irYear').value;
+  const month      = qs('#irMonth').value;
+  if(!station_id){ toast('Selecciona una estación'); return; }
   window.open(`/admin/incidents-report.pdf?year=${year}&month=${month}&station_id=${station_id}`, '_blank');
 }
 
@@ -250,8 +573,8 @@ function downloadPdf(){
   await loadStations();
   qs('#irReload').addEventListener('click', () => loadReport().catch(e => toast('Error: '+e.message)));
   qs('#irPdf').addEventListener('click', downloadPdf);
-  if (qs('#irStation').options.length > 0){
-    await loadReport().catch(()=>{});
+  if(qs('#irStation').options.length > 0){
+    await loadReport().catch(() => {});
   }
 })();
 </script>
