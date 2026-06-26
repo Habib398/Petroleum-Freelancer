@@ -1,1 +1,0 @@
-Ajuste realizado: la cotización ahora adjunta el PDF al correo interno y se envía solo a los correos principal y secundario.

@@ -1,9 +1,0 @@
-Ajustes realizados:
-- PDF de cotización con diseño corporativo mejorado, logos y folio visible.
-- PDF con mejor acomodo de información y continuación automática si el detalle es largo.
-- Panel público de cotización con texto y botones más profesionales.
-- Estilo global refinado para tarjetas, botones, formularios y tablas del sistema.
-- Mejor consistencia visual para módulos con clases cardx, btnx, table y field.
-
-Nota:
-Los archivos .php no se deben abrir con ruta local file:/// si quieres que se ejecuten. Deben abrirse desde Apache/XAMPP o desde el servidor web.
