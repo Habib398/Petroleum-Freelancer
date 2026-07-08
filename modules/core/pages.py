@@ -892,11 +892,17 @@ def register(app):
         if len(allowed) == 1:
             chosen = next(iter(allowed))
             set_brand(chosen)
-            # Post-login landing:
-            # - Admin -> módulo hub according to active brand
-            # - Others -> shared dashboard
+            # Post-login landing según rol:
+            # - Admin           → hub de administración
+            # - operador        → vista de actividades directamente
+            # - jefe_estacion   → calendario operativo directamente
+            # - contador/auditor y demás → menú staff general
             if role == "admin":
                 return redirect("/admin/menu")
+            if role == "operador":
+                return redirect("/mod/activities")
+            if role == "jefe_estacion":
+                return redirect("/mod/operational-calendar")
             return redirect("/staff/menu")
 
         return render_template("select_system.html", allowed=sorted(list(allowed)))
@@ -926,7 +932,16 @@ def register(app):
             return jsonify({"ok": False, "error": "brand_not_allowed"}), 403
 
         set_brand(brand)
-        redirect_url = "/staff/menu" if role in {"jefe_estacion", "operador", "contador", "auditor"} else "/mod/dashboard"
+        # Redirigir según rol operativo:
+        # - operador        → vista de actividades
+        # - jefe_estacion   → calendario operativo
+        # - contador/auditor y demás → menú staff general
+        if role == "operador":
+            redirect_url = "/mod/activities"
+        elif role == "jefe_estacion":
+            redirect_url = "/mod/operational-calendar"
+        else:
+            redirect_url = "/staff/menu"
         return jsonify({"ok": True, "brand": brand, "redirect": redirect_url})
 
 

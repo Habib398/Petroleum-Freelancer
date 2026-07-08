@@ -24,8 +24,16 @@
     <div class="help">Si la estación está en modo vista, aquí es donde puede reactivarse enviando su comprobante.</div>
     <form id="payProof" style="display:grid;gap:10px;margin-top:10px;">
       <div class="formrow">
-        <div><div class="help">Inicio periodo</div><input class="input" name="period_start" placeholder="2026-02-01"></div>
-        <div><div class="help">Fin periodo</div><input class="input" name="period_end" placeholder="2026-02-29"></div>
+        <div>
+          <div class="help">Inicio periodo</div>
+          <input class="input" type="date" id="payPeriodStart" name="period_start"
+            readonly style="background:var(--hme-bg-soft,#f1f5f9);color:var(--hme-text-soft,#94a3b8);cursor:not-allowed;pointer-events:none;">
+        </div>
+        <div>
+          <div class="help">Fin periodo</div>
+          <input class="input" type="date" id="payPeriodEnd" name="period_end"
+            readonly style="background:var(--hme-bg-soft,#f1f5f9);color:var(--hme-text-soft,#94a3b8);cursor:not-allowed;pointer-events:none;">
+        </div>
       </div>
       <div><div class="help">Comprobante (foto/PDF)</div><input class="input" type="file" name="proof" required></div>
       <div class="formactions"><button class="btn primary" type="submit">Enviar</button></div>

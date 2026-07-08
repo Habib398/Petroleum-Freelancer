@@ -3,6 +3,27 @@
   const tb = qs("#payT");
   const err = qs("#payErr");
 
+  // --- Control de acceso a campos de fecha (periodo) ---
+  // Solo admin y contador pueden modificar el periodo de facturación.
+  // El resto de roles (jefe_estacion, operador, etc.) ve los campos bloqueados.
+  const CAN_EDIT_PERIOD = me && (me.role === "admin" || me.role === "contador");
+  const periodInputs = [qs("#payPeriodStart"), qs("#payPeriodEnd")];
+  periodInputs.forEach(input => {
+    if (!input) return;
+    if (CAN_EDIT_PERIOD) {
+      input.removeAttribute("readonly");
+      input.style.removeProperty("background");
+      input.style.removeProperty("color");
+      input.style.removeProperty("cursor");
+      input.style.removeProperty("pointer-events");
+      input.title = "";
+    } else {
+      input.title = "Solo el administrador o contador puede modificar las fechas de periodo.";
+    }
+  });
+
+
+
   function fileLink(rel){
     if(!rel) return '<span class="muted">—</span>';
     return `<a href="/uploads/${rel}">Descargar</a>`;

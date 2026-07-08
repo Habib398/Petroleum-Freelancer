@@ -1,13 +1,571 @@
 {% extends "layout.html" %}
+{% block head %}
+<style>
+  /* ===== Centro de Ayuda ===== */
+  .hc-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 14px;
+    border-radius: 999px;
+    background: var(--hme-green, #86B821);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    width: fit-content;
+    margin-top: 6px;
+  }
+
+  /* Tabs (solo admin) */
+  .hc-tabs {
+    display: flex;
+    gap: 4px;
+    margin: 18px 0 0;
+    border-bottom: 2px solid var(--hme-border, #e2e8f0);
+  }
+  .hc-tab {
+    padding: 9px 18px;
+    border: none;
+    background: transparent;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    color: var(--hme-text-soft, #64748b);
+    border-bottom: 3px solid transparent;
+    margin-bottom: -2px;
+    border-radius: 8px 8px 0 0;
+    transition: color .15s, border-color .15s, background .15s;
+    font-family: inherit;
+  }
+  .hc-tab:hover { color: var(--hme-green, #86B821); background: var(--hme-bg-soft, #f8fafc); }
+  .hc-tab.active {
+    color: var(--hme-green, #86B821);
+    border-bottom-color: var(--hme-green, #86B821);
+    background: var(--hme-bg-soft, #f8fafc);
+  }
+
+  /* Secciones por rol */
+  .hc-section { display: none; }
+  .hc-section.active { display: block; }
+
+  /* Pasos */
+  .hc-steps { display: grid; gap: 14px; margin-top: 20px; }
+  .hc-step {
+    display: grid;
+    grid-template-columns: 52px 1fr;
+    gap: 18px;
+    padding: 22px 20px;
+    border-radius: 14px;
+    background: var(--hme-card-bg, #fff);
+    border: 1px solid var(--hme-border, #e2e8f0);
+    transition: box-shadow .18s;
+  }
+  .hc-step:hover { box-shadow: 0 4px 18px rgba(0,0,0,.06); }
+
+  .hc-step-num {
+    width: 52px;
+    height: 52px;
+    border-radius: 50%;
+    background: var(--hme-green, #86B821);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    font-weight: 900;
+    flex-shrink: 0;
+    align-self: start;
+    margin-top: 2px;
+  }
+
+  .hc-step-title {
+    font-size: 16px;
+    font-weight: 900;
+    color: var(--hme-text, #1e293b);
+    margin-bottom: 8px;
+    line-height: 1.3;
+  }
+  .hc-step-desc {
+    font-size: 14px;
+    line-height: 1.72;
+    color: var(--hme-text-soft, #475569);
+  }
+  .hc-step-action { margin-top: 14px; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* Slot para captura de pantalla — oculto por defecto, visible si tiene img dentro */
+  .hc-img-slot {
+    margin-top: 16px;
+    border: 2px dashed var(--hme-border, #e2e8f0);
+    border-radius: 10px;
+    padding: 18px;
+    text-align: center;
+    color: var(--hme-text-soft, #94a3b8);
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: .03em;
+    background: var(--hme-bg-soft, #f8fafc);
+    display: none; /* Activar cuando se agreguen imagenes reales */
+  }
+  .hc-img-slot.show { display: block; }
+  .hc-img-slot img { max-width: 100%; border-radius: 8px; display: block; margin: 0 auto 10px; }
+
+  /* Avisos */
+  .hc-tip {
+    display: flex;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    background: rgba(134, 184, 33, .07);
+    border: 1px solid rgba(134, 184, 33, .22);
+    margin-top: 22px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--hme-text, #1e293b);
+  }
+  .hc-tip-icon {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: var(--hme-green, #86B821);
+    color: #fff;
+    font-weight: 900;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+  .hc-notice {
+    display: flex;
+    gap: 12px;
+    padding: 14px 18px;
+    border-radius: 10px;
+    background: rgba(245, 158, 11, .07);
+    border: 1px solid rgba(245, 158, 11, .28);
+    margin-top: 14px;
+    font-size: 13.5px;
+    line-height: 1.6;
+    color: var(--hme-text, #1e293b);
+  }
+  .hc-notice-icon {
+    flex-shrink: 0;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #d97706;
+    color: #fff;
+    font-weight: 900;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+
+  /* Tarjeta de contacto */
+  .hc-contact-card {
+    margin-top: 28px;
+    padding: 22px;
+    border-radius: 14px;
+    background: var(--hme-card-bg, #fff);
+    border: 1px solid var(--hme-border, #e2e8f0);
+    text-align: center;
+  }
+  .hc-contact-title { font-size: 16px; font-weight: 900; margin-bottom: 6px; }
+  .hc-contact-desc { font-size: 14px; color: var(--hme-text-soft, #64748b); line-height: 1.6; }
+</style>
+{% endblock %}
+
 {% block content %}
 {% include "components/back_button.html" %}
-<div class="pagehead"><div><h1 class="h1">Centro de ayuda</h1><div class="sub">Guías rápidas, preguntas frecuentes y ayuda por módulo.</div></div></div>
-<div class="card" style="margin-top:14px;"><input id="q" class="input" placeholder="Buscar ayuda..."></div>
-<div id="items" class="grid cols-2" style="margin-top:14px;"></div>
+
+<div class="pagehead">
+  <div>
+    <h1 class="h1">Centro de ayuda</h1>
+    <div class="sub">Guia paso a paso para usar el sistema. Sin tecnicismos, directo al grano.</div>
+    <div id="hcRoleBadge" class="hc-role-badge" hidden></div>
+  </div>
+</div>
+
+<!-- Pestanas de rol (visible solo para admin, para poder navegar entre vistas) -->
+<div class="hc-tabs" id="hcTabs" hidden>
+  <button class="hc-tab active" data-hc-tab="admin"         type="button">Administrador</button>
+  <button class="hc-tab"        data-hc-tab="jefe_estacion" type="button">Jefe de Estacion</button>
+  <button class="hc-tab"        data-hc-tab="operador"      type="button">Operador</button>
+</div>
+
+
+<!-- ======================================================= -->
+<!--  SECCION: OPERADOR                                       -->
+<!-- ======================================================= -->
+<div class="hc-section" id="hc-operador">
+  <div class="hc-steps">
+
+    <div class="hc-step">
+      <div class="hc-step-num">1</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Revisa tus actividades del dia</div>
+        <div class="hc-step-desc">
+          Al iniciar sesion, el sistema te lleva directamente a tu calendario de actividades.
+          Ahi aparecen todas las tareas que te han asignado. Los colores en el calendario indican
+          si una actividad esta pendiente, ya entregada o vencida sin respuesta.<br><br>
+          Haz clic sobre cualquier dia marcado para ver el detalle de las tareas de esa fecha.
+        </div>
+        <div class="hc-step-action">
+          <a class="btn" href="/mod/activities">Ir a mis actividades</a>
+        </div>
+        <!-- SLOT DE IMAGEN: quitar display:none y agregar <img> cuando haya captura disponible -->
+        <div class="hc-img-slot" data-hc-img="operador-calendario">
+          Aqui ira una captura de pantalla del calendario de actividades.
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-step">
+      <div class="hc-step-num">2</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Sube tu evidencia y la actividad queda lista</div>
+        <div class="hc-step-desc">
+          Para registrar que completaste una tarea, haz clic sobre ella en el calendario.
+          Se abre una pantalla donde puedes escribir una nota y adjuntar el archivo que te soliciten.<br><br>
+          En cuanto envias el archivo, <strong>la actividad queda completada de inmediato</strong>.
+          No tienes que esperar que nadie la apruebe: el sistema la registra como terminada en ese momento
+          y el jefe de estacion puede consultarla cuando quiera.<br><br>
+          <strong>Formato aceptado:</strong> el archivo debe ser PDF, imagen JPG o PNG.
+          Si no sabes que formato usar, pregunta a tu jefe de estacion antes de subir.
+        </div>
+        <!-- SLOT DE IMAGEN: quitar display:none y agregar <img> cuando haya captura disponible -->
+        <div class="hc-img-slot" data-hc-img="operador-subir-evidencia">
+          Aqui ira una captura de pantalla del formulario de entrega de evidencia.
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-step">
+      <div class="hc-step-num">3</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Que hacer si el sistema no te deja actuar</div>
+        <div class="hc-step-desc">
+          Si aparece un aviso amarillo en la parte superior de la pantalla que dice
+          <strong>"Modo vista (mensualidad pendiente)"</strong>, significa que la estacion
+          tiene un pago pendiente de revision.<br><br>
+          En ese caso solo puedes consultar el sistema; no podras subir, editar ni descargar nada
+          hasta que el pago sea regularizado.
+        </div>
+        <div class="hc-notice">
+          <div class="hc-notice-icon">!</div>
+          <div>
+            <strong>Que hacer:</strong> Avisa a tu jefe de estacion o al administrador para que suban
+            el comprobante de pago correspondiente. Tu no puedes resolver esto desde tu cuenta.
+          </div>
+        </div>
+        <!-- SLOT DE IMAGEN -->
+        <div class="hc-img-slot" data-hc-img="operador-modo-vista">
+          Aqui ira una captura de pantalla del aviso de modo vista.
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-step">
+      <div class="hc-step-num">4</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Revisa tus avisos y notificaciones</div>
+        <div class="hc-step-desc">
+          La campana en la esquina superior derecha muestra los avisos del sistema.
+          Cuando hay algo nuevo, aparece un numero rojo sobre ella.<br><br>
+          Haz clic en la campana para ver los avisos mas recientes sin salir de la pagina.
+          Para ver el historial completo, entra a la pagina de notificaciones.
+        </div>
+        <div class="hc-step-action">
+          <a class="btn" href="/mod/notifications">Ver todos mis avisos</a>
+        </div>
+        <!-- SLOT DE IMAGEN -->
+        <div class="hc-img-slot" data-hc-img="operador-notificaciones">
+          Aqui ira una captura de pantalla del panel de notificaciones.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="hc-tip">
+    <div class="hc-tip-icon">i</div>
+    <div>
+      <strong>Consejo general:</strong> Si en algun momento el sistema muestra algo inesperado o una pagina
+      en blanco, recarga la pagina con la tecla <strong>F5</strong> o el boton de actualizar del navegador
+      y vuelve a intentarlo. Si el problema persiste, avisa a tu administrador.
+    </div>
+  </div>
+</div>
+
+
+<!-- ======================================================= -->
+<!--  SECCION: JEFE DE ESTACION                              -->
+<!-- ======================================================= -->
+<div class="hc-section" id="hc-jefe_estacion">
+  <div class="hc-steps">
+
+    <div class="hc-step">
+      <div class="hc-step-num">1</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Revisa el calendario operativo de tu estacion</div>
+        <div class="hc-step-desc">
+          Al iniciar sesion, el sistema te lleva directamente al calendario operativo.
+          Aqui puedes ver todas las actividades programadas para tu estacion: cuales estan pendientes,
+          cuales ya fueron entregadas y cuales se vencieron sin respuesta.<br><br>
+          Puedes cambiar la vista entre mes, semana y agenda usando los botones en la parte superior
+          del calendario. Tambien puedes filtrar por tipo de actividad.
+        </div>
+        <div class="hc-step-action">
+          <a class="btn" href="/mod/operational-calendar">Ir al calendario operativo</a>
+        </div>
+        <!-- SLOT DE IMAGEN -->
+        <div class="hc-img-slot" data-hc-img="jefe-calendario">
+          Aqui ira una captura de pantalla del calendario operativo.
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-step">
+      <div class="hc-step-num">2</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Consulta lo que entrego tu equipo</div>
+        <div class="hc-step-desc">
+          Cuando un operador sube su evidencia, la actividad queda completada automaticamente en el sistema.
+          Tu labor aqui es de <strong>consulta y seguimiento</strong>, no de aprobacion.<br><br>
+          Para ver la evidencia de una actividad, haz clic sobre ella en el calendario operativo.
+          Ahi puedes ver el archivo adjunto, las notas que escribio el operador y la fecha en que lo entrego.<br><br>
+          Si detectas que una entrega tiene un error o necesita corregirse, puedes marcarlo desde esa misma
+          pantalla y el sistema le notifica al operador con una tarea de correccion.
+        </div>
+        <!-- SLOT DE IMAGEN -->
+        <div class="hc-img-slot" data-hc-img="jefe-entregas">
+          Aqui ira una captura de pantalla del detalle de actividad con entrega.
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-step">
+      <div class="hc-step-num">3</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Envia el comprobante de mensualidad</div>
+        <div class="hc-step-desc">
+          El pago mensual de la estacion se registra en el modulo <strong>Mensualidad</strong>,
+          que encontraras en el menu lateral bajo "Operacion tecnica".<br><br>
+          Ahi debes subir el comprobante de pago en formato PDF o imagen. Una vez enviado,
+          el contador lo revisara y generara la factura correspondiente.<br><br>
+          Las fechas del periodo las establece el administrador; tu solo necesitas subir el archivo correcto.
+        </div>
+        <div class="hc-step-action">
+          <a class="btn" href="/mod/payments">Ir a Mensualidad</a>
+        </div>
+        <div class="hc-notice">
+          <div class="hc-notice-icon">!</div>
+          <div>
+            <strong>Si la estacion entra en "Modo vista":</strong> significa que el comprobante esta pendiente
+            o fue rechazado. Sube el comprobante correcto para que el administrador reactive el acceso completo.
+          </div>
+        </div>
+        <!-- SLOT DE IMAGEN -->
+        <div class="hc-img-slot" data-hc-img="jefe-mensualidad">
+          Aqui ira una captura de pantalla del modulo de mensualidad.
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-step">
+      <div class="hc-step-num">4</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Consulta documentos faltantes de tu estacion</div>
+        <div class="hc-step-desc">
+          En el menu lateral encontraras los modulos de documentacion: SASISOPA, SGM y Carpeta compartida.
+          Desde ahi puedes ver que documentos ya fueron cargados y cuales aun faltan por entregar.<br><br>
+          Los documentos con fecha vencida o proxima a vencer aparecen marcados para que puedas
+          actuar a tiempo sin esperar un aviso del administrador.
+        </div>
+        <div class="hc-step-action">
+          <a class="btn" href="/staff/pending-docs">Ver documentos faltantes</a>
+        </div>
+        <!-- SLOT DE IMAGEN -->
+        <div class="hc-img-slot" data-hc-img="jefe-documentos">
+          Aqui ira una captura de pantalla del modulo de documentos faltantes.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="hc-tip">
+    <div class="hc-tip-icon">i</div>
+    <div>
+      <strong>Consejo:</strong> Revisa el calendario operativo al inicio de cada semana para asegurarte
+      de que tu equipo esta al dia con sus entregas. Asi evitas acumulacion de pendientes al cierre de mes.
+    </div>
+  </div>
+</div>
+
+
+<!-- ======================================================= -->
+<!--  SECCION: ADMINISTRADOR                                  -->
+<!-- ======================================================= -->
+<div class="hc-section" id="hc-admin">
+  <div class="hc-steps">
+
+    <div class="hc-step">
+      <div class="hc-step-num">1</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Revisa el Inbox de entregas y comprobantes</div>
+        <div class="hc-step-desc">
+          El Inbox es el centro de revision del administrador. Aqui llegan todos los comprobantes
+          de pago, evidencias y documentos enviados por las estaciones que requieren tu validacion.<br><br>
+          Los elementos nuevos aparecen marcados. Puedes aprobar, rechazar o solicitar correccion
+          directamente desde el mismo inbox sin necesidad de navegar a otra pantalla.
+        </div>
+        <div class="hc-step-action">
+          <a class="btn" href="/admin/inbox">Ir al Inbox</a>
+        </div>
+        <!-- SLOT DE IMAGEN -->
+        <div class="hc-img-slot" data-hc-img="admin-inbox">
+          Aqui ira una captura de pantalla del inbox de revision.
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-step">
+      <div class="hc-step-num">2</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Gestiona usuarios y estaciones</div>
+        <div class="hc-step-desc">
+          Desde los modulos de <strong>Usuarios</strong> y <strong>Estaciones</strong> puedes crear nuevas cuentas,
+          asignar roles y estaciones, y activar o desactivar usuarios cuando sea necesario.<br><br>
+          Es importante asignar el rol correcto a cada persona. El acceso a cada modulo del sistema
+          depende directamente del rol asignado a su cuenta.
+        </div>
+        <div class="hc-step-action">
+          <a class="btn" href="/admin/users">Usuarios</a>
+          <a class="btn" href="/admin/stations">Estaciones</a>
+        </div>
+        <!-- SLOT DE IMAGEN -->
+        <div class="hc-img-slot" data-hc-img="admin-usuarios">
+          Aqui ira una captura de pantalla del modulo de usuarios.
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-step">
+      <div class="hc-step-num">3</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Controla la mensualidad de cada estacion</div>
+        <div class="hc-step-desc">
+          El estado de mensualidad de una estacion determina si sus usuarios pueden operar con normalidad.
+          Desde el modulo <strong>Mensualidad</strong> puedes ver el historial de pagos, validar
+          comprobantes y adjuntar la factura generada por el contador.<br><br>
+          Solo el administrador y el contador pueden modificar las fechas de periodo de facturacion.
+          Los demas usuarios las ven en modo solo lectura.
+        </div>
+        <div class="hc-step-action">
+          <a class="btn" href="/mod/payments">Ir a Mensualidad</a>
+        </div>
+        <!-- SLOT DE IMAGEN -->
+        <div class="hc-img-slot" data-hc-img="admin-mensualidad">
+          Aqui ira una captura de pantalla del control de mensualidad.
+        </div>
+      </div>
+    </div>
+
+    <div class="hc-step">
+      <div class="hc-step-num">4</div>
+      <div class="hc-step-body">
+        <div class="hc-step-title">Ajusta la configuracion y realiza respaldos</div>
+        <div class="hc-step-desc">
+          En <strong>Configuracion</strong> puedes modificar parametros generales del sistema:
+          nombre, logotipo, colores de marca y opciones avanzadas de operacion.<br><br>
+          Desde el modulo <strong>Backups</strong> puedes generar respaldos manuales de la base de datos.
+          Se recomienda hacerlo periodicamente y antes de realizar cambios importantes en la configuracion.
+        </div>
+        <div class="hc-step-action">
+          <a class="btn" href="/admin/setup-wizard">Configuracion</a>
+          <a class="btn" href="/admin/backup">Respaldos</a>
+        </div>
+        <!-- SLOT DE IMAGEN -->
+        <div class="hc-img-slot" data-hc-img="admin-configuracion">
+          Aqui ira una captura de pantalla de la configuracion del sistema.
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="hc-tip">
+    <div class="hc-tip-icon">i</div>
+    <div>
+      <strong>Nota:</strong> Para agregar articulos de ayuda personalizados visibles desde esta misma pagina,
+      estos se gestionan a traves de la tabla <code>help_articles</code> en la base de datos del sistema.
+      Contacta al equipo de soporte tecnico para configurarlos.
+    </div>
+  </div>
+</div>
+
+
+<!-- Tarjeta de contacto al pie -->
+<div class="hc-contact-card">
+  <div class="hc-contact-title">No encontraste lo que buscabas?</div>
+  <div class="hc-contact-desc">
+    Comunicate con el administrador del sistema o con el equipo de soporte tecnico
+    para recibir asistencia personalizada.
+  </div>
+</div>
+
 {% endblock %}
+
 {% block scripts %}
 <script>
-async function load(){const q=document.getElementById('q').value||''; const r=await api('/api/help-center?q='+encodeURIComponent(q)); const box=document.getElementById('items'); const items=r.items||[]; box.innerHTML = items.map(it=>`<article class="card"><div class="help">${_esc(it.category||'General')}</div><h3 style="margin:6px 0 10px;">${_esc(it.title||'')}</h3><div style="white-space:pre-wrap;line-height:1.55;">${_esc(it.body||'')}</div></article>`).join('') || '<div class="card">Sin resultados.</div>'; }
-document.getElementById('q').addEventListener('input', ()=>load().catch(()=>{})); load();
+(async () => {
+  let me;
+  try { me = (await api('/api/me')).me; } catch(e) { return; }
+  const role = (me && me.role) ? me.role : '';
+
+  // Etiqueta de rol visible en el encabezado
+  const roleLabels = {
+    admin:         'Administrador',
+    operador:      'Operador',
+    jefe_estacion: 'Jefe de Estacion',
+    contador:      'Contador',
+    auditor:       'Auditor',
+  };
+  const badge = qs('#hcRoleBadge');
+  if (badge) {
+    badge.textContent = roleLabels[role] || role;
+    badge.hidden = false;
+  }
+
+  // Admin: mostrar pestanas para navegar entre vistas de rol
+  if (role === 'admin') {
+    const tabsEl = qs('#hcTabs');
+    if (tabsEl) tabsEl.hidden = false;
+    showSection('admin');
+    qsa('.hc-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        qsa('.hc-tab').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        showSection(btn.dataset.hcTab);
+      });
+    });
+  } else if (role === 'jefe_estacion') {
+    showSection('jefe_estacion');
+  } else {
+    // operador y cualquier otro rol (contador, auditor) ven la vista de operador como referencia
+    showSection('operador');
+  }
+
+  function showSection(r) {
+    qsa('.hc-section').forEach(s => s.classList.remove('active'));
+    const target = qs('#hc-' + r);
+    if (target) target.classList.add('active');
+  }
+})();
 </script>
 {% endblock %}

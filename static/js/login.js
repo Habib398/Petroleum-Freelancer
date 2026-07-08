@@ -45,9 +45,14 @@ async function doLogin(){
         brand = allowed.trim().toLowerCase();
       }
       try{
-        await api("/api/set-brand",{method:"POST",body:JSON.stringify({brand})});
-      }catch(_e){}
-      location.href = (role==="admin") ? "/admin/menu" : "/staff/menu";
+        const brandRes = await api("/api/set-brand",{method:"POST",body:JSON.stringify({brand})});
+        // El backend devuelve la URL correcta según el rol del usuario:
+        // admin → /admin/menu | jefe_estacion → /mod/operational-calendar
+        // operador → /mod/activities | contador/auditor → /staff/menu
+        location.href = brandRes.redirect || "/staff/menu";
+      }catch(_e){
+        location.href = "/staff/menu";
+      }
     }
   }catch(e){
     err.textContent = "No se pudo iniciar sesión: " + e.message;
