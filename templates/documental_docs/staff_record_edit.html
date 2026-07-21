@@ -2,87 +2,156 @@
 {% block head %}
 <link rel="stylesheet" href="/static/css/documental_docs.css"/>
 <style>
-/* Barra superior pegajosa con botón guardar */
-.sr-toolbar{
-  position:sticky;top:0;z-index:20;
-  background:#fff;border:1px solid var(--hme-border);border-radius:14px;
-  padding:10px 14px;margin:0 0 14px;
-  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
-  box-shadow:0 6px 14px rgba(2,6,23,.05);
+/* ── Layout principal ────────────────────────────────────────────────────── */
+.doc-editor-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 0;
+  align-items: start;
+  margin-top: 16px;
 }
-.sr-toolbar .meta{font-size:13px;color:var(--hme-text-soft);max-width:640px;line-height:1.45}
-.sr-toolbar .actions{display:flex;gap:8px;flex-wrap:wrap}
-.sr-toolbar .legend{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--hme-text-soft);align-items:center}
-.sr-toolbar .legend span{display:inline-flex;align-items:center;gap:4px;font-weight:700}
-.sr-toolbar .legend .sw{display:inline-block;width:10px;height:10px;border-radius:2px;border:1.5px solid #1e3a8a;background:rgba(37,99,235,.10)}
-.sr-toolbar .legend .sw.ro{border:1px dashed rgba(148,163,184,.55);background:rgba(148,163,184,.10)}
+.doc-area { min-width: 0; padding-right: 16px; }
 
-/* Página del PDF */
-.doc-page{
-  position:relative;display:block;margin:0 auto 18px;
-  background:#fff;border:1px solid var(--hme-border);border-radius:10px;
-  overflow:hidden;width:fit-content;max-width:100%;
-  box-shadow:0 6px 14px rgba(2,6,23,.05);
+/* ── Toolbar pegajoso ────────────────────────────────────────────────────── */
+.sr-toolbar {
+  position: sticky; top: 0; z-index: 20;
+  background: #fff; border: 1px solid var(--hme-border); border-radius: 14px;
+  padding: 10px 14px; margin: 0 0 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  box-shadow: 0 6px 14px rgba(2,6,23,.05);
 }
-.doc-page img{display:block;max-width:100%;height:auto;user-select:none;-webkit-user-drag:none}
+.sr-toolbar .meta   { font-size: 13px; color: var(--hme-text-soft); max-width: 480px; line-height: 1.45; }
+.sr-toolbar .actions{ display: flex; gap: 8px; flex-wrap: wrap; }
+.sr-toolbar .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--hme-text-soft); align-items: center; }
+.sr-toolbar .legend span { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
+.sr-toolbar .legend .sw     { display: inline-block; width: 10px; height: 10px; border-radius: 2px; border: 1.5px solid #1e3a8a; background: rgba(37,99,235,.10); }
+.sr-toolbar .legend .sw.ro  { border: 1px dashed rgba(148,163,184,.55); background: rgba(148,163,184,.10); }
 
-/* Overlays */
-.ov{position:absolute;box-sizing:border-box}
+/* ── Página del PDF ──────────────────────────────────────────────────────── */
+.doc-page {
+  position: relative; display: block; margin: 0 auto 18px;
+  background: #fff; border: 1px solid var(--hme-border); border-radius: 10px;
+  overflow: hidden; width: fit-content; max-width: 100%;
+  box-shadow: 0 6px 14px rgba(2,6,23,.05);
+}
+.doc-page img { display: block; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
 
-/* Casilla editable (cuadro clickable que muestra ✓ al marcar) */
-.ov.cb{
-  cursor:pointer;background:rgba(255,255,255,.55);
-  border:1.5px solid rgba(37,99,235,.55);border-radius:3px;
-  display:flex;align-items:center;justify-content:center;
-  transition:background .12s,border-color .12s;
+/* ── Overlays (solo visualización) ──────────────────────────────────────── */
+.ov {
+  position: absolute; box-sizing: border-box; border-radius: 3px;
+  overflow: hidden; font-size: 11px; line-height: 1.2;
+  display: flex; align-items: center; padding: 1px 3px;
+  transition: box-shadow .15s, border-color .15s, background .15s;
+  white-space: nowrap;
 }
-.ov.cb:hover{background:rgba(37,99,235,.16);border-color:#1e3a8a}
-.ov.cb input{position:absolute;inset:0;margin:0;opacity:0;cursor:pointer;width:100%;height:100%}
-.ov.cb .ck{display:none;font-weight:900;color:#1e3a8a;line-height:1;pointer-events:none}
-.ov.cb input:checked ~ .ck{display:block}
+/* Campo que tiene par en el panel (azul suave) */
+.ov.ov-edit {
+  border: 1.5px solid rgba(37,99,235,.40);
+  background: rgba(37,99,235,.06);
+  color: var(--hme-text);
+  cursor: pointer;
+}
+.ov.ov-edit:hover { background: rgba(37,99,235,.14); border-color: rgba(37,99,235,.65); }
+/* Campo activo (panel enfocado en él) */
+.ov.ov-active {
+  border-color: #1e3a8a !important;
+  background: rgba(37,99,235,.20) !important;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.28);
+  z-index: 2;
+}
+/* Campo de referencia (no editable) */
+.ov.ov-ref {
+  border: 1px dashed rgba(148,163,184,.50);
+  background: rgba(148,163,184,.07);
+  color: #64748b; pointer-events: none;
+}
+/* Texto placeholder cuando el campo está vacío */
+.ov-ph {
+  color: rgba(37,99,235,.50); font-style: italic;
+  font-size: 10px; overflow: hidden; text-overflow: ellipsis;
+}
 
-/* Texto / fecha / número editable */
-.ov.txt input,.ov.txt textarea{
-  width:100%;height:100%;padding:2px 4px;
-  border:1.5px solid rgba(37,99,235,.55);border-radius:3px;
-  background:rgba(255,255,255,.92);font:inherit;font-size:11px;color:var(--hme-text);
-  box-sizing:border-box;outline:none;resize:none;
+/* ── Panel lateral de edición ────────────────────────────────────────────── */
+.edit-panel {
+  position: sticky; top: 0;
+  max-height: 100vh; overflow-y: auto;
+  background: #fff; border: 1px solid var(--hme-border);
+  border-radius: 16px; box-shadow: 0 8px 28px rgba(2,6,23,.09);
+  display: flex; flex-direction: column;
 }
-.ov.txt input:focus,.ov.txt textarea:focus{
-  border-color:#1e3a8a;background:#fff;box-shadow:0 0 0 2px rgba(37,99,235,.18);
+.edit-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  background: var(--hme-text); color: #fff;
+  border-radius: 15px 15px 0 0;
+  position: sticky; top: 0; z-index: 5;
+}
+.edit-panel-title {
+  font-size: 11px; font-weight: 900;
+  letter-spacing: .10em; text-transform: uppercase;
+}
+.edit-panel-body {
+  padding: 14px 14px 28px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.panel-save {
+  width: 100%; margin-bottom: 16px; padding: 11px; font-size: 13px;
 }
 
-/* Campos NO editables (referencia visual, no clickable) */
-.ov.ro{
-  background:rgba(148,163,184,.10);border:1px dashed rgba(148,163,184,.55);
-  border-radius:2px;display:flex;align-items:center;justify-content:center;
-  font-size:10px;color:#475569;pointer-events:none;overflow:hidden;
+/* Campo individual en el panel */
+.panel-field { margin-bottom: 12px; }
+.panel-field-lbl {
+  display: block; font-size: 11px; font-weight: 800;
+  color: var(--hme-text-soft); margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: .04em;
 }
-.ov.ro.cb-on{color:#334155;font-weight:900}
+.panel-field input,
+.panel-field textarea {
+  width: 100%; padding: 8px 10px;
+  border: 1.5px solid var(--hme-border); border-radius: 10px;
+  font: inherit; font-size: 13px; color: var(--hme-text);
+  background: #fff; box-sizing: border-box;
+  transition: border-color .15s, box-shadow .15s; outline: none;
+}
+.panel-field textarea { min-height: 70px; resize: vertical; }
+.panel-field input:focus, .panel-field textarea:focus {
+  border-color: #1e3a8a;
+  box-shadow: 0 0 0 3px rgba(37,99,235,.14);
+}
+/* Campo activo en el panel (borde dorado, igual que las capturas) */
+.panel-field.is-active input,
+.panel-field.is-active textarea {
+  border-color: #c59a1b;
+  box-shadow: 0 0 0 3px rgba(197,154,27,.18);
+}
+/* Checkbox especial */
+.panel-cb-row {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.panel-cb-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
 
-/* Tooltip con la etiqueta del campo (aparece al hover/focus) */
-.tag-lbl{
-  position:absolute;bottom:100%;left:0;
-  background:#1e3a8a;color:#fff;font-size:11px;font-weight:800;
-  padding:2px 7px;border-radius:5px;white-space:nowrap;margin-bottom:3px;
-  pointer-events:none;opacity:0;transition:opacity .15s;z-index:5;
-  box-shadow:0 4px 10px rgba(2,6,23,.18);
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .doc-editor-layout { grid-template-columns: 1fr; }
+  .doc-area { padding-right: 0; }
+  .edit-panel { position: static; max-height: none; border-radius: 14px; margin-top: 16px; }
 }
-.ov.cb:hover .tag-lbl,
-.ov.txt:focus-within .tag-lbl,
-.ov.txt:hover .tag-lbl{opacity:1}
 </style>
 {% endblock %}
 
 {% block content %}
-{% set subheader_back_url = '/staff/menu' %}{% set subheader_back_label = 'Volver al menú' %}
+{% set subheader_back_url = staff_base + '/records' %}
+{% set subheader_back_label = 'Volver' %}
 {% include 'documental_docs/_subheader.html' %}
 
 <div class="card">
   <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
     <div>
       <h1 style="margin:0 0 6px">Editar partes permitidas</h1>
-      <div class="muted">{{ module_label }} • {{ record.station_code }} • {{ record.station_name }}</div>
+      <div class="muted">{{ module_label }} &bull; {{ record.station_code }} &bull; {{ record.station_name }}</div>
       <div class="muted">Documento: {{ record.template_name or record.title }}</div>
     </div>
     <div class="actions">
@@ -92,143 +161,186 @@
   </div>
 </div>
 
-<form method="post" id="sr-form" style="margin-top:16px">
+<form method="post" id="sr-form">
   <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
-  <div class="sr-toolbar">
-    <div class="meta">
-      Marca o llena los campos resaltados en azul sobre el documento. Pasa el cursor por encima para ver su etiqueta. Los campos en gris son solo referencia y no se pueden modificar.
-    </div>
-    <div class="legend">
-      <span><span class="sw"></span> Editable</span>
-      <span><span class="sw ro"></span> Referencia</span>
-    </div>
-    <div class="actions">
-      <button type="submit" class="btnx">Guardar cambios</button>
-    </div>
-  </div>
+  <div class="doc-editor-layout">
 
-  {% if previews %}
-    {% for preview in previews %}
-    <div class="doc-page" data-page="{{ loop.index0 }}">
-      <img class="doc-img" src="/uploads/{{ preview }}" alt="página {{ loop.index }}" data-page="{{ loop.index0 }}">
+    <!-- ══════════ ÁREA DEL DOCUMENTO ══════════ -->
+    <div class="doc-area">
+      <div class="sr-toolbar">
+        <div class="meta">
+          Llena los campos en el <strong>Panel de Edicion</strong>.
+          Al escribir, el documento se actualiza en tiempo real.
+          Haz clic sobre un campo del documento para ir a su casilla.
+        </div>
+        <div class="legend">
+          <span><span class="sw"></span> Editable</span>
+          <span><span class="sw ro"></span> Referencia</span>
+        </div>
+        <div class="actions">
+          <button type="submit" class="btnx">Guardar cambios</button>
+        </div>
+      </div>
+
+      {% if previews %}
+        {% for preview in previews %}
+        <div class="doc-page" data-page="{{ loop.index0 }}">
+          <img class="doc-img" src="/uploads/{{ preview }}"
+               alt="pagina {{ loop.index }}" data-page="{{ loop.index0 }}">
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="cardx"><div class="muted">No se pudieron generar previsualizaciones del documento.</div></div>
+      {% endif %}
     </div>
-    {% endfor %}
-  {% else %}
-    <div class="cardx"><div class="muted">No se pudieron generar previsualizaciones del documento.</div></div>
-  {% endif %}
+
+    <!-- ══════════ PANEL LATERAL ══════════ -->
+    <aside class="edit-panel">
+      <div class="edit-panel-header">
+        <span class="edit-panel-title">Panel de Edicion</span>
+      </div>
+      <div class="edit-panel-body">
+        <button type="submit" class="btnx panel-save">Guardar cambios</button>
+
+        {% for field in schema %}
+          {% if field.key in editable_keys %}
+          {% set val  = values.get(field.key, '') %}
+          {% set ft   = field.type or 'text' %}
+          <div class="panel-field" data-field-key="{{ field.key }}">
+            <span class="panel-field-lbl">{{ field.label or field.key }}</span>
+            {% if ft == 'checkbox' %}
+              <label class="panel-cb-row">
+                <input type="checkbox" name="{{ field.key }}" value="1"
+                  {% if (val|string).lower() in ['1','true','yes','on','checked','x','✓'] %}checked{% endif %}>
+                Marcar
+              </label>
+            {% elif ft in ['textarea','multiline','paragraph'] or (field.h and field.h|int > 28) %}
+              <textarea name="{{ field.key }}"
+                placeholder="{{ field.placeholder or (field.label or field.key) }}"
+                maxlength="{{ field.max_len or 320 }}">{{ val }}</textarea>
+            {% else %}
+              <input type="{{ 'date' if ft=='date' else ('number' if ft=='number' else 'text') }}"
+                name="{{ field.key }}" value="{{ val }}"
+                placeholder="{{ field.placeholder or (field.label or field.key) }}"
+                maxlength="{{ field.max_len or 160 }}">
+            {% endif %}
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </aside>
+
+  </div>
 </form>
 
 <script>
 (function(){
-  const ZOOM = 1.3; // factor del preview (fitz.Matrix(1.3, 1.3))
-  const fields = {{ schema|tojson }};
-  const values = {{ values|tojson }};
-  const editableSet = new Set({{ editable_keys|tojson }});
-  const truthy = new Set(['1','true','yes','on','checked','x','✓']);
+  var ZOOM       = 1.3;
+  var fields     = {{ schema|tojson }};
+  var values     = {{ values|tojson }};
+  var editSet    = new Set({{ editable_keys|tojson }});
+  var truthy     = new Set(['1','true','yes','on','checked','x','✓']);
 
-  function isTruthy(v){
-    if (v === true) return true;
-    return truthy.has(String(v||'').toLowerCase());
-  }
-  function escHtml(s){
-    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-  }
-  function ratio(img){
-    return img.naturalWidth ? (img.clientWidth / img.naturalWidth) : 1;
-  }
-  function pdfToCss(img, x, y, w, h){
-    const r = ratio(img);
-    return {
-      left:  x * ZOOM * r,
-      top:   y * ZOOM * r,
-      width: w * ZOOM * r,
-      height:h * ZOOM * r,
-    };
-  }
+  function isTruthy(v){ return v === true || truthy.has(String(v||'').toLowerCase()); }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);}); }
+  function ratio(img){ return img.naturalWidth ? img.clientWidth/img.naturalWidth : 1; }
+  function toCSS(img,x,y,w,h){ var r=ratio(img); return{left:x*ZOOM*r,top:y*ZOOM*r,width:w*ZOOM*r,height:h*ZOOM*r}; }
 
-  function buildOverlay(f, css){
-    const type = (f.type || 'text').toLowerCase();
-    const editable = editableSet.has(f.key);
-    const cur = values[f.key];
-    const el = document.createElement('div');
-    el.style.left   = css.left + 'px';
-    el.style.top    = css.top + 'px';
-    el.style.width  = Math.max(css.width, 6) + 'px';
-    el.style.height = Math.max(css.height, 6) + 'px';
-    const lblHtml = `<span class="tag-lbl">${escHtml(f.label || f.key)}</span>`;
+  function buildOv(f, css){
+    var editable = editSet.has(f.key);
+    var el  = document.createElement('div');
+    var cur = values[f.key];
+    el.className = 'ov ' + (editable ? 'ov-edit' : 'ov-ref');
+    el.dataset.fkey = f.key;
+    el.style.cssText = 'left:'+css.left+'px;top:'+css.top+'px;width:'+Math.max(css.width,8)+'px;height:'+Math.max(css.height,8)+'px';
 
+    var type = (f.type||'text').toLowerCase();
     if (type === 'checkbox'){
-      if (editable){
-        el.className = 'ov cb';
-        const checkSize = Math.max(10, Math.round(css.height * 0.78));
-        el.innerHTML =
-          `<input type="checkbox" name="${escHtml(f.key)}" value="1" ${isTruthy(cur)?'checked':''}>`+
-          `<span class="ck" style="font-size:${checkSize}px">✓</span>`+
-          lblHtml;
-      } else {
-        el.className = 'ov ro' + (isTruthy(cur) ? ' cb-on' : '');
-        const checkSize = Math.max(10, Math.round(css.height * 0.78));
-        el.style.fontSize = checkSize + 'px';
-        if (isTruthy(cur)) el.textContent = '✓';
-      }
-      return el;
-    }
-
-    if (type === 'textarea'){
-      if (editable){
-        el.className = 'ov txt';
-        el.innerHTML =
-          `<textarea name="${escHtml(f.key)}" maxlength="${parseInt(f.max_len)||160}" placeholder="${escHtml(f.placeholder||'')}">${escHtml(cur||'')}</textarea>`+
-          lblHtml;
-      } else {
-        el.className = 'ov ro';
-        el.textContent = cur || '';
-      }
-      return el;
-    }
-
-    // text / date / number
-    const htmlType = type === 'date' ? 'date' : (type === 'number' ? 'number' : 'text');
-    if (editable){
-      el.className = 'ov txt';
-      el.innerHTML =
-        `<input type="${htmlType}" name="${escHtml(f.key)}" value="${escHtml(cur||'')}" maxlength="${parseInt(f.max_len)||160}" placeholder="${escHtml(f.placeholder||'')}">`+
-        lblHtml;
+      el.style.justifyContent = 'center';
+      el.style.fontSize = Math.max(10, Math.round(css.height*.75)) + 'px';
+      el.style.fontWeight = '900';
+      el.textContent = isTruthy(cur) ? '✓' : '';
     } else {
-      el.className = 'ov ro';
-      el.textContent = cur || '';
+      setOvText(el, cur, f);
+    }
+
+    if (editable){
+      el.addEventListener('click', function(){
+        var pf = document.querySelector('.panel-field[data-field-key="'+f.key+'"]');
+        if (!pf) return;
+        var inp = pf.querySelector('input,textarea');
+        if (inp){ inp.focus(); inp.scrollIntoView({behavior:'smooth',block:'center'}); }
+      });
     }
     return el;
   }
 
+  function setOvText(el, val, f){
+    el.innerHTML = '';
+    if (val){ el.style.whiteSpace='pre-wrap'; el.textContent=val; }
+    else if (editSet.has(f.key)){
+      var ph = document.createElement('span');
+      ph.className='ov-ph'; ph.textContent = f.label||f.key;
+      el.appendChild(ph);
+    }
+  }
+
   function renderAll(){
-    document.querySelectorAll('.doc-page').forEach(page => {
-      const pageNo = parseInt(page.dataset.page, 10);
-      const img = page.querySelector('.doc-img');
-      page.querySelectorAll('.ov').forEach(n => n.remove());
-      fields.forEach(f => {
-        if (parseInt(f.page, 10) !== pageNo) return;
-        const css = pdfToCss(img, +f.x, +f.y, +f.w, +f.h);
-        page.appendChild(buildOverlay(f, css));
+    document.querySelectorAll('.doc-page').forEach(function(page){
+      var pn  = parseInt(page.dataset.page,10);
+      var img = page.querySelector('.doc-img');
+      page.querySelectorAll('.ov').forEach(function(n){n.remove();});
+      fields.forEach(function(f){
+        if (parseInt(f.page,10)!==pn) return;
+        page.appendChild(buildOv(f, toCSS(img,+f.x,+f.y,+f.w,+f.h)));
+      });
+    });
+    wirePanel();
+  }
+
+  function wirePanel(){
+    document.querySelectorAll('.panel-field').forEach(function(pf){
+      var key = pf.dataset.fieldKey;
+      var inp = pf.querySelector('input,textarea');
+      if (!inp) return;
+      var isCb = inp.type==='checkbox';
+      var f    = fields.find(function(x){return x.key===key;});
+
+      var onVal = function(){
+        var ov = document.querySelector('.ov[data-fkey="'+key+'"]');
+        if (!ov) return;
+        if (isCb){ ov.textContent = inp.checked ? '✓' : ''; }
+        else { setOvText(ov, inp.value, f||{key:key}); }
+        values[key] = isCb ? (inp.checked?'1':'') : inp.value;
+      };
+
+      inp.addEventListener('input',  onVal);
+      inp.addEventListener('change', onVal);
+
+      inp.addEventListener('focus', function(){
+        document.querySelectorAll('.panel-field').forEach(function(p){p.classList.remove('is-active');});
+        document.querySelectorAll('.ov').forEach(function(o){o.classList.remove('ov-active');});
+        pf.classList.add('is-active');
+        var ov = document.querySelector('.ov[data-fkey="'+key+'"]');
+        if (ov){ ov.classList.add('ov-active'); ov.scrollIntoView({behavior:'smooth',block:'center'}); }
+      });
+      inp.addEventListener('blur', function(){
+        pf.classList.remove('is-active');
+        var ov = document.querySelector('.ov[data-fkey="'+key+'"]');
+        if (ov) ov.classList.remove('ov-active');
       });
     });
   }
 
-  // Mover los overlays dentro del <form> al cargar (los doc-page ya están dentro,
-  // pero los inputs creados por JS aún se asocian al form porque están en su
-  // árbol DOM — sin necesidad de "form" attribute explícito).
-  const imgs = document.querySelectorAll('.doc-img');
-  let pending = imgs.length;
-  function tryRender(){ if (--pending <= 0) renderAll(); }
+  var imgs = document.querySelectorAll('.doc-img');
+  var pend = imgs.length;
+  function tryRender(){ if(--pend<=0) renderAll(); }
   if (!imgs.length) renderAll();
-  else imgs.forEach(img => { if (img.complete) tryRender(); else img.addEventListener('load', tryRender); });
+  else imgs.forEach(function(img){ img.complete ? tryRender() : img.addEventListener('load',tryRender); });
 
-  let resizeT;
-  window.addEventListener('resize', () => {
-    clearTimeout(resizeT);
-    resizeT = setTimeout(renderAll, 80);
-  });
+  var resT;
+  window.addEventListener('resize',function(){ clearTimeout(resT); resT=setTimeout(renderAll,80); });
 })();
 </script>
 {% endblock %}

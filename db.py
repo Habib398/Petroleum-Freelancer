@@ -1,7 +1,9 @@
 import atexit
-import os, sqlite3
+import os
 import re
+import sqlite3
 from services.db_compat import build_postgres_connection, is_postgres_env
+from services.utils import add_months
 try:
     from services.brand import get_brand as _get_brand
 except Exception:
@@ -157,24 +159,57 @@ def _close_mem_connections():
 atexit.register(_close_mem_connections)
 
 
-def _table_columns(conn, table:str):
+# ---------------------------------------------------------------------------
+# Context manager para conexiones DB
+# ---------------------------------------------------------------------------
+
+from contextlib import contextmanager
+
+
+@contextmanager
+def db_conn():
+    """Context manager que abre una conexión y garantiza su cierre.
+
+    Uso recomendado en lugar del patrón manual conn = get_conn() / conn.close():
+
+        with db_conn() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT ...")
+            conn.commit()
+        # conn se cierra automáticamente al salir del bloque,
+        # incluso si ocurre una excepción.
+
+    El commit sigue siendo responsabilidad del llamador (para agrupar
+    múltiples escrituras en una sola transacción cuando sea necesario).
+    """
+    conn = get_conn()
+    try:
+        yield conn
+    finally:
+        try:
+            conn.close()
+        except Exception:
+            pass
+
+
+def _table_columns(conn, table: str) -> set:
     cur = conn.cursor()
     cur.execute(f"PRAGMA table_info({table})")
     return {r[1] for r in cur.fetchall()}
 
-def ensure_column(conn, table:str, column:str, ddl:str):
+
+def ensure_column(conn, table: str, column: str, ddl: str) -> None:
+    """Agrega la columna `column` a `table` si aún no existe.
+
+    `ddl` debe ser la definición completa de la columna, p. ej.:
+        ensure_column(conn, 'users', 'locked_until', 'locked_until INTEGER')
+
+    Hace commit automático para que la migración quede persistida.
+    Es seguro llamarla múltiples veces; si la columna ya existe no hace nada.
+    """
     cols = _table_columns(conn, table)
     if column not in cols:
         conn.execute(f"ALTER TABLE {table} ADD COLUMN {ddl};")
-
-
-
-def _ensure_column(conn, table: str, column: str, coldef: str):
-    cur = conn.cursor()
-    cur.execute(f"PRAGMA table_info({table})")
-    cols = [r[1] for r in cur.fetchall()]
-    if column not in cols:
-        cur.execute(f"ALTER TABLE {table} ADD COLUMN {column} {coldef}")
         conn.commit()
 
 
@@ -206,12 +241,7 @@ def _safe_executescript(conn, script: str) -> None:
         # Ignore to keep init resilient; logs will show if running app
         pass
 
-def _add_months_seed(d, months:int):
-    import calendar as _cal
-    y = d.year + (d.month - 1 + months) // 12
-    m = (d.month - 1 + months) % 12 + 1
-    day = min(d.day, _cal.monthrange(y, m)[1])
-    return d.replace(year=y, month=m, day=day)
+# _add_months_seed eliminada — se usa add_months() importada desde services.utils
 
 def _dates_for_seed_frequency(year:int, freq:str):
     import datetime as _dt
@@ -228,19 +258,19 @@ def _dates_for_seed_frequency(year:int, freq:str):
         cur = start
         while cur <= end:
             out.append(cur)
-            cur = _add_months_seed(cur, 1)
+            cur = add_months(cur, 1)
         return out
     if freq == 'quarterly':
         cur = start
         while cur <= end:
             out.append(cur)
-            cur = _add_months_seed(cur, 3)
+            cur = add_months(cur, 3)
         return out
     if freq == 'fourmonthly':
         cur = start
         while cur <= end:
             out.append(cur)
-            cur = _add_months_seed(cur, 4)
+            cur = add_months(cur, 4)
         return out
     if freq == 'semiannual':
         return [start, _dt.date(year, 7, 1)]
@@ -2291,11 +2321,13 @@ def verify_user(username: str, password: str, *, ip: str | None = None):
     conn.close()
     return None, "invalid_credentials"
 
-def get_user(user_id: int):
-    conn = get_conn(); cur = conn.cursor()
-    cur.execute(
-        "SELECT u.*, s.monthly_status, s.monthly_end FROM users u LEFT JOIN stations s ON s.id=u.station_id WHERE u.id=?",
-        (user_id,),
-    )
-    row = cur.fetchone(); conn.close()
+def get_user(user_id: int) -> dict | None:
+    """Retorna el usuario con `user_id` incluyendo estado de la estación, o None si no existe."""
+    with db_conn() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            "SELECT u.*, s.monthly_status, s.monthly_end FROM users u LEFT JOIN stations s ON s.id=u.station_id WHERE u.id=?",
+            (user_id,),
+        )
+        row = cur.fetchone()
     return dict(row) if row else None

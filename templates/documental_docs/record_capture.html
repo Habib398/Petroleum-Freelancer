@@ -1,21 +1,177 @@
 {% extends "layout.html" %}
 {% block head %}
 <link rel="stylesheet" href="/static/css/documental_docs.css"/>
-<style>.grid2{grid-template-columns:.95fr 1.05fr}@media (max-width:980px){.grid2{grid-template-columns:1fr}}</style>
+<style>
+/* ── Layout principal ────────────────────────────────────────────────────── */
+.doc-editor-layout {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 0;
+  align-items: start;
+  margin-top: 16px;
+}
+.doc-area { min-width: 0; padding-right: 16px; }
+
+/* ── Toolbar pegajoso ────────────────────────────────────────────────────── */
+.sr-toolbar {
+  position: sticky; top: 0; z-index: 20;
+  background: #fff; border: 1px solid var(--hme-border); border-radius: 14px;
+  padding: 10px 14px; margin: 0 0 14px;
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 12px; flex-wrap: wrap;
+  box-shadow: 0 6px 14px rgba(2,6,23,.05);
+}
+.sr-toolbar .meta   { font-size: 13px; color: var(--hme-text-soft); max-width: 420px; line-height: 1.45; }
+.sr-toolbar .actions{ display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.sr-toolbar .legend { display: flex; gap: 10px; flex-wrap: wrap; font-size: 11px; color: var(--hme-text-soft); align-items: center; }
+.sr-toolbar .legend span { display: inline-flex; align-items: center; gap: 4px; font-weight: 700; }
+.sr-toolbar .legend .sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; border: 1.5px solid #1e3a8a; background: rgba(37,99,235,.10); }
+
+/* Selector de estacion en toolbar */
+.station-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 10px;
+  border: 1px solid var(--hme-border);
+  background: rgba(15,23,42,.03);
+  font-size: 12px; font-weight: 700;
+  white-space: nowrap;
+}
+.station-chip select {
+  border: none; background: transparent; font: inherit;
+  font-weight: 700; color: var(--hme-text); cursor: pointer;
+  outline: none; padding: 0 2px;
+}
+
+/* ── Página del PDF ──────────────────────────────────────────────────────── */
+.doc-page {
+  position: relative; display: block; margin: 0 auto 18px;
+  background: #fff; border: 1px solid var(--hme-border); border-radius: 10px;
+  overflow: hidden; width: fit-content; max-width: 100%;
+  box-shadow: 0 6px 14px rgba(2,6,23,.05);
+}
+.doc-page img { display: block; max-width: 100%; height: auto; user-select: none; -webkit-user-drag: none; }
+
+/* ── Overlays (solo visualización) ──────────────────────────────────────── */
+.ov {
+  position: absolute; box-sizing: border-box; border-radius: 3px;
+  overflow: hidden; font-size: 11px; line-height: 1.2;
+  display: flex; align-items: center; padding: 1px 3px;
+  transition: box-shadow .15s, border-color .15s, background .15s;
+  white-space: nowrap;
+}
+.ov.ov-edit {
+  border: 1.5px solid rgba(37,99,235,.40);
+  background: rgba(37,99,235,.06); color: var(--hme-text); cursor: pointer;
+}
+.ov.ov-edit:hover { background: rgba(37,99,235,.14); border-color: rgba(37,99,235,.65); }
+.ov.ov-active {
+  border-color: #1e3a8a !important;
+  background: rgba(37,99,235,.20) !important;
+  box-shadow: 0 0 0 2px rgba(37,99,235,.28); z-index: 2;
+}
+.ov-ph {
+  color: rgba(37,99,235,.50); font-style: italic;
+  font-size: 10px; overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Aviso sin estación */
+.no-station-notice {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 48px 24px; text-align: center;
+  border-radius: 14px; border: 2px dashed var(--hme-border);
+  color: var(--hme-text-soft); margin-top: 0;
+}
+.no-station-notice strong { font-size: 15px; font-weight: 900; color: var(--hme-text); }
+
+/* ── Panel lateral de edición ────────────────────────────────────────────── */
+.edit-panel {
+  position: sticky; top: 0;
+  max-height: 100vh; overflow-y: auto;
+  background: #fff; border: 1px solid var(--hme-border);
+  border-radius: 16px; box-shadow: 0 8px 28px rgba(2,6,23,.09);
+  display: flex; flex-direction: column;
+}
+.edit-panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 16px 12px;
+  border-bottom: 1px solid rgba(255,255,255,.12);
+  background: var(--hme-text); color: #fff;
+  border-radius: 15px 15px 0 0;
+  position: sticky; top: 0; z-index: 5;
+}
+.edit-panel-title { font-size: 11px; font-weight: 900; letter-spacing: .10em; text-transform: uppercase; }
+
+.edit-panel-body {
+  padding: 14px 14px 28px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.panel-save { width: 100%; margin-bottom: 16px; padding: 11px; font-size: 13px; }
+
+.panel-field { margin-bottom: 12px; }
+.panel-field-lbl {
+  display: block; font-size: 11px; font-weight: 800;
+  color: var(--hme-text-soft); margin-bottom: 4px;
+  text-transform: uppercase; letter-spacing: .04em;
+}
+.panel-field input,
+.panel-field textarea {
+  width: 100%; padding: 8px 10px;
+  border: 1.5px solid var(--hme-border); border-radius: 10px;
+  font: inherit; font-size: 13px; color: var(--hme-text);
+  background: #fff; box-sizing: border-box;
+  transition: border-color .15s, box-shadow .15s; outline: none;
+}
+.panel-field textarea { min-height: 70px; resize: vertical; }
+.panel-field input:focus, .panel-field textarea:focus {
+  border-color: #1e3a8a; box-shadow: 0 0 0 3px rgba(37,99,235,.14);
+}
+.panel-field.is-active input,
+.panel-field.is-active textarea {
+  border-color: #c59a1b; box-shadow: 0 0 0 3px rgba(197,154,27,.18);
+}
+.panel-cb-row { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+.panel-cb-row input[type="checkbox"] { width: 16px; height: 16px; cursor: pointer; }
+
+/* Nota de estación en el panel */
+.panel-station-note {
+  font-size: 12px; color: var(--hme-text-soft);
+  padding: 8px 10px; border-radius: 10px;
+  background: rgba(15,23,42,.04); border: 1px solid var(--hme-border);
+  margin-bottom: 14px; line-height: 1.45;
+}
+.panel-station-note strong { color: var(--hme-text); font-weight: 900; }
+
+/* ── Responsive ──────────────────────────────────────────────────────────── */
+@media (max-width: 1100px) {
+  .doc-editor-layout { grid-template-columns: 1fr; }
+  .doc-area { padding-right: 0; }
+  .edit-panel { position: static; max-height: none; border-radius: 14px; margin-top: 16px; }
+}
+</style>
 {% endblock %}
+
 {% block content %}
-{% set subheader_back_url = '/admin/menu' %}{% set subheader_back_label = 'Volver a módulos' %}
+{% set subheader_back_url = admin_base + '/templates' %}
+{% set subheader_back_label = 'Plantillas' %}
 {% include 'documental_docs/_subheader.html' %}
+
+{# ── Cabecera ── #}
 <div class="card">
   <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap">
     <div>
       <h1 style="margin:0 0 6px">Generar y guardar documento</h1>
-      <div class="muted">{{ module_label }} • {{ template_row.name }} {% if template_row.month_key %}• {{ template_row.month_key }}{% endif %}</div>
+      <div class="muted">
+        {{ module_label }} &bull; {{ template_row.name }}
+        {% if template_row.month_key %}&bull; {{ template_row.month_key }}{% endif %}
+      </div>
       {% if current_record %}
-        <div style="margin-top:6px"><span class="pill">Guardado</span> <span class="muted">Última edición: {{ current_record.updated_at }}</span></div>
+        <div style="margin-top:6px">
+          <span class="pill">Guardado</span>
+          <span class="muted">Ultima edicion: {{ current_record.updated_at }}</span>
+        </div>
       {% endif %}
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
+    <div class="actions">
       <a class="btnx alt" href="{{ admin_base }}/templates">Plantillas</a>
       <a class="btnx alt" href="{{ admin_base }}/records">Documentos guardados</a>
       {% if current_record %}
@@ -25,57 +181,233 @@
   </div>
 </div>
 
-<div class="grid2" style="margin-top:16px">
-  <section class="cardx">
-    <h3 style="margin-top:0">Datos</h3>
-    <form method="post">
-      <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-      <div class="field">
-        <label>Estación</label>
-        <select name="station_id" required>
-          <option value="">Selecciona…</option>
-          {% for st in stations %}
-            <option value="{{ st.id }}" {% if station_id and (station_id|int)==(st.id|int) %}selected{% endif %}>
-              {{ st.code }} • {{ st.name }}
-            </option>
-          {% endfor %}
-        </select>
-        <div class="muted">Solo el administrador puede editar. Los demás usuarios podrán ver/descargar su estación.</div>
+{% if previews %}
+<form method="post" id="sr-form">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <input type="hidden" name="station_id" value="{{ station_id }}">
+
+  <div class="doc-editor-layout">
+
+    <!-- ══════════ ÁREA DEL DOCUMENTO ══════════ -->
+    <div class="doc-area">
+      <div class="sr-toolbar">
+        <div class="meta">
+          Selecciona la estacion y llena el <strong>Panel de Edicion</strong>.
+          El documento se actualiza en tiempo real mientras escribes.
+        </div>
+
+        {# Selector de estacion: cambio recarga la pagina con valores precargados #}
+        <div class="station-chip">
+          <span style="font-size:11px;color:var(--hme-text-soft)">Estacion:</span>
+          <select id="stationSel" title="Selecciona la estacion">
+            <option value="">-- Selecciona --</option>
+            {% for st in stations %}
+              <option value="{{ st.id }}"
+                {% if station_id and (station_id|int)==(st.id|int) %}selected{% endif %}>
+                {{ st.code }} &bull; {{ st.name }}
+              </option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div class="legend">
+          <span><span class="sw"></span> Editable</span>
+        </div>
       </div>
 
-      {% for field in schema %}
-        <div class="field">
-          {% set ftype = field.type or 'text' %}
-          {% set ph = field.placeholder or '' %}
-          {% set val = (values.get(field.key) if values else '') %}
-          {% if ftype == 'checkbox' %}
-            {% set checked = (val|string).lower() in ['1','true','yes','on','checked','x'] %}
-            <label style="display:flex;align-items:center;gap:8px;font-weight:700">
-              <input type="checkbox" name="{{ field.key }}" value="1" {% if checked %}checked{% endif %}>
-              {{ field.label or field.key }}
-            </label>
-          {% else %}
-            <label>{{ field.label or field.key }}</label>
-            {% if ftype in ['textarea','multiline','paragraph'] or (field.h and field.h|int > 28) %}
-              <textarea name="{{ field.key }}" placeholder="{{ ph }}">{{ val }}</textarea>
-            {% else %}
-              <input type="{{ 'date' if ftype=='date' else ('number' if ftype=='number' else 'text') }}" name="{{ field.key }}" value="{{ val }}" placeholder="{{ ph }}">
-            {% endif %}
-          {% endif %}
-          <div class="muted">p{{ field.page }} • x{{ field.x }} y{{ field.y }} • {{ field.w }}×{{ field.h }}</div>
+      {% if not station_id %}
+        <div class="no-station-notice">
+          <strong>Selecciona una estacion para comenzar</strong>
+          <div>Usa el selector en la barra superior. Los valores guardados de esa estacion se cargaran automaticamente.</div>
+        </div>
+      {% endif %}
+
+      {% for preview in previews %}
+        <div class="doc-page" data-page="{{ loop.index0 }}">
+          <img class="doc-img" src="/uploads/{{ preview }}"
+               alt="pagina {{ loop.index }}" data-page="{{ loop.index0 }}">
         </div>
       {% endfor %}
+    </div>
 
-      <button class="btnx" type="submit">Guardar y generar PDF</button>
-    </form>
-  </section>
+    <!-- ══════════ PANEL LATERAL ══════════ -->
+    <aside class="edit-panel">
+      <div class="edit-panel-header">
+        <span class="edit-panel-title">Panel de Edicion</span>
+      </div>
+      <div class="edit-panel-body">
 
-  <section class="cardx">
-    <h3 style="margin-top:0">Vista previa del PDF</h3>
-    <div class="muted" style="margin-bottom:12px">Usa estas páginas como referencia visual.</div>
-    {% for preview in previews %}
-      <img class="preview" src="/uploads/{{ preview }}" alt="preview {{ loop.index }}">
-    {% endfor %}
-  </section>
-</div>
+        <button type="submit" class="btnx panel-save"
+          {% if not station_id %}disabled title="Selecciona una estacion primero"{% endif %}>
+          Finalizar y Guardar
+        </button>
+
+        {# Nota de estacion activa #}
+        {% if station_id %}
+          {% for st in stations %}
+            {% if (st.id|int) == (station_id|int) %}
+            <div class="panel-station-note">
+              Estacion: <strong>{{ st.code }} &bull; {{ st.name }}</strong>
+            </div>
+            {% endif %}
+          {% endfor %}
+        {% else %}
+          <div class="panel-station-note">
+            Selecciona una estacion en la barra superior para activar los campos.
+          </div>
+        {% endif %}
+
+        {# Inputs para cada campo del esquema (todos editables para admin) #}
+        {% for field in schema %}
+          {% set val = values.get(field.key, '') %}
+          {% set ft  = field.type or 'text' %}
+          <div class="panel-field" data-field-key="{{ field.key }}">
+            <span class="panel-field-lbl">{{ field.label or field.key }}</span>
+            {% if ft == 'checkbox' %}
+              <label class="panel-cb-row">
+                <input type="checkbox" name="{{ field.key }}" value="1"
+                  {% if (val|string).lower() in ['1','true','yes','on','checked','x','✓'] %}checked{% endif %}
+                  {% if not station_id %}disabled{% endif %}>
+                Marcar
+              </label>
+            {% elif ft in ['textarea','multiline','paragraph'] or (field.h and field.h|int > 28) %}
+              <textarea name="{{ field.key }}"
+                placeholder="{{ field.placeholder or (field.label or field.key) }}"
+                maxlength="{{ field.max_len or 320 }}"
+                {% if not station_id %}disabled{% endif %}>{{ val }}</textarea>
+            {% else %}
+              <input type="{{ 'date' if ft=='date' else ('number' if ft=='number' else 'text') }}"
+                name="{{ field.key }}" value="{{ val }}"
+                placeholder="{{ field.placeholder or (field.label or field.key) }}"
+                maxlength="{{ field.max_len or 160 }}"
+                {% if not station_id %}disabled{% endif %}>
+            {% endif %}
+          </div>
+        {% endfor %}
+
+      </div>
+    </aside>
+
+  </div>
+</form>
+{% else %}
+  <div class="no-station-notice" style="margin-top:16px">
+    <strong>Sin previsualizacion</strong>
+    <div>No se pudieron generar las imagenes de esta plantilla PDF.</div>
+  </div>
+{% endif %}
+
+<script>
+(function(){
+  var ZOOM   = 1.3;
+  var fields = {{ schema|tojson }};
+  var values = {{ values|tojson }};
+  // Admin: todos los campos son editables
+  var editSet = new Set(fields.map(function(f){ return f.key; }));
+  var truthy  = new Set(['1','true','yes','on','checked','x','✓']);
+
+  function isTruthy(v){ return v===true||truthy.has(String(v||'').toLowerCase()); }
+  function esc(s){ return String(s||'').replace(/[&<>"']/g,function(c){return({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]);}); }
+  function ratio(img){ return img.naturalWidth ? img.clientWidth/img.naturalWidth : 1; }
+  function toCSS(img,x,y,w,h){ var r=ratio(img); return{left:x*ZOOM*r,top:y*ZOOM*r,width:w*ZOOM*r,height:h*ZOOM*r}; }
+
+  function setOvText(el, val, f){
+    el.innerHTML='';
+    if (val){ el.style.whiteSpace='pre-wrap'; el.textContent=val; }
+    else {
+      var ph=document.createElement('span');
+      ph.className='ov-ph'; ph.textContent=f.label||f.key;
+      el.appendChild(ph);
+    }
+  }
+
+  function buildOv(f, css){
+    var el  = document.createElement('div');
+    var cur = values[f.key];
+    el.className='ov ov-edit';
+    el.dataset.fkey=f.key;
+    el.style.cssText='left:'+css.left+'px;top:'+css.top+'px;width:'+Math.max(css.width,8)+'px;height:'+Math.max(css.height,8)+'px';
+    var type=(f.type||'text').toLowerCase();
+    if (type==='checkbox'){
+      el.style.justifyContent='center';
+      el.style.fontSize=Math.max(10,Math.round(css.height*.75))+'px';
+      el.style.fontWeight='900';
+      el.textContent=isTruthy(cur)?'✓':'';
+    } else { setOvText(el, cur, f); }
+
+    el.addEventListener('click', function(){
+      var pf=document.querySelector('.panel-field[data-field-key="'+f.key+'"]');
+      if (!pf) return;
+      var inp=pf.querySelector('input,textarea');
+      if (inp){ inp.focus(); inp.scrollIntoView({behavior:'smooth',block:'center'}); }
+    });
+    return el;
+  }
+
+  function renderAll(){
+    document.querySelectorAll('.doc-page').forEach(function(page){
+      var pn=parseInt(page.dataset.page,10);
+      var img=page.querySelector('.doc-img');
+      page.querySelectorAll('.ov').forEach(function(n){n.remove();});
+      fields.forEach(function(f){
+        if (parseInt(f.page,10)!==pn) return;
+        page.appendChild(buildOv(f, toCSS(img,+f.x,+f.y,+f.w,+f.h)));
+      });
+    });
+    wirePanel();
+  }
+
+  function wirePanel(){
+    document.querySelectorAll('.panel-field').forEach(function(pf){
+      var key=pf.dataset.fieldKey;
+      var inp=pf.querySelector('input,textarea');
+      if (!inp) return;
+      var isCb=inp.type==='checkbox';
+      var f=fields.find(function(x){return x.key===key;})||{key:key};
+
+      var onVal=function(){
+        var ov=document.querySelector('.ov[data-fkey="'+key+'"]');
+        if (!ov) return;
+        if (isCb){ ov.textContent=inp.checked?'✓':''; }
+        else { setOvText(ov, inp.value, f); }
+        values[key]=isCb?(inp.checked?'1':''):inp.value;
+      };
+      inp.addEventListener('input',  onVal);
+      inp.addEventListener('change', onVal);
+
+      inp.addEventListener('focus', function(){
+        document.querySelectorAll('.panel-field').forEach(function(p){p.classList.remove('is-active');});
+        document.querySelectorAll('.ov').forEach(function(o){o.classList.remove('ov-active');});
+        pf.classList.add('is-active');
+        var ov=document.querySelector('.ov[data-fkey="'+key+'"]');
+        if (ov){ ov.classList.add('ov-active'); ov.scrollIntoView({behavior:'smooth',block:'center'}); }
+      });
+      inp.addEventListener('blur', function(){
+        pf.classList.remove('is-active');
+        var ov=document.querySelector('.ov[data-fkey="'+key+'"]');
+        if (ov) ov.classList.remove('ov-active');
+      });
+    });
+  }
+
+  var imgs=document.querySelectorAll('.doc-img');
+  var pend=imgs.length;
+  function tryRender(){ if(--pend<=0) renderAll(); }
+  if (!imgs.length) renderAll();
+  else imgs.forEach(function(img){ img.complete?tryRender():img.addEventListener('load',tryRender); });
+
+  var resT;
+  window.addEventListener('resize',function(){ clearTimeout(resT); resT=setTimeout(renderAll,80); });
+
+  // Selector de estacion → recarga con station_id en URL
+  var sel=document.getElementById('stationSel');
+  if (sel){
+    sel.addEventListener('change', function(){
+      var url=new URL(location.href);
+      this.value ? url.searchParams.set('station_id',this.value) : url.searchParams.delete('station_id');
+      location.href=url.toString();
+    });
+  }
+})();
+</script>
 {% endblock %}

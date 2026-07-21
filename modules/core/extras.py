@@ -7,8 +7,10 @@ from pathlib import Path
 from flask import jsonify, render_template, request, current_app
 
 from db import get_conn
-from services.branding import get_normative_config
 from services.brand import get_brand
+from services.branding import get_normative_config
+from services.state import get_state as _get_state, set_state as _set_state
+from services.utils import add_months as _add_months
 from modules.core.notifications import _station_scope_for_user, _visibility_clause
 
 
@@ -29,31 +31,23 @@ def _state_key(prefix: str, brand: str) -> str:
     return f"{prefix}:{(brand or 'consulting').strip().lower()}"
 
 
-def _get_state(conn, key: str) -> str:
-    row = conn.execute("SELECT value FROM system_state WHERE key=?", (key,)).fetchone()
-    return (row["value"] if row and row.get("value") is not None else "") or ""
-
-
-def _set_state(conn, key: str, value: str) -> None:
-    conn.execute(
-        "INSERT INTO system_state (key, value, updated_at) VALUES (?,?,CURRENT_TIMESTAMP) "
-        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
-        (key, value),
-    )
-
-
 def _month_start(d: datetime.date) -> datetime.date:
     return d.replace(day=1)
 
 
-def _add_months(d: datetime.date, months: int) -> datetime.date:
-    y = d.year + (d.month - 1 + months) // 12
-    m = (d.month - 1 + months) % 12 + 1
-    if m == 12:
-        last = datetime.date(y + 1, 1, 1) - datetime.timedelta(days=1)
-    else:
-        last = datetime.date(y, m + 1, 1) - datetime.timedelta(days=1)
-    return datetime.date(y, m, min(d.day, last.day))
+# _add_months, _get_state y _set_state fueron extraídas a
+# services/utils.py y services/state.py (importadas arriba)
+
+
+# ---------------------------------------------------------------------------
+# Semáforo de estaciones — pesos por tipo de problema pendiente
+# Un score más alto indica más riesgo operativo para la estación.
+# ---------------------------------------------------------------------------
+_SEMAPHORE_WEIGHT_ALERTS:     int = 3   # alertas abiertas (menor peso, son recurrentes)
+_SEMAPHORE_WEIGHT_PAYMENTS:   int = 4   # pagos pendientes
+_SEMAPHORE_WEIGHT_DOCS:       int = 4   # documentos en revisión pendiente
+_SEMAPHORE_WEIGHT_COMPLIANCE: int = 5   # vencimientos de cumplimiento (mayor riesgo)
+_SEMAPHORE_YELLOW_THRESHOLD:  int = 8   # score máximo para semaforo amarillo (>8 → rojo)
 
 
 def register(app):
@@ -477,8 +471,13 @@ def register(app):
             if brand == 'petroleum':
                 cur.execute("SELECT COUNT(*) AS c FROM compliance_records WHERE brand=? AND station_id=? AND expiry_date IS NOT NULL AND date(expiry_date) <= date(?)", (brand, sid, (_today() + datetime.timedelta(days=30)).isoformat()))
                 compliance_expiring = int(cur.fetchone()["c"] or 0)
-            score = alerts_open * 3 + payments_pending * 4 + docs_pending * 4 + compliance_expiring * 5
-            color = 'green' if score == 0 else 'yellow' if score <= 8 else 'red'
+            score = (
+                alerts_open      * _SEMAPHORE_WEIGHT_ALERTS
+                + payments_pending  * _SEMAPHORE_WEIGHT_PAYMENTS
+                + docs_pending      * _SEMAPHORE_WEIGHT_DOCS
+                + compliance_expiring * _SEMAPHORE_WEIGHT_COMPLIANCE
+            )
+            color = 'green' if score == 0 else 'yellow' if score <= _SEMAPHORE_YELLOW_THRESHOLD else 'red'
             rows.append({**st, 'alerts_open': alerts_open, 'payments_pending': payments_pending, 'docs_pending': docs_pending, 'compliance_expiring': compliance_expiring, 'score': score, 'color': color})
         conn.close()
         return jsonify({"ok": True, "rows": rows})

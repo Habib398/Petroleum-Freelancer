@@ -1,11 +1,15 @@
 from __future__ import annotations
-import datetime, json, uuid
+
+import datetime
+import json
+import uuid
 from pathlib import Path
+
 from flask import session
 from werkzeug.utils import secure_filename
 from werkzeug.exceptions import RequestEntityTooLarge
 
-from db import get_user, get_conn
+from db import get_user, get_conn, db_conn
 from services.brand import get_brand
 from services.storage import get_storage
 from services.outbound import (
@@ -121,16 +125,11 @@ class AppContext:
             return set()
         if self.has_global_station_scope(me):
             try:
-                conn = get_conn(); cur = conn.cursor()
-                cur.execute("SELECT id FROM stations WHERE brand=?", (get_brand(),))
-                ids = {int(r["id"]) for r in cur.fetchall()}
-                conn.close()
-                return ids
+                with db_conn() as conn:
+                    cur = conn.cursor()
+                    cur.execute("SELECT id FROM stations WHERE brand=?", (get_brand(),))
+                    return {int(r["id"]) for r in cur.fetchall()}
             except Exception:
-                try:
-                    conn.close()
-                except Exception:
-                    pass
                 return set()
         scope: set[int] = set()
         if me.get("station_id"):
@@ -139,22 +138,19 @@ class AppContext:
             except Exception:
                 pass
         try:
-            conn = get_conn(); cur = conn.cursor()
-            cur.execute(
-                "SELECT station_id FROM user_station_access WHERE brand=? AND user_id=?",
-                (get_brand(), int(me["id"])),
-            )
-            for r in cur.fetchall():
-                try:
-                    scope.add(int(r["station_id"]))
-                except Exception:
-                    pass
-            conn.close()
+            with db_conn() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    "SELECT station_id FROM user_station_access WHERE brand=? AND user_id=?",
+                    (get_brand(), int(me["id"])),
+                )
+                for r in cur.fetchall():
+                    try:
+                        scope.add(int(r["station_id"]))
+                    except Exception:
+                        pass
         except Exception:
-            try:
-                conn.close()
-            except Exception:
-                pass
+            pass
         return scope
 
     def can_access_station(self, me: dict, station_id: int) -> bool:
@@ -183,12 +179,13 @@ class AppContext:
                 pass
             if me and me.get("username"):
                 meta_obj.setdefault("actor_username", me.get("username"))
-            conn = get_conn(); cur = conn.cursor()
-            cur.execute(
-                "INSERT INTO audit_log (brand, actor_user_id, action, entity, entity_id, meta_json) VALUES (?,?,?,?,?,?)",
-                (get_brand(), me["id"] if me else None, action, entity, entity_id, json.dumps(meta_obj, ensure_ascii=False)),
-            )
-            conn.commit(); conn.close()
+            with db_conn() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    "INSERT INTO audit_log (brand, actor_user_id, action, entity, entity_id, meta_json) VALUES (?,?,?,?,?,?)",
+                    (get_brand(), me["id"] if me else None, action, entity, entity_id, json.dumps(meta_obj, ensure_ascii=False)),
+                )
+                conn.commit()
         except Exception:
             # Don't block user flows if audit logging fails.
             pass

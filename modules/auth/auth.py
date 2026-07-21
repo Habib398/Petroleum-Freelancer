@@ -1,11 +1,20 @@
 from __future__ import annotations
-import os, json, datetime
+
+import os
+import json
+import datetime
+
 from flask import request, jsonify, session, redirect, render_template, send_from_directory, abort, current_app
 from werkzeug.security import generate_password_hash
-from db import get_conn, verify_user, get_user
+from db import get_conn, db_conn, verify_user, get_user
 from services import reminders
 
 
+# ---------------------------------------------------------------------------
+# Rate limit de login — constantes con nombre para facilitar ajustes
+# ---------------------------------------------------------------------------
+_LOGIN_RATE_WINDOW: int = 600   # segundos (10 minutos)
+_LOGIN_RATE_MAX:    int = 8     # intentos fallidos máximos por ventana
 
 
 # --------- shared decorators (for modules importing from routes.auth) ---------
@@ -62,15 +71,13 @@ def register(app):
 
     @app.post("/api/auth/login")
     def api_login():
-        # Basic rate limit: 8 attempts / 10 minutes per IP
+        # Rate limit: máximo _LOGIN_RATE_MAX intentos en _LOGIN_RATE_WINDOW segundos por IP
         import time
         ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip() or "unknown"
         bucket = app.extensions.get("rate_login")
         now = int(time.time())
-        window = 600
-        limit = 8
         rec = bucket.get(ip) if isinstance(bucket, dict) else None
-        if rec and now - rec.get("ts", 0) <= window and rec.get("fails", 0) >= limit:
+        if rec and now - rec.get("ts", 0) <= _LOGIN_RATE_WINDOW and rec.get("fails", 0) >= _LOGIN_RATE_MAX:
             return jsonify({"error": "rate_limited", "message": "Demasiados intentos. Intenta más tarde."}), 429
 
         data = request.get_json(silent=True) or {}
@@ -80,7 +87,7 @@ def register(app):
         if not user:
             # track failed attempts per IP (anti-bruteforce)
             if isinstance(bucket, dict):
-                if not rec or now - rec.get("ts", 0) > window:
+                if not rec or now - rec.get("ts", 0) > _LOGIN_RATE_WINDOW:
                     rec = {"ts": now, "fails": 0}
                 rec["fails"] = int(rec.get("fails", 0)) + 1
                 rec["ts"] = now
@@ -105,7 +112,6 @@ def register(app):
             pass
         return jsonify({"ok": True})
 
-    # --- Password reset (admin-assisted, ISO-friendly) ---
     @app.post("/api/auth/request-reset")
     @login_required
     @role_required("admin")
@@ -115,24 +121,27 @@ def register(app):
         if not username:
             return jsonify({"ok": False, "error": "missing_username"}), 400
 
-        conn = get_conn(); cur = conn.cursor()
-        cur.execute("SELECT id, is_active FROM users WHERE username=?", (username,))
-        row = cur.fetchone()
-        if not row or int(row["is_active"] or 0) != 1:
-            conn.close()
-            return jsonify({"ok": False, "error": "user_not_found"}), 404
+        import time
+        import hashlib
+        import secrets
 
-        import time, hashlib, secrets
-        token = secrets.token_urlsafe(24)
-        token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
-        expires_at = int(time.time()) + int(os.environ.get("COG_RESET_TTL_MIN", "30")) * 60
-        ip_req = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip() or "unknown"
+        with db_conn() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT id, is_active FROM users WHERE username=?", (username,))
+            row = cur.fetchone()
+            if not row or int(row["is_active"] or 0) != 1:
+                return jsonify({"ok": False, "error": "user_not_found"}), 404
 
-        cur.execute(
-            "INSERT INTO password_resets (user_id, token_hash, expires_at, request_ip) VALUES (?,?,?,?)",
-            (row["id"], token_hash, expires_at, ip_req),
-        )
-        conn.commit(); conn.close()
+            token = secrets.token_urlsafe(24)
+            token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
+            expires_at = int(time.time()) + int(os.environ.get("COG_RESET_TTL_MIN", "30")) * 60
+            ip_req = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip() or "unknown"
+
+            cur.execute(
+                "INSERT INTO password_resets (user_id, token_hash, expires_at, request_ip) VALUES (?,?,?,?)",
+                (row["id"], token_hash, expires_at, ip_req),
+            )
+            conn.commit()
 
         me = ctx.get_me()
         ctx.log_action(me, "request_password_reset", "users", str(row["id"]), {"username": username, "expires_at": expires_at, "ip": ip_req})
@@ -146,6 +155,9 @@ def register(app):
 
         This endpoint is allowed without login. It is safe because the token is random and short-lived.
         """
+        import time
+        import hashlib
+
         data = request.get_json(silent=True) or {}
         token = (data.get("token") or "").strip()
         new_password = (data.get("new_password") or "").strip()
@@ -156,26 +168,25 @@ def register(app):
         if len(new_password) < min_len:
             return jsonify({"ok": False, "error": "weak_password", "message": f"La contraseña debe tener al menos {min_len} caracteres"}), 400
 
-        import time, hashlib
         token_hash = hashlib.sha256(token.encode("utf-8")).hexdigest()
         now = int(time.time())
 
-        conn = get_conn(); cur = conn.cursor()
-        cur.execute(
-            "SELECT id, user_id, expires_at, used_at FROM password_resets WHERE token_hash=? ORDER BY id DESC LIMIT 1",
-            (token_hash,),
-        )
-        r = cur.fetchone()
-        if not r or r["used_at"] or int(r["expires_at"] or 0) < now:
-            conn.close()
-            return jsonify({"ok": False, "error": "invalid_or_expired_token"}), 400
+        with db_conn() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT id, user_id, expires_at, used_at FROM password_resets WHERE token_hash=? ORDER BY id DESC LIMIT 1",
+                (token_hash,),
+            )
+            r = cur.fetchone()
+            if not r or r["used_at"] or int(r["expires_at"] or 0) < now:
+                return jsonify({"ok": False, "error": "invalid_or_expired_token"}), 400
 
-        cur.execute(
-            "UPDATE users SET password_hash=?, password_updated_at=CURRENT_TIMESTAMP, failed_attempts=0, locked_until=NULL WHERE id=?",
-            (generate_password_hash(new_password), r["user_id"]),
-        )
-        cur.execute("UPDATE password_resets SET used_at=CURRENT_TIMESTAMP WHERE id=?", (r["id"],))
-        conn.commit(); conn.close()
+            cur.execute(
+                "UPDATE users SET password_hash=?, password_updated_at=CURRENT_TIMESTAMP, failed_attempts=0, locked_until=NULL WHERE id=?",
+                (generate_password_hash(new_password), r["user_id"]),
+            )
+            cur.execute("UPDATE password_resets SET used_at=CURRENT_TIMESTAMP WHERE id=?", (r["id"],))
+            conn.commit()
 
         return jsonify({"ok": True})
 
@@ -194,18 +205,18 @@ def register(app):
         if len(new_password) < min_len:
             return jsonify({"ok": False, "error": "weak_password"}), 400
 
-        conn = get_conn(); cur = conn.cursor()
-        cur.execute("SELECT id FROM users WHERE id=?", (int(user_id),))
-        u = cur.fetchone()
-        if not u:
-            conn.close()
-            return jsonify({"ok": False, "error": "user_not_found"}), 404
+        with db_conn() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT id FROM users WHERE id=?", (int(user_id),))
+            u = cur.fetchone()
+            if not u:
+                return jsonify({"ok": False, "error": "user_not_found"}), 404
 
-        cur.execute(
-            "UPDATE users SET password_hash=?, password_updated_at=CURRENT_TIMESTAMP, failed_attempts=0, locked_until=NULL WHERE id=?",
-            (generate_password_hash(new_password), int(user_id)),
-        )
-        conn.commit(); conn.close()
+            cur.execute(
+                "UPDATE users SET password_hash=?, password_updated_at=CURRENT_TIMESTAMP, failed_attempts=0, locked_until=NULL WHERE id=?",
+                (generate_password_hash(new_password), int(user_id)),
+            )
+            conn.commit()
 
         me = ctx.get_me()
         ctx.log_action(me, "force_password_reset", "users", str(user_id))

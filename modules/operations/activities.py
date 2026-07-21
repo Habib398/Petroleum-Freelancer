@@ -10,6 +10,7 @@ from werkzeug.utils import secure_filename
 from db import get_conn
 from services.brand import get_brand
 from services.corrections import create_correction_task
+from services.utils import add_months as _add_months
 
 
 
@@ -39,17 +40,7 @@ def _end_of_year(date_str: str) -> str:
     return f"{y}-12-31"
 
 
-def _add_months(d: datetime.date, months: int) -> datetime.date:
-    # add months, clamp day to end of resulting month
-    y = d.year + (d.month - 1 + months) // 12
-    m = (d.month - 1 + months) % 12 + 1
-    # last day of target month
-    if m == 12:
-        last = datetime.date(y + 1, 1, 1) - datetime.timedelta(days=1)
-    else:
-        last = datetime.date(y, m + 1, 1) - datetime.timedelta(days=1)
-    day = min(d.day, last.day)
-    return datetime.date(y, m, day)
+# _add_months fue extraída a services/utils.py (importada como _add_months arriba)
 
 
 def _generate_dates(start_date: str, repeat: str, until: str | None) -> list[datetime.date]:

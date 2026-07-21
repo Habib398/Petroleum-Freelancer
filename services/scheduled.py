@@ -2,28 +2,30 @@ from __future__ import annotations
 
 import datetime
 import os
-
-from db import get_conn
-from flask import has_request_context
-from services.brand import VALID_BRANDS, get_brand
-
-# Optional daily backup (DB + uploads). Runs opportunistically and is throttled.
 from pathlib import Path
-from db import DB_PATH
+
+from db import get_conn, DB_PATH
+from flask import has_request_context
 from services.backup import create_backup
-from services.outbound import build_notification_email_body, build_notification_email_subject, send_email_if_configured
-from services.deadlines import list_document_deadlines, log_deadline_notification, notification_type_for_module, parse_reminder_days, route_for_module, sync_document_deadlines
+from services.brand import VALID_BRANDS, get_brand
+from services.deadlines import (
+    list_document_deadlines,
+    log_deadline_notification,
+    notification_type_for_module,
+    parse_reminder_days,
+    route_for_module,
+    sync_document_deadlines,
+)
+from services.outbound import (
+    build_notification_email_body,
+    build_notification_email_subject,
+    send_email_if_configured,
+)
+from services.state import get_state as _get_state, set_state as _set_state
+from services.utils import add_months as _add_months
 
 
-def _add_months(d: datetime.date, months: int) -> datetime.date:
-    y = d.year + (d.month - 1 + months) // 12
-    m = (d.month - 1 + months) % 12 + 1
-    if m == 12:
-        last = datetime.date(y + 1, 1, 1) - datetime.timedelta(days=1)
-    else:
-        last = datetime.date(y, m + 1, 1) - datetime.timedelta(days=1)
-    day = min(d.day, last.day)
-    return datetime.date(y, m, day)
+# _add_months fue extraída a services/utils.py (importada como _add_months arriba)
 
 
 def _next_date(cur: datetime.date, repeat: str) -> datetime.date | None:
@@ -129,20 +131,7 @@ def _extend_calendar_events(conn, brand: str, horizon_days: int = 60) -> int:
     return created
 
 
-def _get_state(conn, key: str) -> str | None:
-    cur = conn.cursor()
-    cur.execute("SELECT value FROM system_state WHERE key=?", (key,))
-    r = cur.fetchone()
-    return r["value"] if r else None
-
-
-def _set_state(conn, key: str, value: str) -> None:
-    cur = conn.cursor()
-    cur.execute(
-        "INSERT INTO system_state (key, value, updated_at) VALUES (?,?,CURRENT_TIMESTAMP) "
-        "ON CONFLICT(key) DO UPDATE SET value=excluded.value, updated_at=CURRENT_TIMESTAMP",
-        (key, value),
-    )
+# _get_state y _set_state fueron extraídas a services/state.py (importadas arriba)
 
 
 def _dedup_key(conn, key: str) -> bool:

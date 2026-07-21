@@ -33,11 +33,18 @@ def _load_env_file(env_path: Path) -> None:
 BASE_DIR = Path(__file__).resolve().parent
 _load_env_file(BASE_DIR / ".env")
 
-from db import get_conn, init_db
-from services.context import AppContext
-from services.scheduled import run_due_tick
-from services.runtime_scheduler import start_runtime_scheduler
+import time
+
+from flask import Flask, jsonify, request, g, session
+from werkzeug.exceptions import RequestEntityTooLarge
+
+from db import get_conn, db_conn, init_db
+from services.brand import parse_allowed_brands, set_brand
 from services.branding import get_branding_settings, get_normative_config, get_normative_items, get_normative_titles_line
+from services.context import AppContext
+from services.navigation import get_active_section
+from services.runtime_scheduler import start_runtime_scheduler
+from services.scheduled import run_due_tick
 from services.storage import StorageService
 
 # Módulos de dominio (arquitectura modular — cada módulo agrupa rutas afines)
@@ -95,6 +102,14 @@ def _wants_json() -> bool:
     return "application/json" in accept or "text/json" in accept
 
 
+# ---------------------------------------------------------------------------
+# Rate limit — constantes con nombre para que sean fáciles de localizar
+# ---------------------------------------------------------------------------
+# Límite de escritura global (endpoints POST/PUT/PATCH/DELETE, excluye login)
+_RL_WRITE_WINDOW: int = int(os.environ.get("COG_RL_WINDOW", "60") or 60)   # segundos
+_RL_WRITE_MAX:    int = int(os.environ.get("COG_RL_WRITE",  "240") or 240)  # peticiones/ventana
+
+
 def create_app() -> Flask:
     app = Flask(__name__, static_folder="static", template_folder="templates")
     app.secret_key = os.environ.get("COG_SECRET") or os.environ.get("SECRET_KEY") or "change-this-secret-in-env"
@@ -137,33 +152,39 @@ def create_app() -> Flask:
     app.extensions["rate_login"] = {}
     app.extensions["rate_write"] = {}
 
-    # --- Trace id for every request (helps pinpoint http_500 quickly) ---
-    @app.before_request
-    def _trace_id():
-        g.trace_id = request.headers.get("X-Trace-Id") or uuid.uuid4().hex
+    # ---------------------------------------------------------------------------
+    # Middleware before_request — cada handler tiene una sola responsabilidad
+    # ---------------------------------------------------------------------------
 
-        # CSRF token for any visitor (used by JS fetch wrapper)
-        from flask import session
+    @app.before_request
+    def _assign_trace_and_csrf():
+        """Asigna un trace ID único a la petición y garantiza el CSRF token en sesión."""
+        g.trace_id = request.headers.get("X-Trace-Id") or uuid.uuid4().hex
         if not session.get("csrf_token"):
             session["csrf_token"] = uuid.uuid4().hex
         g.csrf_token = session.get("csrf_token")
 
-        # --- Enforce allowed brand (prevents cross-company data leaks) ---
+    @app.before_request
+    def _enforce_brand_access():
+        """Valida que el brand activo en sesión esté permitido para el usuario.
+
+        Previene acceso cruzado entre compañías (consulting ↔ petroleum).
+        Activa automáticamente el brand petroleum en rutas de módulo petroleum.
+        """
         try:
             if session.get("user_id"):
                 from db import get_user
-                from services.brand import parse_allowed_brands, set_brand
                 me = get_user(session.get("user_id")) or {}
                 role = (me.get("role") or "").strip().lower()
 
-                # Non-admin users can only operate inside their allowed brands
+                # Usuarios no-admin solo operan dentro de sus brands permitidos
                 if role != "admin":
                     allowed = parse_allowed_brands(me.get("allowed_brands"))
                     active = (session.get("brand") or "consulting").strip().lower()
                     if active not in allowed:
                         set_brand(sorted(list(allowed))[0] if allowed else "consulting")
 
-                # Auto-activate Petroleum brand for Petroleum module URLs
+                # Auto-activar brand petroleum en rutas del módulo petroleum
                 path_ = (request.path or "")
                 if path_.startswith("/petroleum") or path_.startswith("/api/compliance") or path_.startswith("/api/petroleum/"):
                     allowed = {"consulting", "petroleum"} if role == "admin" else parse_allowed_brands(me.get("allowed_brands"))
@@ -172,24 +193,25 @@ def create_app() -> Flask:
         except Exception:
             pass
 
-        
-        # Write rate limit (simple per-IP bucket)
+    @app.before_request
+    def _enforce_write_rate_limit():
+        """Limita las peticiones de escritura por IP (POST/PUT/PATCH/DELETE en /api/).
+
+        Usa un bucket en memoria por IP. El login tiene su propio limiter en auth.py.
+        Para despliegues multi-worker se recomienda migrar a Redis.
+        """
         try:
             if request.path.startswith("/api/") and request.method in {"POST", "PUT", "PATCH", "DELETE"}:
-                # Skip login (has its own limiter)
-                if request.path != "/api/auth/login":
-                    import time
+                if request.path != "/api/auth/login":  # login tiene su propio limiter
                     ip = (request.headers.get("X-Forwarded-For") or request.remote_addr or "").split(",")[0].strip() or "unknown"
                     bucket = app.extensions.get("rate_write")
-                    window = int(os.environ.get("COG_RL_WINDOW", "60") or 60)
-                    limit = int(os.environ.get("COG_RL_WRITE", "240") or 240)
                     now = int(time.time())
                     rec = bucket.get(ip) if isinstance(bucket, dict) else None
-                    if rec and now - rec.get("ts", 0) <= window and rec.get("count", 0) >= limit:
-                        retry = max(1, window - (now - rec.get("ts", 0)))
+                    if rec and now - rec.get("ts", 0) <= _RL_WRITE_WINDOW and rec.get("count", 0) >= _RL_WRITE_MAX:
+                        retry = max(1, _RL_WRITE_WINDOW - (now - rec.get("ts", 0)))
                         return jsonify({"ok": False, "error": "rate_limited", "message": "Demasiadas solicitudes. Intenta más tarde.", "trace_id": getattr(g, "trace_id", "-")}), 429, {"Retry-After": str(retry)}
                     if isinstance(bucket, dict):
-                        if not rec or now - rec.get("ts", 0) > window:
+                        if not rec or now - rec.get("ts", 0) > _RL_WRITE_WINDOW:
                             rec = {"ts": now, "count": 0}
                         rec["count"] = int(rec.get("count", 0)) + 1
                         rec["ts"] = rec.get("ts", now)
@@ -197,11 +219,16 @@ def create_app() -> Flask:
         except Exception:
             pass
 
-        # CSRF protection for state-changing requests
+    @app.before_request
+    def _enforce_csrf():
+        """Valida el CSRF token en peticiones de escritura.
+
+        Excluye: assets estáticos, uploads y el endpoint de reset de contraseña
+        (que usa token propio). Se puede deshabilitar con COG_CSRF=0 en .env.
+        """
         if request.method in {"POST", "PUT", "PATCH", "DELETE"}:
             if os.environ.get("COG_CSRF", "1") == "0":
                 return None
-            # Allow static assets and downloads
             if request.path.startswith("/static/") or request.path.startswith("/uploads/"):
                 return None
             if request.path == "/api/auth/reset-password":
@@ -339,12 +366,13 @@ def create_app() -> Flask:
         # For HTML pages, return default error
         return err, 500
 
-    # --- Healthcheck for CMD debugging ---
+    # --- Healthcheck para diagnóstico rápido ---
     @app.get("/api/health")
     def api_health():
         """Quick diagnostics: DB + uploads + tables."""
         status = {"ok": True, "db": {"ok": True}, "uploads": {"ok": True}, "tables": {}}
-        # uploads
+
+        # Verificar escritura en directorio de uploads
         try:
             test_file = upload_dir / ".write_test"
             test_file.write_text("ok", encoding="utf-8")
@@ -353,8 +381,8 @@ def create_app() -> Flask:
             status["ok"] = False
             status["uploads"] = {"ok": False, "error": str(e)}
 
-        # db + tables
-        tables = [
+        # Verificar DB y existencia de tablas clave
+        required_tables = [
             "stations",
             "users",
             "calendar_events",
@@ -364,15 +392,14 @@ def create_app() -> Flask:
             "notifications",
         ]
         try:
-            conn = get_conn()
-            cur = conn.cursor()
-            cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
-            existing = {r[0] for r in cur.fetchall()}
-            for t in tables:
-                status["tables"][t] = t in existing
-                if t not in existing:
-                    status["ok"] = False
-            conn.close()
+            with db_conn() as conn:
+                cur = conn.cursor()
+                cur.execute("SELECT name FROM sqlite_master WHERE type='table'")
+                existing = {r[0] for r in cur.fetchall()}
+                for t in required_tables:
+                    status["tables"][t] = t in existing
+                    if t not in existing:
+                        status["ok"] = False
         except Exception as e:
             status["ok"] = False
             status["db"] = {"ok": False, "error": str(e)}
@@ -388,45 +415,9 @@ def create_app() -> Flask:
     mod_admin.register(app)       # Admin, reportes, analítica y organigrama
     mod_petroleum.register(app)   # Funcionalidad exclusiva Petroleum
 
-    def _get_active_section():
-        """Map current request path to sidebar section name."""
-        path = (request.path or "").lower()
-        # Quick lookup table for common routes to sections
-        section_map = {
-            "/mod/pipas": "operacion_tecnica",
-            "/mod/maintenance": "operacion_tecnica",
-            "/mod/alerts": "operacion_tecnica",
-            "/mod/reports": "operacion_tecnica",
-            "/mod/payments": "operacion_tecnica",
-            "/mod/activities": "operacion",
-            "/mod/operational-calendar": "operacion",
-            "/mod/station-evidence": "operacion",
-            "/mod/document-renewals-calendar": "operacion",
-            "/mod/evidencias": "operacion",
-            "/mod/incidents": "operacion",
-            "/mod/corrections": "operacion",
-            "/petroleum/normativas": "normativa_control",
-            "/petroleum/expedientes": "normativa_control",
-            "/mod/help-center": "ayuda",
-            "/mod/signature-pad": "ayuda",
-            "/mod/analytics": "ayuda",
-        }
-
-        # Check exact match first
-        if path in section_map:
-            return section_map[path]
-
-        # Check prefix match
-        for route, section in section_map.items():
-            if path.startswith(route.rstrip("/")):
-                return section
-
-        return None
-
-    # Inject CSRF token + branding into templates
+    # Inyecta CSRF token + branding + sección activa en todos los templates
     @app.context_processor
     def _inject_csrf():
-        from flask import session
         active = (session.get("brand") or "consulting").strip().lower()
         return {
             "csrf_token": getattr(g, "csrf_token", ""),
@@ -436,7 +427,7 @@ def create_app() -> Flask:
             "norm_cfg": get_normative_config,
             "norm_items": get_normative_items,
             "norm_titles_line": get_normative_titles_line,
-            "active_section": _get_active_section(),
+            "active_section": get_active_section(request.path),
         }
 
     if os.environ.get("COG_RUNTIME_SCHEDULER", "1") == "1":
